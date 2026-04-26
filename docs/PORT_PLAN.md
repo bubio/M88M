@@ -179,13 +179,14 @@ Phase 2 (2.5d) ──┬─→ Phase 3 (1.5d)  描画
 - 主要なキー（英数字、記号、SHIFT/CTRL/GRPH、STOP/ESC、矢印、F1-F5）を実装。
 - ※ジョイパッド入力は初期リリース対象外として保留。
 
-### Phase 6 — ディスク / テープ 🚧 進行中
+### Phase 6 — ディスク / テープ ✅ 完了
 
-- `src/common/file.cpp` の `FileIO` portable 実装は既存 (Phase 0 で導入済み)
-- `disk_dialog.cpp` で raygui ファイルダイアログ → `DiskManager::Mount(drive, path, readonly)`
-- ドラッグ & ドロップ: raylib `IsFileDropped()` + `LoadDroppedFiles()`
+- `nativefiledialog-extended` を導入し、OS標準のファイル選択ダイアログをサポート。
+- ドラッグ & ドロップによるディスクイメージ（.D88等）のマウントを実装。
+- `F1` / `F2` キーで各ドライブのネイティブダイアログを表示。
+- 画面左下に現在のマウント状態（ディスクタイトル）を表示。
 
-### Phase 7 — 設定 / ROM 配置 ⏳
+### Phase 7 — 設定 / ROM 配置 🚧 進行中
 
 ROM 検索順:
 

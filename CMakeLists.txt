@@ -102,12 +102,20 @@ FetchContent_MakeAvailable(raygui)
 add_library(raygui INTERFACE)
 target_include_directories(raygui INTERFACE ${raygui_SOURCE_DIR}/src)
 
+# --- nativefiledialog-extended -----------------------------------------
+FetchContent_Declare(
+    nfd
+    GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
+    GIT_TAG        v1.2.1
+)
+FetchContent_MakeAvailable(nfd)
+
 # --- raylib frontend executable ----------------------------------------
 file(GLOB RAYLIB_FRONT_SRC src/raylib/*.cpp)
 
 if(RAYLIB_FRONT_SRC)
     add_executable(m88_raylib ${RAYLIB_FRONT_SRC})
-    target_link_libraries(m88_raylib PRIVATE m88core raylib raygui)
+    target_link_libraries(m88_raylib PRIVATE m88core raylib raygui nfd)
     set_target_properties(m88_raylib PROPERTIES OUTPUT_NAME "m88")
 
     if(APPLE)

@@ -36,6 +36,22 @@ int main() {
         // Update
         // ----------------------------------------------------------------------------------
         core.UpdateInput();
+
+        if (IsFileDropped()) {
+            FilePathList droppedFiles = LoadDroppedFiles();
+            if (droppedFiles.count > 0) {
+                // Mount first file to Drive 1
+                core.GetDiskManager()->Mount(0, droppedFiles.paths[0], false, 0, false);
+            }
+            UnloadDroppedFiles(droppedFiles);
+        }
+
+        if (IsKeyPressed(KEY_F1)) {
+            core.OpenDiskDialog(0);
+        }
+        if (IsKeyPressed(KEY_F2)) {
+            core.OpenDiskDialog(1);
+        }
         // ----------------------------------------------------------------------------------
 
         // Draw
@@ -45,6 +61,8 @@ int main() {
             ClearBackground(BLACK);
 
             draw.Render();
+            
+            core.DrawUI();
 
             DrawFPS(10, 10);
 

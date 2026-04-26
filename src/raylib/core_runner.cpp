@@ -32,6 +32,14 @@ void CoreRunner::UpdateInput() {
     keyInput.Update();
 }
 
+void CoreRunner::DrawUI() {
+    diskDialog.Draw(&diskmgr);
+}
+
+void CoreRunner::OpenDiskDialog(int drive) {
+    diskDialog.OpenNativeDialog(&diskmgr, drive);
+}
+
 void CoreRunner::Start() {
     if (running) return;
     running = true;

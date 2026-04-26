@@ -8,4 +8,5 @@ public:
     ~DiskDialog();
 
     void Draw(DiskManager* diskmgr);
+    void OpenNativeDialog(DiskManager* diskmgr, int drive);
 };
