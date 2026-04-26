@@ -3,6 +3,7 @@
 #include "pc88.h"
 #include "diskmgr.h"
 #include "tapemgr.h"
+#include "audio_out.h"
 #include <thread>
 #include <atomic>
 
@@ -25,6 +26,7 @@ private:
     PC88 pc88;
     DiskManager diskmgr;
     TapeManager tapemgr;
+    RaylibSound sound;
     
     std::thread thread;
     std::atomic<bool> running;

@@ -161,20 +161,18 @@ Phase 2 (2.5d) ──┬─→ Phase 3 (1.5d)  描画
 - `DrawTexturePro` を使用し、4:3 アスペクト比を維持してスケーリング表示。
 - `CoreRunner` から `UpdateScreen()` を定期的に呼び出し描画を駆動。
 
-### Phase 4 — サウンド 🚧 進行中
+### Phase 4 — サウンド ✅ 完了
 
 `RaylibSound : public ISoundControl`:
 
-- `LoadAudioStream(48000, 16, 2)` + `SetAudioStreamCallback`
-- `Connect(ISoundSource*)` / `Disconnect()` で OPN1 / OPN2 / BEEP を内部リストへ
-- コールバック内で各 source の `Mix(int32* buf, int n)` を加算 → クリップ → s16 ステレオ
-- 内部リング (~256 ms)、コアスレッド pull、オーディオコールバック consume
-- `src/common/srcbuf.cpp` / `sndbuf2.cpp` のレート変換を可能な限り再利用
-- `win32/soundds.cpp` のミキサロジックを参考実装に
+- `InitAudioDevice()` および `LoadAudioStream(44100, 16, 2)` で初期化。
+- `GlobalAudioCallback` 内で各 `ISoundSource` (OPNA1/2, BEEP) の `Mix()` を呼び出し合成。
+- 32-bit ミックス結果を 16-bit 整数にクリップして出力。
+- `CoreRunner` の初期化時に各デバイスを `Connect()`。
 
-### Phase 5 — キーボード / ジョイ入力 ⏳
+### Phase 5 — キーボード / ジョイ入力 🚧 進行中
 
-`win32/WinKeyIF.cpp` (827 行) のスキャンコード→PC-88 マトリクス (16×8) テーブルを踏襲し、raylib `KEY_*` の対応表を JIS 配列で再構築:
+`win32/WinKeyIF.cpp` のスキャンコード→PC-88 マトリクス (16×8) テーブルを踏襲し、raylib `KEY_*` の対応表を JIS 配列で再構築:
 
 | PC-88 key | raylib key |
 | --- | --- |

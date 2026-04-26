@@ -1,4 +1,6 @@
 #include "core_runner.h"
+#include "opnif.h"
+#include "beep.h"
 #include <chrono>
 
 CoreRunner::CoreRunner() : running(false), paused(false) {
@@ -15,12 +17,19 @@ bool CoreRunner::Init(Draw* draw) {
     if (!pc88.Init(draw, &diskmgr, &tapemgr)) {
         return false;
     }
+
+    sound.Init();
+    sound.Connect(pc88.GetOPN1());
+    sound.Connect(pc88.GetOPN2());
+    sound.Connect(pc88.GetBEEP());
+
     return true;
 }
 
 void CoreRunner::Start() {
     if (running) return;
     running = true;
+    sound.Start();
     thread = std::thread(&CoreRunner::Run, this);
 }
 
