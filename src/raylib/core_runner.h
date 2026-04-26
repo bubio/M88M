@@ -8,6 +8,7 @@
 #include "disk_dialog.h"
 #include <thread>
 #include <atomic>
+#include <string>
 
 class CoreRunner {
 public:
@@ -22,12 +23,18 @@ public:
     void DrawUI();
     void OpenDiskDialog(int drive);
     void ToggleSettings() { showSettings = !showSettings; }
+    
+    // ROMエラー関連
+    bool HasRomError() const { return !romError.empty(); }
+    const std::string& GetRomError() const { return romError; }
+    void ClearRomError() { romError.clear(); }
 
     PC88* GetPC88() { return &pc88; }
     DiskManager* GetDiskManager() { return &diskmgr; }
 
 private:
     void Run();
+    std::string CheckMandatoryRoms(const std::string& romDir);
 
     PC88 pc88;
     DiskManager diskmgr;
@@ -40,4 +47,5 @@ private:
     std::atomic<bool> running;
     std::atomic<bool> paused;
     bool showSettings;
+    std::string romError;
 };

@@ -195,7 +195,7 @@ Phase 2 (2.5d) ──┬─→ Phase 3 (1.5d)  描画
 
 ### Phase 8 — 動作検証 🚧 進行中
 
-1. ROM 不在で起動 → ダイアログ表示でクラッシュなし
+1. ROM 不在で起動 → ダイアログ表示でクラッシュなし ✅ 完了
 2. ROM 配置後 → N88-BASIC ロゴ・プロンプト到達
 3. `sample1` / `sample2` の D88 を F1 マウント → `RUN"START"` 起動
 4. `BEEP` / `PLAY` で BEEP / PSG / OPNA 音再生 (欠落・割れなし)
