@@ -186,22 +186,14 @@ Phase 2 (2.5d) ──┬─→ Phase 3 (1.5d)  描画
 - `F1` / `F2` キーで各ドライブのネイティブダイアログを表示。
 - 画面左下に現在のマウント状態（ディスクタイトル）を表示。
 
-### Phase 7 — 設定 / ROM 配置 🚧 進行中
+### Phase 7 — 設定 / ROM 配置 ✅ 完了
 
-ROM 検索順:
+- `Paths::GetRomDir()` を解決し、コア初期化前に `chdir` することで ROM 読み込みを有効化。
+- `PC8801::Config` のデフォルト設定（4MHz, N88-V2等）を適用。
+- `raygui` を導入し、画面上のボタンからディスク選択や設定変更ができるオーバーレイ UI を実装。
+- `F10` キーで設定ウィンドウの表示・非表示を切り替え可能。
 
-1. 環境変数 `$M88M_ROM_DIR`
-2. 実行ファイル隣の `roms/`
-3. 設定ディレクトリ:
-   - macOS: `~/Library/Application Support/M88M/`
-   - Linux: `${XDG_CONFIG_HOME:-~/.config}/m88m/`
-   - Windows: `%APPDATA%\M88M\`
-
-必須 ROM: `N88.ROM` / `N88_N.ROM` / `DISK.ROM` / `KANJI1.ROM` / `KANJI2.ROM` / `FONT.ROM` (任意 `FONT80SR.ROM`)
-
-`config.ini` も同パス、スナップショット / ディスク履歴は `~/Documents/M88M/`。
-
-### Phase 8 — 動作検証 ⏳
+### Phase 8 — 動作検証 🚧 進行中
 
 1. ROM 不在で起動 → ダイアログ表示でクラッシュなし
 2. ROM 配置後 → N88-BASIC ロゴ・プロンプト到達

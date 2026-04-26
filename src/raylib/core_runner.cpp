@@ -1,9 +1,13 @@
 #include "core_runner.h"
+#include "paths.h"
+#include "config.h"
 #include "opnif.h"
 #include "beep.h"
 #include <chrono>
+#include <unistd.h>
+#include <iostream>
 
-CoreRunner::CoreRunner() : running(false), paused(false) {
+CoreRunner::CoreRunner() : running(false), paused(false), showSettings(false) {
 }
 
 CoreRunner::~CoreRunner() {
@@ -11,12 +15,22 @@ CoreRunner::~CoreRunner() {
 }
 
 bool CoreRunner::Init(Draw* draw) {
+    // 1. Resolve and change to ROM directory
+    std::string romDir = Paths::GetRomDir();
+    std::cout << "ROM Directory: " << romDir << std::endl;
+    if (chdir(romDir.c_str()) != 0) {
+        std::cerr << "Warning: Could not change to ROM directory: " << romDir << std::endl;
+    }
+
     if (!diskmgr.Init()) return false;
     // TapeManager doesn't have Init()?
     
     if (!pc88.Init(draw, &diskmgr, &tapemgr)) {
         return false;
     }
+
+    // Apply initial config
+    pc88.ApplyConfig(&Config::Get());
 
     sound.Init();
     sound.Connect(pc88.GetOPN1());
@@ -34,6 +48,7 @@ void CoreRunner::UpdateInput() {
 
 void CoreRunner::DrawUI() {
     diskDialog.Draw(&diskmgr);
+    diskDialog.DrawSettings(Config::Get(), &showSettings);
 }
 
 void CoreRunner::OpenDiskDialog(int drive) {
@@ -72,7 +87,6 @@ void CoreRunner::Run() {
         pc88.UpdateScreen();
 
         // Basic throttle to avoid 100% CPU if not needed
-        // In a real implementation, we would sync with real time
         std::this_thread::sleep_for(std::chrono::microseconds(500));
     }
 }

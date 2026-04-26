@@ -52,6 +52,9 @@ int main() {
         if (IsKeyPressed(KEY_F2)) {
             core.OpenDiskDialog(1);
         }
+        if (IsKeyPressed(KEY_F10)) {
+            core.ToggleSettings();
+        }
         // ----------------------------------------------------------------------------------
 
         // Draw
