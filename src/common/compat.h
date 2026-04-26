@@ -52,6 +52,7 @@
   #include <strings.h>    // strcasecmp
   #include <stdarg.h>
   #include <ctype.h>
+  #include <assert.h>
 
   #ifndef MAX_PATH
     #define MAX_PATH PATH_MAX

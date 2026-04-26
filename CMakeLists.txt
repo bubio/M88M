@@ -51,7 +51,7 @@ file(GLOB PC88_SRC    src/pc88/*.cpp)
 list(FILTER DEVICES_SRC EXCLUDE REGEX "Z80_x86\\.cpp$")
 list(FILTER DEVICES_SRC EXCLUDE REGEX "Z80Test\\.cpp$")
 list(FILTER DEVICES_SRC EXCLUDE REGEX "Z80Debug\\.cpp$")
-list(FILTER DEVICES_SRC EXCLUDE REGEX "z80diag\\.cpp$")
+# list(FILTER DEVICES_SRC EXCLUDE REGEX "z80diag\\.cpp$")
 list(FILTER PC88_SRC    EXCLUDE REGEX "memview\\.cpp$")
 list(FILTER PC88_SRC    EXCLUDE REGEX "ioview\\.cpp$")
 

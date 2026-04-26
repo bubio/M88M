@@ -134,25 +134,24 @@ Phase 2 (2.5d) ──┬─→ Phase 3 (1.5d)  描画
 
 成果: macOS arm64 で `libm88core.a` (≈2.6 MB) が完走。
 
-### Phase 2 — フロントエンドスケルトン 🚧 進行中
+### Phase 2 — フロントエンドスケルトン ✅ 完了
 
-`src/raylib/` を新設し、ファイル構成:
+`src/raylib/` を新設し、基本骨格を実装。
 
 | ファイル | 役割 |
 | --- | --- |
-| `app.cpp` | エントリ点。`InitWindow(640, 400 * scale)` → ROM ロード → main loop → `EndDrawing` |
-| `core_runner.cpp/.h` | `std::thread` で `PC88::Proceed()` を ~1ms tick (Sequencer 相当)。stop / reset / throttle / turbo |
-| `screen_view.cpp/.h` | `RaylibDraw : public Draw` (Phase 3) |
-| `audio_out.cpp/.h` | `RaylibSound : public ISoundControl` (Phase 4) |
-| `key_input.cpp/.h` | PC-88 キーマトリクス (Phase 5) |
-| `disk_dialog.cpp/.h` | raygui ファイル選択 + IsFileDropped (Phase 6) |
-| `config.cpp/.h` | INI 読み書き → `PC8801::Config` |
-| `paths.cpp/.h` | macOS / Linux / Windows の設定ディレクトリ解決 (Phase 7) |
-| `portable_file.cpp/.h` | 既に `src/common/file.cpp` で実装済み (Phase 6 で追補予定) |
+| `app.cpp` | エントリ点。`InitWindow` → main loop → `draw.Render()` → `EndDrawing` |
+| `core_runner.cpp/.h` | `std::thread` で `PC88::Proceed()` を駆動。 |
+| `screen_view.cpp/.h` | `RaylibDraw : public Draw` のスケルトン（インデックス→RGBA変換含む）。 |
+| `paths.cpp/.h` | macOS / Linux の設定・ROMディレクトリ解決。 |
+| `audio_out.cpp/.h` | `RaylibSound : public ISoundControl` (Phase 4 スケルトン) |
+| `key_input.cpp/.h` | 入力ハンドラ (Phase 5 スケルトン) |
+| `disk_dialog.cpp/.h` | raygui ディスク操作 UI (Phase 6 スケルトン) |
+| `config.cpp/.h` | 設定管理 (Phase 7 スケルトン) |
 
-**Exit 条件**: 空ウィンドウが立ち上がり `m88core` がリンクできて動作する。
+**成果**: 空ウィンドウが立ち上がり、`m88core` とリンクしてバックグラウンドでコアが動作することを確認。
 
-### Phase 3 — 描画橋渡し ⏳
+### Phase 3 — 描画橋渡し 🚧 進行中
 
 `Draw` 抽象 (`src/common/draw.h`) を `RaylibDraw` で実装:
 
