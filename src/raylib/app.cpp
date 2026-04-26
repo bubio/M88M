@@ -64,7 +64,7 @@ int main() {
                 DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.6f));
 
                 if (GuiWindowBox({ x, y, boxWidth, boxHeight }, "BIOS ROM Error")) {
-                    core.ClearRomError();
+                    break; // Exit application
                 }
                 
                 // Draw error message line by line
@@ -78,8 +78,8 @@ int main() {
                     lineY += 25;
                 }
                 
-                if (GuiButton({ x + boxWidth/2 - 50, y + boxHeight - 50, 100, 30 }, "Close")) {
-                    core.ClearRomError();
+                if (GuiButton({ x + boxWidth/2 - 50, y + boxHeight - 50, 100, 30 }, "Exit")) {
+                    break; // Exit application
                 }
             }
 
