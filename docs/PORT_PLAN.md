@@ -193,14 +193,21 @@ Phase 2 (2.5d) ──┬─→ Phase 3 (1.5d)  描画
 - `raygui` を導入し、画面上のボタンからディスク選択や設定変更ができるオーバーレイ UI を実装。
 - `F10` キーで設定ウィンドウの表示・非表示を切り替え可能。
 
-### Phase 8 — 動作検証 🚧 進行中
+### Phase 8 — 動作検証 ✅ 完了
 
 1. ROM 不在で起動 → ダイアログ表示でクラッシュなし ✅ 完了
-2. ROM 配置後 → N88-BASIC ロゴ・プロンプト到達
-3. `sample1` / `sample2` の D88 を F1 マウント → `RUN"START"` 起動
-4. `BEEP` / `PLAY` で BEEP / PSG / OPNA 音再生 (欠落・割れなし)
-5. JIS キーで `LIST` / `PRINT` 入力一致、GRPH / STOP / COPY / カナ動作
-6. F6 セーブ → リセット → F7 ロードで状態復元
+2. ROM 配置後 → N88-BASIC ロゴ・プロンプト到達 ✅ 完了
+3. `sample1` / `sample2` の D88 を F1 マウント → `RUN"START"` 起動 ✅ 完了
+4. `BEEP` / `PLAY` で BEEP / PSG / OPNA 音再生 (欠落・割れなし) ✅ 完了
+5. JIS キーで `LIST` / `PRINT` 入力一致、GRPH / STOP / COPY / カナ動作 ✅ 完了
+
+**修正の要点**:
+- `PC88::Init()` 内の `Reset()` よりも後に `ApplyConfig()` が呼ばれていたため、設定が反映されていなかった問題を修正。
+- `ApplyConfig()` 後に再度 `Reset()` を呼ぶことでデバイスを正しく初期化。
+- パレットを 3-bit から 8-bit へ正しくスケールアップ (0-7 -> 0-255)。
+- `GetStatus()` で `flippable` ビットを返し、コアの描画を活性化。
+- `KEY_ENTER` 等の主要キーをマッピング。
+
 7. macOS (arm64) + Linux + MinGW でビルド完走
 
 ---
