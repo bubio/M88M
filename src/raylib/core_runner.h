@@ -4,6 +4,7 @@
 #include "diskmgr.h"
 #include "tapemgr.h"
 #include "audio_out.h"
+#include "key_input.h"
 #include <thread>
 #include <atomic>
 
@@ -16,6 +17,7 @@ public:
     void Start();
     void Stop();
     void Pause(bool pause);
+    void UpdateInput();
 
     PC88* GetPC88() { return &pc88; }
     DiskManager* GetDiskManager() { return &diskmgr; }
@@ -27,6 +29,7 @@ private:
     DiskManager diskmgr;
     TapeManager tapemgr;
     RaylibSound sound;
+    KeyInput keyInput;
     
     std::thread thread;
     std::atomic<bool> running;

@@ -23,7 +23,13 @@ bool CoreRunner::Init(Draw* draw) {
     sound.Connect(pc88.GetOPN2());
     sound.Connect(pc88.GetBEEP());
 
+    keyInput.Init(&pc88);
+
     return true;
+}
+
+void CoreRunner::UpdateInput() {
+    keyInput.Update();
 }
 
 void CoreRunner::Start() {

@@ -170,21 +170,16 @@ Phase 2 (2.5d) ──┬─→ Phase 3 (1.5d)  描画
 - 32-bit ミックス結果を 16-bit 整数にクリップして出力。
 - `CoreRunner` の初期化時に各デバイスを `Connect()`。
 
-### Phase 5 — キーボード / ジョイ入力 🚧 進行中
+### Phase 5 — キーボード / ジョイ入力 ✅ 完了
 
-`win32/WinKeyIF.cpp` のスキャンコード→PC-88 マトリクス (16×8) テーブルを踏襲し、raylib `KEY_*` の対応表を JIS 配列で再構築:
+`KeyInput : public Device` を実装し、IOポート 0x00-0x0f をエミュレート:
 
-| PC-88 key | raylib key |
-| --- | --- |
-| GRPH | `KEY_LEFT_ALT` |
-| STOP | `KEY_ESCAPE` |
-| COPY | `KEY_PRINT_SCREEN` |
-| KANA | `KEY_RIGHT_ALT` |
-| カナロック | `KEY_F11` |
+- raylib の `IsKeyDown()` を PC-8801 の 16x8 キーマトリクスにマッピング。
+- メイン CPU の `IIOBus` (Port 0x00-0x0f) に接続し、負論理で応答。
+- 主要なキー（英数字、記号、SHIFT/CTRL/GRPH、STOP/ESC、矢印、F1-F5）を実装。
+- ※ジョイパッド入力は初期リリース対象外として保留。
 
-毎フレーム `IsKeyDown` でビット更新、`IIOBus` 経由で 88 へ。ジョイは `IsGamepadButtonDown` / `GetGamepadAxisMovement` で `IPadInput::GetState`。
-
-### Phase 6 — ディスク / テープ ⏳
+### Phase 6 — ディスク / テープ 🚧 進行中
 
 - `src/common/file.cpp` の `FileIO` portable 実装は既存 (Phase 0 で導入済み)
 - `disk_dialog.cpp` で raygui ファイルダイアログ → `DiskManager::Mount(drive, path, readonly)`

@@ -108,6 +108,7 @@ public:
 	Z80*			GetCPU2() { return &cpu2; }
 	PC8801::PD8257*	GetDMAC() { return dmac; }
 	PC8801::Beep*	GetBEEP() { return beep; }
+	IIOBus*			GetBus1() { return &bus1; }
 
 	bool SaveShapshot(const char* filename);
 	bool LoadShapshot(const char* filename);
