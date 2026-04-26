@@ -5,82 +5,47 @@
 #include "beep.h"
 #include <chrono>
 #include <unistd.h>
-#include <iostream>
 #include <vector>
 
-CoreRunner::CoreRunner() : running(false), paused(false), showSettings(false) {
-}
-
-CoreRunner::~CoreRunner() {
-    Stop();
-}
+CoreRunner::CoreRunner() : running(false), paused(false), showSettings(false) {}
+CoreRunner::~CoreRunner() { Stop(); }
 
 std::string CoreRunner::CheckMandatoryRoms(const std::string& romDir) {
     std::vector<std::string> mandatory = { "N88.ROM", "DISK.ROM", "FONT.ROM" };
     std::vector<std::string> missing;
-
     for (const auto& file : mandatory) {
         std::string path = romDir + "/" + file;
-        if (access(path.c_str(), F_OK) != 0) {
-            missing.push_back(file);
-        }
+        if (access(path.c_str(), F_OK) != 0) missing.push_back(file);
     }
-
     if (missing.empty()) return "";
-
     std::string msg = "Mandatory ROM files are missing:\n";
-    for (const auto& m : missing) {
-        msg += " - " + m + "\n";
-    }
+    for (const auto& m : missing) msg += " - " + m + "\n";
     msg += "\nPlease place them in this folder:\n\n" + romDir;
     return msg;
 }
 
 bool CoreRunner::Init(Draw* draw) {
     std::string romDir = Paths::GetRomDir();
-    std::cout << "ROM Directory: " << romDir << std::endl;
-
-    // ROMチェック
     romError = CheckMandatoryRoms(romDir);
-
-    if (chdir(romDir.c_str()) != 0) {
-        std::cerr << "Warning: Could not change to ROM directory: " << romDir << std::endl;
-    }
-
+    if (!romError.empty()) return false;
+    chdir(romDir.c_str());
     if (!diskmgr.Init()) return false;
+    if (!pc88.Init(draw, &diskmgr, &tapemgr)) return false;
     
-    // ROMがない状態でもInit自体は続行させ、UIでエラーを出す
-    if (!pc88.Init(draw, &diskmgr, &tapemgr)) {
-        if (romError.empty()) {
-            romError = "PC88 Core initialization failed.";
-        }
-        return false;
-    }
-
     pc88.ApplyConfig(&Config::Get());
-
+    // Win32オリジナルと同様、ApplyConfig後にResetを呼んで設定を反映する
+    pc88.Reset();
     sound.Init();
     sound.Connect(pc88.GetOPN1());
     sound.Connect(pc88.GetOPN2());
     sound.Connect(pc88.GetBEEP());
-
     keyInput.Init(&pc88);
-
     return true;
 }
 
-void CoreRunner::UpdateInput() {
-    keyInput.Update();
-}
-
-void CoreRunner::DrawUI() {
-    diskDialog.Draw(&diskmgr);
-    diskDialog.DrawSettings(Config::Get(), &showSettings);
-}
-
-void CoreRunner::OpenDiskDialog(int drive) {
-    diskDialog.OpenNativeDialog(&diskmgr, drive);
-}
+void CoreRunner::UpdateInput() { if (running) keyInput.Update(); }
+void CoreRunner::DrawUI() { diskDialog.Draw(&diskmgr); diskDialog.DrawSettings(Config::Get(), &showSettings); }
+void CoreRunner::OpenDiskDialog(int drive) { diskDialog.OpenNativeDialog(&diskmgr, drive); }
 
 void CoreRunner::Start() {
     if (running || HasRomError()) return;
@@ -90,15 +55,13 @@ void CoreRunner::Start() {
 }
 
 void CoreRunner::Stop() {
-    running = false;
-    if (thread.joinable()) {
-        thread.join();
+    if (running) {
+        running = false;
+        if (thread.joinable()) thread.join();
     }
 }
 
-void CoreRunner::Pause(bool p) {
-    paused = p;
-}
+void CoreRunner::Pause(bool p) { paused = p; }
 
 void CoreRunner::Run() {
     while (running) {
@@ -106,8 +69,9 @@ void CoreRunner::Run() {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             continue;
         }
-        pc88.Proceed(1000, 4000000, 100);
-        pc88.UpdateScreen();
-        std::this_thread::sleep_for(std::chrono::microseconds(500));
+
+        pc88.Proceed(100, 40, 100);
+        pc88.UpdateScreen(true);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 }

@@ -54,8 +54,10 @@ void RaylibSound::Cleanup() {
 
 bool IFCALL RaylibSound::Connect(ISoundSource* src) {
     std::lock_guard<std::recursive_mutex> lock(mutex);
+    // Prevent double-connecting the same source
+    for (auto* s : sources) { if (s == src) return true; }
+    
     sources.push_back(src);
-    src->Connect(this);
     src->SetRate(sampleRate);
     return true;
 }

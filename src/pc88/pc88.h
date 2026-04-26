@@ -107,6 +107,7 @@ public:
 	Z80*			GetCPU1() { return &cpu1; }
 	Z80*			GetCPU2() { return &cpu2; }
 	PC8801::PD8257*	GetDMAC() { return dmac; }
+	PC8801::Memory*	GetMemory() { return mem1; }
 	PC8801::Beep*	GetBEEP() { return beep; }
 	IIOBus*			GetBus1() { return &bus1; }
 

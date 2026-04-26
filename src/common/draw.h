@@ -22,7 +22,7 @@ public:
 	struct Region
 	{
 		void Reset() { top = left = 32767; bottom = right = -1; }
-		bool Valid() { return top <= bottom; }
+		bool Valid() const { return top <= bottom; }
 		void Update(int l, int t, int r, int b)
 		{
 			left = Min(left, l), right  = Max(right , r);
@@ -39,9 +39,9 @@ public:
 
 	enum Status
 	{
-		readytodraw		= 1 <<  0,		// XV‚Å‚«‚é‚±‚Æ‚ðŽ¦‚·
-		shouldrefresh	= 1 <<  1,		// DrawBuffer ‚ð‚Ü‚½‘‚«’¼‚·•K—v‚ª‚ ‚é
-		flippable		= 1 <<  2,		// flip ‚ªŽÀ‘•‚µ‚Ä‚ ‚é‚±‚Æ‚ðŽ¦‚·
+		readytodraw		= 1 <<  0,		// ï¿½Xï¿½Vï¿½Å‚ï¿½ï¿½é‚±ï¿½Æ‚ï¿½ï¿½ï¿½ï¿½ï¿½
+		shouldrefresh	= 1 <<  1,		// DrawBuffer ï¿½ï¿½ï¿½Ü‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Kï¿½vï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+		flippable		= 1 <<  2,		// flip ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä‚ï¿½ï¿½é‚±ï¿½Æ‚ï¿½ï¿½ï¿½ï¿½ï¿½
 	};
 
 public:

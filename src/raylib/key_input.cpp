@@ -51,6 +51,9 @@ void KeyInput::Update() {
         if (down) matrix[row] &= ~(1 << bit);
     };
 
+    // --- Row 1 bit 7: RETURN ---
+    set_key(1, 7, IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_KP_ENTER));
+
     // --- Row 2: @, A, B, C, D, E, F, G ---
     set_key(2, 1, IsKeyDown(KEY_A));
     set_key(2, 2, IsKeyDown(KEY_B));
