@@ -137,14 +137,14 @@ const Device::Descriptor Base::descriptor = { indef, outdef };
 
 const Device::OutFuncPtr Base::outdef[] = 
 {
-	STATIC_CAST(Device::OutFuncPtr, &Reset),
-	STATIC_CAST(Device::OutFuncPtr, &VRTC),
+	STATIC_CAST(Device::OutFuncPtr, &Base::Reset),
+	STATIC_CAST(Device::OutFuncPtr, &Base::VRTC),
 };
 
 const Device::InFuncPtr Base::indef[] = 
 {
-	STATIC_CAST(Device::InFuncPtr, &In30),
-	STATIC_CAST(Device::InFuncPtr, &In31),
-	STATIC_CAST(Device::InFuncPtr, &In40),
-	STATIC_CAST(Device::InFuncPtr, &In6e),
+	STATIC_CAST(Device::InFuncPtr, &Base::In30),
+	STATIC_CAST(Device::InFuncPtr, &Base::In31),
+	STATIC_CAST(Device::InFuncPtr, &Base::In40),
+	STATIC_CAST(Device::InFuncPtr, &Base::In6e),
 };

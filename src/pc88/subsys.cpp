@@ -314,24 +314,24 @@ const Device::Descriptor SubSystem::descriptor = { indef, outdef };
 
 const Device::InFuncPtr SubSystem::indef[] = 
 {
-	STATIC_CAST(Device::InFuncPtr, &IntAck),
-	STATIC_CAST(Device::InFuncPtr, &M_Read0),
-	STATIC_CAST(Device::InFuncPtr, &M_Read1),
-	STATIC_CAST(Device::InFuncPtr, &M_Read2),
-	STATIC_CAST(Device::InFuncPtr, &S_Read0),
-	STATIC_CAST(Device::InFuncPtr, &S_Read1),
-	STATIC_CAST(Device::InFuncPtr, &S_Read2),
+	STATIC_CAST(Device::InFuncPtr, &SubSystem::IntAck),
+	STATIC_CAST(Device::InFuncPtr, &SubSystem::M_Read0),
+	STATIC_CAST(Device::InFuncPtr, &SubSystem::M_Read1),
+	STATIC_CAST(Device::InFuncPtr, &SubSystem::M_Read2),
+	STATIC_CAST(Device::InFuncPtr, &SubSystem::S_Read0),
+	STATIC_CAST(Device::InFuncPtr, &SubSystem::S_Read1),
+	STATIC_CAST(Device::InFuncPtr, &SubSystem::S_Read2),
 };
 
 const Device::OutFuncPtr SubSystem::outdef[] = 
 {
-	STATIC_CAST(Device::OutFuncPtr, &Reset),
-	STATIC_CAST(Device::OutFuncPtr, &M_Set0),
-	STATIC_CAST(Device::OutFuncPtr, &M_Set1),
-	STATIC_CAST(Device::OutFuncPtr, &M_Set2),
-	STATIC_CAST(Device::OutFuncPtr, &M_SetCW),
-	STATIC_CAST(Device::OutFuncPtr, &S_Set0),
-	STATIC_CAST(Device::OutFuncPtr, &S_Set1),
-	STATIC_CAST(Device::OutFuncPtr, &S_Set2),
-	STATIC_CAST(Device::OutFuncPtr, &S_SetCW),
+	STATIC_CAST(Device::OutFuncPtr, &SubSystem::Reset),
+	STATIC_CAST(Device::OutFuncPtr, &SubSystem::M_Set0),
+	STATIC_CAST(Device::OutFuncPtr, &SubSystem::M_Set1),
+	STATIC_CAST(Device::OutFuncPtr, &SubSystem::M_Set2),
+	STATIC_CAST(Device::OutFuncPtr, &SubSystem::M_SetCW),
+	STATIC_CAST(Device::OutFuncPtr, &SubSystem::S_Set0),
+	STATIC_CAST(Device::OutFuncPtr, &SubSystem::S_Set1),
+	STATIC_CAST(Device::OutFuncPtr, &SubSystem::S_Set2),
+	STATIC_CAST(Device::OutFuncPtr, &SubSystem::S_SetCW),
 };

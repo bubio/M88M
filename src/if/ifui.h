@@ -8,9 +8,7 @@
 #include "types.h"
 #include "ifcommon.h"
 
-#ifndef IFCALL
-#define IFCALL __stdcall
-#endif
+// IFCALL/IOCALL come from compat.h via types.h; no local override needed.
 
 interface IMouseUI : public IUnk
 {
@@ -23,7 +21,7 @@ interface IMouseUI : public IUnk
 
 struct PadState
 {
-	uint8 direction;		// b0:ª b1:« b2:© b3:¨  active high
+	uint8 direction;		// b0:ï¿½ï¿½ b1:ï¿½ï¿½ b2:ï¿½ï¿½ b3:ï¿½ï¿½  active high
 	uint8 button;			// b0-3, active high
 };
 

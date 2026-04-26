@@ -11,7 +11,14 @@
 #include "schedule.h"
 #include "status.h"
 
+// c86ctl/Romeo (real-OPNA passthrough) is Win32-only and lives under
+// src/win32/romeo/. The portable build links against a no-op stub so the
+// fmgen emulated OPNA path is the only one taken at runtime.
+#if defined(_WIN32)
 #include "romeo/piccolo.h"
+#else
+#include "piccolo_stub.h"
+#endif
 
 //#include "romeo/juliet.h"
 
@@ -25,14 +32,14 @@ using namespace PC8801;
 #define ROMEO_JULIET		0
 
 // ---------------------------------------------------------------------------
-//	ƒvƒŠƒXƒP[ƒ‰‚Ìİ’è’l
-//	static ‚É‚·‚é‚Ì‚ÍCFMGen ‚Ì§ŒÀ‚É‚æ‚èC•¡”‚Ì OPN ‚ğˆÙ‚È‚éƒNƒƒbƒN‚É
-//	‚·‚é‚±‚Æ‚ªo—ˆ‚È‚¢‚½‚ßD
+//	ï¿½vï¿½ï¿½ï¿½Xï¿½Pï¿½[ï¿½ï¿½ï¿½Ìİ’ï¿½l
+//	static ï¿½É‚ï¿½ï¿½ï¿½Ì‚ÍCFMGen ï¿½Ìï¿½ï¿½ï¿½ï¿½É‚ï¿½ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ OPN ï¿½ï¿½ï¿½Ù‚È‚ï¿½Nï¿½ï¿½ï¿½bï¿½Nï¿½ï¿½
+//	ï¿½ï¿½ï¿½é‚±ï¿½Æ‚ï¿½ï¿½oï¿½ï¿½ï¿½È‚ï¿½ï¿½ï¿½ï¿½ßD
 //
 int OPNIF::prescaler = 0x2d;
 
 // ---------------------------------------------------------------------------
-//	¶¬E”jŠü
+//	ï¿½ï¿½ï¿½ï¿½ï¿½Eï¿½jï¿½ï¿½
 //
 OPNIF::OPNIF(const ID& id)
 : Device(id), chip(0),piccolo(0)
@@ -55,7 +62,7 @@ OPNIF::~OPNIF()
 }
 
 // ---------------------------------------------------------------------------
-//	‰Šú‰»
+//	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //
 bool OPNIF::Init(IOBus* b, int intrport, int io, Scheduler* s)
 {
@@ -121,7 +128,7 @@ bool IFCALL OPNIF::Connect(ISoundControl* c)
 }
 
 // ---------------------------------------------------------------------------
-//	‡¬EÄ¶ƒŒ[ƒgİ’è
+//	ï¿½ï¿½ï¿½ï¿½ï¿½Eï¿½Äï¿½ï¿½ï¿½ï¿½[ï¿½gï¿½İ’ï¿½
 //
 bool IFCALL OPNIF::SetRate(uint rate)
 {
@@ -132,7 +139,7 @@ bool IFCALL OPNIF::SetRate(uint rate)
 }
 
 // ---------------------------------------------------------------------------
-//	FM ‰¹Œ¹‚Ì‡¬ƒ‚[ƒh‚ğİ’è
+//	FM ï¿½ï¿½ï¿½ï¿½ï¿½Ìï¿½ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½hï¿½ï¿½İ’ï¿½
 //
 void OPNIF::SetFMMixMode(bool mm)
 {
@@ -141,7 +148,7 @@ void OPNIF::SetFMMixMode(bool mm)
 }
 
 // ---------------------------------------------------------------------------
-//	‡¬
+//	ï¿½ï¿½ï¿½ï¿½
 //
 void IFCALL OPNIF::Mix(int32* dest, int nsamples)
 {
@@ -150,7 +157,7 @@ void IFCALL OPNIF::Mix(int32* dest, int nsamples)
 }
 
 // ---------------------------------------------------------------------------
-//	‰¹—Êİ’è
+//	ï¿½ï¿½ï¿½Êİ’ï¿½
 //
 static inline int ConvertVolume(int volume)
 {
@@ -199,7 +206,7 @@ void IOCALL OPNIF::Reset(uint, uint)
 }
 
 // ---------------------------------------------------------------------------
-//	Š„‚è‚İ
+//	ï¿½ï¿½ï¿½èï¿½ï¿½
 //
 void OPNIF::OPNUnit::Intr(bool flag)
 {
@@ -213,7 +220,7 @@ void OPNIF::OPNUnit::Intr(bool flag)
 }
 
 // ---------------------------------------------------------------------------
-//	Š„‚è‚İ‹–‰ÂH
+//	ï¿½ï¿½ï¿½èï¿½İ‹ï¿½ï¿½ÂH
 //
 inline void OPNIF::OPNUnit::SetIntrMask(bool en)
 {
@@ -367,7 +374,7 @@ uint IOCALL OPNIF::ReadStatusEx(uint a)
 }
 
 // ---------------------------------------------------------------------------
-//	ƒ^ƒCƒ}[XV
+//	ï¿½^ï¿½Cï¿½}ï¿½[ï¿½Xï¿½V
 //
 void OPNIF::UpdateTimer()
 {
@@ -381,7 +388,7 @@ void OPNIF::UpdateTimer()
 }
 
 // ---------------------------------------------------------------------------
-//	ƒ^ƒCƒ}[
+//	ï¿½^ï¿½Cï¿½}ï¿½[
 //
 void IOCALL OPNIF::TimeEvent(uint e)
 {
@@ -401,7 +408,7 @@ void IOCALL OPNIF::TimeEvent(uint e)
 }
 
 // ---------------------------------------------------------------------------
-//	ó‘Ô‚ÌƒTƒCƒY
+//	ï¿½ï¿½Ô‚ÌƒTï¿½Cï¿½Y
 //
 uint IFCALL OPNIF::GetStatusSize()
 {
@@ -412,7 +419,7 @@ uint IFCALL OPNIF::GetStatusSize()
 }
 
 // ---------------------------------------------------------------------------
-//	ó‘Ô•Û‘¶
+//	ï¿½ï¿½Ô•Û‘ï¿½
 //
 bool IFCALL OPNIF::SaveStatus(uint8* s)
 {
@@ -432,7 +439,7 @@ bool IFCALL OPNIF::SaveStatus(uint8* s)
 }
 
 // ---------------------------------------------------------------------------
-//	ó‘Ô•œ‹A
+//	ï¿½ï¿½Ô•ï¿½ï¿½A
 //
 bool IFCALL OPNIF::LoadStatus(const uint8* s)
 {
@@ -500,7 +507,7 @@ bool IFCALL OPNIF::LoadStatus(const uint8* s)
 
 
 // ---------------------------------------------------------------------------
-//	ƒJƒEƒ“ƒ^‚ğ“¯Šú
+//	ï¿½Jï¿½Eï¿½ï¿½ï¿½^ï¿½ğ“¯Šï¿½
 //
 void IOCALL OPNIF::Sync(uint, uint)
 {
@@ -518,20 +525,20 @@ const Device::Descriptor OPNIF::descriptor = { indef, outdef };
 
 const Device::OutFuncPtr OPNIF::outdef[] = 
 {
-	STATIC_CAST(Device::OutFuncPtr, &Reset),
-	STATIC_CAST(Device::OutFuncPtr, &SetIndex0),
-	STATIC_CAST(Device::OutFuncPtr, &SetIndex1),
-	STATIC_CAST(Device::OutFuncPtr, &WriteData0),
-	STATIC_CAST(Device::OutFuncPtr, &WriteData1),
-	STATIC_CAST(Device::OutFuncPtr, &SetIntrMask),
-	STATIC_CAST(Device::OutFuncPtr, &Sync),
+	STATIC_CAST(Device::OutFuncPtr, &OPNIF::Reset),
+	STATIC_CAST(Device::OutFuncPtr, &OPNIF::SetIndex0),
+	STATIC_CAST(Device::OutFuncPtr, &OPNIF::SetIndex1),
+	STATIC_CAST(Device::OutFuncPtr, &OPNIF::WriteData0),
+	STATIC_CAST(Device::OutFuncPtr, &OPNIF::WriteData1),
+	STATIC_CAST(Device::OutFuncPtr, &OPNIF::SetIntrMask),
+	STATIC_CAST(Device::OutFuncPtr, &OPNIF::Sync),
 };
 
 const Device::InFuncPtr OPNIF::indef[] = 
 {
-	STATIC_CAST(Device::InFuncPtr, &ReadStatus),
-	STATIC_CAST(Device::InFuncPtr, &ReadStatusEx),
-	STATIC_CAST(Device::InFuncPtr, &ReadData0),
-	STATIC_CAST(Device::InFuncPtr, &ReadData1),
+	STATIC_CAST(Device::InFuncPtr, &OPNIF::ReadStatus),
+	STATIC_CAST(Device::InFuncPtr, &OPNIF::ReadStatusEx),
+	STATIC_CAST(Device::InFuncPtr, &OPNIF::ReadData0),
+	STATIC_CAST(Device::InFuncPtr, &OPNIF::ReadData1),
 };
 

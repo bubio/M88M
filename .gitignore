@@ -21,3 +21,7 @@ Release/
 *.exe
 *.rom
 
+# Cross-platform CMake build / IDE artifacts
+/build/
+/.cache/
+/compile_commands.json

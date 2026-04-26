@@ -1302,34 +1302,34 @@ const Device::Descriptor Memory::descriptor =
 
 const Device::OutFuncPtr Memory::outdef[] =
 {
-	STATIC_CAST(Device::OutFuncPtr, &Reset),
-	STATIC_CAST(Device::OutFuncPtr, &Out31),
-	STATIC_CAST(Device::OutFuncPtr, &Out32),
-	STATIC_CAST(Device::OutFuncPtr, &Out34),
-	STATIC_CAST(Device::OutFuncPtr, &Out35),
-	STATIC_CAST(Device::OutFuncPtr, &Out40),
-	STATIC_CAST(Device::OutFuncPtr, &Out5x),
-	STATIC_CAST(Device::OutFuncPtr, &Out70),
-	STATIC_CAST(Device::OutFuncPtr, &Out71),
-	STATIC_CAST(Device::OutFuncPtr, &Out78),
-	STATIC_CAST(Device::OutFuncPtr, &Out99),
-	STATIC_CAST(Device::OutFuncPtr, &Oute2),
-	STATIC_CAST(Device::OutFuncPtr, &Oute3),
-	STATIC_CAST(Device::OutFuncPtr, &Outf0),
-	STATIC_CAST(Device::OutFuncPtr, &Outf1),
-	STATIC_CAST(Device::OutFuncPtr, &VRTC),
-	STATIC_CAST(Device::OutFuncPtr, &Out33),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Reset),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out31),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out32),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out34),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out35),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out40),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out5x),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out70),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out71),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out78),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out99),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Oute2),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Oute3),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Outf0),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Outf1),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::VRTC),
+	STATIC_CAST(Device::OutFuncPtr, &Memory::Out33),
 };
 
 const Device::InFuncPtr Memory::indef[] =
 {
-	STATIC_CAST(Device::InFuncPtr, &In32),
-	STATIC_CAST(Device::InFuncPtr, &In5c),
-	STATIC_CAST(Device::InFuncPtr, &In70),
-	STATIC_CAST(Device::InFuncPtr, &In71),
-	STATIC_CAST(Device::InFuncPtr, &Ine2),
-	STATIC_CAST(Device::InFuncPtr, &Ine3),
-	STATIC_CAST(Device::InFuncPtr, &In33),
+	STATIC_CAST(Device::InFuncPtr, &Memory::In32),
+	STATIC_CAST(Device::InFuncPtr, &Memory::In5c),
+	STATIC_CAST(Device::InFuncPtr, &Memory::In70),
+	STATIC_CAST(Device::InFuncPtr, &Memory::In71),
+	STATIC_CAST(Device::InFuncPtr, &Memory::Ine2),
+	STATIC_CAST(Device::InFuncPtr, &Memory::Ine3),
+	STATIC_CAST(Device::InFuncPtr, &Memory::In33),
 };
 
 
