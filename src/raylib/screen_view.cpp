@@ -1,10 +1,12 @@
 #include "screen_view.h"
 #include <cstring>
+#include <algorithm>
 
 RaylibDraw::RaylibDraw() : width(0), height(0), dirty(false) {
     memset(palette, 0, sizeof(palette));
-    image = {0};
+    memset(raylib_palette, 0, sizeof(raylib_palette));
     texture = {0};
+    update_region.Reset();
 }
 
 RaylibDraw::~RaylibDraw() {
@@ -14,15 +16,13 @@ RaylibDraw::~RaylibDraw() {
 bool RaylibDraw::Init(uint w, uint h, uint bpp) {
     width = w;
     height = h;
-    buffer.resize(width * height);
+    buffer.assign(width * height, 0);
     
-    image.data = buffer.data();
-    image.width = width;
-    image.height = height;
-    image.format = PIXELFORMAT_UNCOMPRESSED_GRAYSCALE;
-    image.mipmaps = 1;
+    // Initial palette (grayscale)
+    for (int i = 0; i < 256; i++) {
+        raylib_palette[i] = {(unsigned char)i, (unsigned char)i, (unsigned char)i, 255};
+    }
 
-    // Texture will be created in Render() on the main thread
     return true;
 }
 
@@ -42,7 +42,6 @@ bool RaylibDraw::Lock(uint8** pimage, int* pbpl) {
 }
 
 bool RaylibDraw::Unlock() {
-    dirty = true;
     mutex.unlock();
     return true;
 }
@@ -52,18 +51,26 @@ uint RaylibDraw::GetStatus() {
 }
 
 void RaylibDraw::Resize(uint w, uint h) {
-    // For PC-88, width/height usually constant 640x400
 }
 
 void RaylibDraw::DrawScreen(const Region& region) {
-    // Core calls this when a region is updated
+    std::lock_guard<std::recursive_mutex> lock(mutex);
+    if (!update_region.Valid()) {
+        update_region = region;
+    } else {
+        update_region.Update(region.left, region.top, region.right, region.bottom);
+    }
+    dirty = true;
 }
 
 void RaylibDraw::SetPalette(uint index, uint nents, const Palette* pal) {
     std::lock_guard<std::recursive_mutex> lock(mutex);
-    if (index + nents <= 256) {
-        memcpy(&palette[index], pal, nents * sizeof(Palette));
+    for (uint i = 0; i < nents && (index + i) < 256; i++) {
+        palette[index + i] = pal[i];
+        raylib_palette[index + i] = {pal[i].red, pal[i].green, pal[i].blue, 255};
     }
+    dirty = true;
+    update_region.Update(0, 0, width, height); // Refresh all if palette changes
 }
 
 void RaylibDraw::Flip() {
@@ -75,25 +82,50 @@ bool RaylibDraw::SetFlipMode(bool flip) {
 
 void RaylibDraw::Render() {
     std::lock_guard<std::recursive_mutex> lock(mutex);
+    
     if (texture.id == 0) {
-        // Create a temporary RGBA image to upload to texture
-        Image rgba = GenImageColor(width, height, BLACK);
-        ImageFormat(&rgba, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
-        texture = LoadTextureFromImage(rgba);
-        UnloadImage(rgba);
+        // Create an empty texture
+        Image img = GenImageColor(width, height, BLACK);
+        ImageFormat(&img, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
+        texture = LoadTextureFromImage(img);
+        UnloadImage(img);
+        SetTextureFilter(texture, TEXTURE_FILTER_POINT);
     }
 
     if (dirty) {
         // Convert indexed to RGBA
-        std::vector<uint32_t> rgba(width * height);
+        // For simplicity, we convert the whole buffer if dirty
+        // In the future, we can optimize using update_region
+        static std::vector<Color> rgba;
+        rgba.resize(width * height);
+        
         for (size_t i = 0; i < width * height; ++i) {
-            uint8_t idx = buffer[i];
-            Palette& p = palette[idx];
-            rgba[i] = (p.red) | (p.green << 8) | (p.blue << 16) | (0xFF << 24);
+            rgba[i] = raylib_palette[buffer[i]];
         }
+        
         UpdateTexture(texture, rgba.data());
         dirty = false;
+        update_region.Reset();
     }
 
-    DrawTextureEx(texture, {0, 0}, 0, 1.0f, WHITE);
+    // Calculate source and destination rectangles for aspect-ratio preservation
+    float screenW = (float)GetScreenWidth();
+    float screenH = (float)GetScreenHeight();
+    
+    // PC-88 original is 640x400 (8:5), but displayed as 4:3 on CRT
+    float targetAspect = 4.0f / 3.0f;
+    float windowAspect = screenW / screenH;
+    
+    Rectangle dest;
+    if (windowAspect > targetAspect) {
+        float h = screenH;
+        float w = h * targetAspect;
+        dest = { (screenW - w) / 2.0f, 0, w, h };
+    } else {
+        float w = screenW;
+        float h = w / targetAspect;
+        dest = { 0, (screenH - h) / 2.0f, w, h };
+    }
+
+    DrawTexturePro(texture, { 0, 0, (float)width, (float)height }, dest, { 0, 0 }, 0, WHITE);
 }

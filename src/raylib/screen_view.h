@@ -29,8 +29,9 @@ private:
     uint width, height;
     std::vector<uint8_t> buffer;
     Palette palette[256];
-    Image image;
+    Color raylib_palette[256];
     Texture2D texture;
     std::recursive_mutex mutex;
     bool dirty;
+    Region update_region;
 };

@@ -43,11 +43,11 @@ void CoreRunner::Run() {
         }
 
         // Proceed for a small slice of time (e.g., 1ms)
-        // PC88::Proceed(uint us, uint clock, uint eff)
-        // clock: CPU clock in Hz (e.g. 4000000)
-        // eff: effective speed percentage (e.g. 100)
         pc88.Proceed(1000, 4000000, 100);
-        
+
+        // Trigger screen update
+        pc88.UpdateScreen();
+
         // Basic throttle to avoid 100% CPU if not needed
         // In a real implementation, we would sync with real time
         std::this_thread::sleep_for(std::chrono::microseconds(500));

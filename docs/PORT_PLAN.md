@@ -151,16 +151,17 @@ Phase 2 (2.5d) ──┬─→ Phase 3 (1.5d)  描画
 
 **成果**: 空ウィンドウが立ち上がり、`m88core` とリンクしてバックグラウンドでコアが動作することを確認。
 
-### Phase 3 — 描画橋渡し 🚧 進行中
+### Phase 3 — 描画橋渡し ✅ 完了
 
 `Draw` 抽象 (`src/common/draw.h`) を `RaylibDraw` で実装:
 
-- `Init(640, 400, 8)` → 8bpp インデックスバッファ × 2 (ダブルバッファ)
-- `Lock(uint8** ptr, int* pitch)` でコアスレッドへ書込みポインタを返す
-- `SetPalette(index, n, Palette*)` で 256 色テーブル保持
-- メインスレッド毎フレーム: `LockObj` で排他 → パレット展開で RGBA8 → `UpdateTexture` → `DrawTexturePro` (整数倍ズーム + アスペクト保持)
+- `Init(640, 400, 8)` → 8bpp インデックスバッファ。
+- `SetPalette` でコアから渡されるパレットを `Color` 配列に保持。
+- `Render()` 内で 8bpp → RGBA8888 変換し、テクスチャを更新。
+- `DrawTexturePro` を使用し、4:3 アスペクト比を維持してスケーリング表示。
+- `CoreRunner` から `UpdateScreen()` を定期的に呼び出し描画を駆動。
 
-### Phase 4 — サウンド ⏳
+### Phase 4 — サウンド 🚧 進行中
 
 `RaylibSound : public ISoundControl`:
 
