@@ -19,7 +19,7 @@ public:
     // IO Handlers
     uint IOCALL In(uint port);
 
-    void Update();
+    void Update(PC88* pc88);
     bool Init(PC88* pc88);
 
 private:

@@ -10,11 +10,11 @@
 
 int main() {
     // Initialization
-    const int screenWidth = 800;
-    const int screenHeight = 600;
+    const int screenWidth = 640;
+    const int screenHeight = 424; // 400 (emulation) + 24 (status bar)
 
-    SetConfigFlags(FLAG_WINDOW_RESIZABLE);
     InitWindow(screenWidth, screenHeight, "M88M - PC-8801 Emulator");
+    SetExitKey(0); // Disable ESC exit
 
     RaylibDraw draw;
     if (!draw.Init(640, 400, 8)) {
@@ -28,10 +28,13 @@ int main() {
 
     SetTargetFPS(60);
 
+    bool shouldExit = false;
+
     // Main game loop
-    while (!WindowShouldClose())
+    while (!WindowShouldClose() && !shouldExit)
     {
         // Update
+        core.UpdateUI(shouldExit);
         core.UpdateInput();
 
         if (IsFileDropped()) {
@@ -42,31 +45,24 @@ int main() {
             UnloadDroppedFiles(droppedFiles);
         }
 
-        if (IsKeyPressed(KEY_F1)) core.OpenDiskDialog(0);
-        if (IsKeyPressed(KEY_F2)) core.OpenDiskDialog(1);
-        if (IsKeyPressed(KEY_F10)) core.ToggleSettings();
-
         // Draw
         BeginDrawing();
             ClearBackground(BLACK);
 
-            // Draw a very obvious marker to prove raylib is drawing
-            DrawCircle(screenWidth - 30, screenHeight - 30, 10, GREEN);
-
             draw.Render();
+            
+            // Unified Overlay UI
             core.DrawUI();
 
             // ROM Error Dialog
             if (core.HasRomError()) {
-                float boxWidth = 740;
+                float boxWidth = 740; 
                 float boxHeight = 360;
                 float x = (float)GetScreenWidth()/2 - boxWidth/2;
                 float y = (float)GetScreenHeight()/2 - boxHeight/2;
 
-                DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.6f));
-                if (GuiWindowBox({ x, y, boxWidth, boxHeight }, "BIOS ROM Error")) {
-                    break;
-                }
+                DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
+                if (GuiWindowBox({ x, y, boxWidth, boxHeight }, "BIOS ROM Error")) shouldExit = true;
                 
                 std::stringstream ss(core.GetRomError());
                 std::string line;
@@ -76,18 +72,13 @@ int main() {
                     DrawText(line.c_str(), (int)x + 25, lineY, 20, textColor);
                     lineY += 25;
                 }
-                if (GuiButton({ x + boxWidth/2 - 50, y + boxHeight - 50, 100, 30 }, "Exit")) {
-                    break;
-                }
+                if (GuiButton({ x + boxWidth/2 - 50, y + boxHeight - 50, 100, 30 }, "Exit")) shouldExit = true;
             }
-
-            DrawFPS(GetScreenWidth() - 80, 10);
         EndDrawing();
     }
 
     core.Stop();
     draw.Cleanup();
     CloseWindow();
-
     return 0;
 }

@@ -91,18 +91,8 @@ void RaylibDraw::Render() {
     if (IsTextureValid(texture)) {
         float screenW = (float)GetScreenWidth();
         float screenH = (float)GetScreenHeight();
-        float targetAspect = 4.0f / 3.0f;
-        float windowAspect = screenW / screenH;
-        Rectangle dest;
-        if (windowAspect > targetAspect) {
-            float h = screenH;
-            float w = h * targetAspect;
-            dest = { (screenW - w) / 2.0f, 0, w, h };
-        } else {
-            float w = screenW;
-            float h = w / targetAspect;
-            dest = { 0, (screenH - h) / 2.0f, w, h };
-        }
+        // Emulation area is the whole window minus the 24px status bar at the bottom
+        Rectangle dest = { 0, 0, screenW, screenH - 24 };
         DrawTexturePro(texture, { 0, 0, (float)width, (float)height }, dest, { 0, 0 }, 0, WHITE);
     }
 }

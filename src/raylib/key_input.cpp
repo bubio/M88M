@@ -44,15 +44,12 @@ bool KeyInput::Init(PC88* pc88) {
     return pc88->GetBus1()->Connect(this, connectors);
 }
 
-void KeyInput::Update() {
+void KeyInput::Update(PC88* pc88) {
     memset(matrix, 0xff, sizeof(matrix));
 
     auto set_key = [&](int row, int bit, bool down) {
         if (down) matrix[row] &= ~(1 << bit);
     };
-
-    // --- Row 1 bit 7: RETURN ---
-    set_key(1, 7, IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_KP_ENTER));
 
     // --- Row 2: @, A, B, C, D, E, F, G ---
     set_key(2, 1, IsKeyDown(KEY_A));
@@ -127,6 +124,9 @@ void KeyInput::Update() {
     set_key(0xa, 2, IsKeyDown(KEY_LEFT));
     set_key(0xa, 3, IsKeyDown(KEY_INSERT)); // HELP
     set_key(0xa, 4, IsKeyDown(KEY_F12));    // COPY
+    
+    // --- Row 1: Return (Enter) ---
+    set_key(1, 2, IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_KP_ENTER));
 }
 
 const Device::Descriptor KeyInput::descriptor = { indef, nullptr };

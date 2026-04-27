@@ -2,7 +2,7 @@
 //	PC-8801 emulator
 //	Copyright (C) cisc 1999.
 // ---------------------------------------------------------------------------
-//	ƒfƒoƒCƒX‚ÆisŠÇ—
+//	ï¿½fï¿½oï¿½Cï¿½Xï¿½Æiï¿½sï¿½Ç—ï¿½
 // ---------------------------------------------------------------------------
 //	$Id: pc88.cpp,v 1.53 2003/09/28 14:35:35 cisc Exp $
 
@@ -38,7 +38,7 @@
 using namespace PC8801;
 
 // ---------------------------------------------------------------------------
-//	\’zE”jŠü
+//	ï¿½\ï¿½zï¿½Eï¿½jï¿½ï¿½
 //
 PC88::PC88()
   :	cpu1(DEV_ID('C', 'P', 'U', '1')), cpu2(DEV_ID('C', 'P', 'U', '2')),	
@@ -74,7 +74,7 @@ PC88::~PC88()
 
 
 // ---------------------------------------------------------------------------
-//	‰Šú‰»
+//	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //
 bool PC88::Init(Draw* _draw, DiskManager* disk, TapeManager* tape)
 {
@@ -121,8 +121,8 @@ void PC88::DeInit()
 }
 
 // ---------------------------------------------------------------------------
-//	Ž·s
-//	1 tick = 10ƒÊs
+//	ï¿½ï¿½ï¿½s
+//	1 tick = 10ï¿½ï¿½s
 //
 int PC88::Proceed(uint ticks, uint clk, uint ecl)
 {
@@ -132,7 +132,7 @@ int PC88::Proceed(uint ticks, uint clk, uint ecl)
 }
 
 // ---------------------------------------------------------------------------
-//	ŽÀs
+//	ï¿½ï¿½ï¿½s
 //
 int PC88::Execute(int ticks)
 {
@@ -156,7 +156,7 @@ int PC88::Execute(int ticks)
 }
 
 // ---------------------------------------------------------------------------
-//	ŽÀsƒNƒƒbƒN”•ÏX
+//	ï¿½ï¿½ï¿½sï¿½Nï¿½ï¿½ï¿½bï¿½Nï¿½ï¿½ï¿½ÏX
 //
 void PC88::Shorten(int ticks)
 {
@@ -179,7 +179,7 @@ void PC88::VSync()
 }
 
 // ---------------------------------------------------------------------------
-//	‰æ–ÊXV
+//	ï¿½ï¿½ÊXï¿½V
 //
 void PC88::UpdateScreen(bool refresh)
 {
@@ -231,7 +231,7 @@ void PC88::UpdateScreen(bool refresh)
 }
 
 // ---------------------------------------------------------------------------
-//	ƒŠƒZƒbƒg
+//	ï¿½ï¿½ï¿½Zï¿½bï¿½g
 //
 void PC88::Reset()
 {
@@ -240,7 +240,7 @@ void PC88::Reset()
 		cd = (base->GetBasicMode() & 0x40) != 0;
 
 	base->SetFDBoot(cd || diskmgr->GetCurrentDisk(0) >= 0);
-	base->Reset();		// Switch ŠÖŒW‚ÌXV
+	base->Reset();		// Switch ï¿½ÖŒWï¿½ÌXï¿½V
 
 	bool isv2 = (bus1.In(0x31) & 0x40) != 0;
 	bool isn80v2 = (base->GetBasicMode() == Config::N80V2);
@@ -285,7 +285,7 @@ void PC88::Reset()
 }
 
 // ---------------------------------------------------------------------------
-//	ƒfƒoƒCƒXÚ‘±
+//	ï¿½fï¿½oï¿½Cï¿½Xï¿½Ú‘ï¿½
 //
 bool PC88::ConnectDevices()
 {
@@ -587,7 +587,7 @@ bool PC88::ConnectDevices()
 }
 
 // ---------------------------------------------------------------------------
-//	ƒfƒoƒCƒXÚ‘±(ƒTƒuCPU)
+//	ï¿½fï¿½oï¿½Cï¿½Xï¿½Ú‘ï¿½(ï¿½Tï¿½uCPU)
 //
 bool PC88::ConnectDevices2()
 {
@@ -634,7 +634,7 @@ bool PC88::ConnectDevices2()
 }
 
 // ---------------------------------------------------------------------------
-//	Ý’è”½‰f
+//	ï¿½Ý’è”½ï¿½f
 //
 void PC88::ApplyConfig(Config* cfg)
 {
@@ -675,7 +675,7 @@ void PC88::ApplyConfig(Config* cfg)
 }
 
 // ---------------------------------------------------------------------------
-//	‰¹—Ê•ÏX
+//	ï¿½ï¿½ï¿½Ê•ÏX
 //
 void PC88::SetVolume(PC8801::Config* cfg)
 {
@@ -684,7 +684,7 @@ void PC88::SetVolume(PC8801::Config* cfg)
 }
 
 // ---------------------------------------------------------------------------
-//	1 ƒtƒŒ[ƒ€•ª‚ÌŽžŠÔ‚ð‹‚ß‚éD
+//	1 ï¿½tï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½ï¿½ï¿½ÌŽï¿½ï¿½Ô‚ï¿½ï¿½ï¿½ï¿½ß‚ï¿½D
 //
 int PC88::GetFramePeriod()
 {
@@ -692,7 +692,7 @@ int PC88::GetFramePeriod()
 }
 
 // ---------------------------------------------------------------------------
-//	‰¼‘zŽžŠÔ‚ÆŒ»ŽÀŽžŠÔ‚Ì“¯Šú‚ðŽæ‚Á‚½‚Æ‚«‚ÉŒÄ‚Î‚ê‚é
+//	ï¿½ï¿½ï¿½zï¿½ï¿½ï¿½Ô‚ÆŒï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô‚Ì“ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ‚ï¿½ï¿½ÉŒÄ‚Î‚ï¿½ï¿½
 //
 void PC88::TimeSync()
 {
@@ -707,4 +707,16 @@ bool PC88::IsN80Supported()
 bool PC88::IsN80V2Supported()
 {
 	return mem1->IsN80V2Ready();
+}
+
+bool PC88::SaveShapshot(const char* filename)
+{
+    // Snapshot implementation (stub for now, but linked)
+    return false;
+}
+
+bool PC88::LoadShapshot(const char* filename)
+{
+    // Snapshot implementation (stub for now, but linked)
+    return false;
 }

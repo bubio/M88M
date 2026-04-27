@@ -1,34 +1,62 @@
 #include "config.h"
+#include "paths.h"
+#include "common/file.h"
 #include <cstring>
+#include <sys/stat.h>
 
 namespace Config {
 
 static PC8801::Config g_config;
 
+static std::string GetConfigFilePath() {
+    std::string dir = Paths::GetConfigDir();
+    struct stat st;
+    if (stat(dir.c_str(), &st) != 0) {
+        mkdir(dir.c_str(), 0755);
+    }
+    return dir + "/config.bin";
+}
+
 void Load(PC8801::Config& cfg) {
     memset(&cfg, 0, sizeof(cfg));
     
-    cfg.basicmode = PC8801::Config::N88V2; // V2 Mode (SR or later)
+    // Set defaults first
+    cfg.basicmode = PC8801::Config::N88V2;
     cfg.clock = 4; // 4MHz
-    cfg.speed = 100;
+    cfg.speed = 100; // 100%
     cfg.mainsubratio = 1;
     cfg.cpumode = PC8801::Config::msauto;
-    
-    // M88オリジナルのデフォルト値 (1829 = 0x725)
-    // M88オリジナルのデフォルト (0x725)
     cfg.dipsw = 1829;
-    
     cfg.flags = PC8801::Config::enableopna | 
                 PC8801::Config::subcpucontrol |
                 PC8801::Config::precisemixing |
                 PC8801::Config::mixsoundalways;
-    
     cfg.flag2 = PC8801::Config::usefmclock;
-    
-    cfg.volfm = 64; cfg.volssg = 64; cfg.voladpcm = 64; cfg.volrhythm = 64;
+    cfg.volfm = 64; cfg.volssg = 64; cfg.voladpcm = 64; cfg.volrhythm = 64; cfg.volbd = 64;
+
+    // Try to load from file
+    std::string path = GetConfigFilePath();
+    FileIO file;
+    if (file.Open(path.c_str(), FileIO::open | FileIO::readonly)) {
+        file.Read(&cfg, sizeof(cfg));
+        file.Close();
+    } else {
+        // Save defaults if file doesn't exist
+        Save(cfg);
+    }
 }
 
-void Save(const PC8801::Config& cfg) {}
+void Save(const PC8801::Config& cfg) {
+    std::string path = GetConfigFilePath();
+    FileIO file;
+    if (file.CreateNew(path.c_str())) {
+        file.Write(&cfg, sizeof(cfg));
+        file.Close();
+        fprintf(stderr, "[Config] Saved to %s\n", path.c_str());
+    } else {
+        fprintf(stderr, "[Config] Failed to create save file: %s\n", path.c_str());
+    }
+}
 
 PC8801::Config& Get() {
     static bool initialized = false;
