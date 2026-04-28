@@ -58,8 +58,7 @@ void RaylibDraw::DrawScreen(const Region& region) {
 void RaylibDraw::SetPalette(uint index, uint nents, const Palette* pal) {
     std::lock_guard<std::recursive_mutex> lock(mutex);
     for (uint i = 0; i < nents && (index + i) < 256; i++) {
-        auto s3to8 = [](uint8 v) -> uint8 { return (v & 0x07) * 255 / 7; };
-        raylib_palette[index + i] = { s3to8(pal[i].red), s3to8(pal[i].green), s3to8(pal[i].blue), 255 };
+        raylib_palette[index + i] = { pal[i].red, pal[i].green, pal[i].blue, 255 };
     }
     dirty = true;
 }

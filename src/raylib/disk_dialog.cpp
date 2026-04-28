@@ -279,6 +279,18 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         }
 
         pY += rowH;
+        bool isDigi = (cfg.flags & PC8801::Config::digitalpalette) != 0;
+        bool oldDigi = isDigi;
+        GuiCheckBox({ x + 150, pY, 20, 20 }, "Digital Monitor (8 Colors)", &isDigi);
+        if (isDigi != oldDigi) {
+            if (isDigi) cfg.flags |= PC8801::Config::digitalpalette;
+            else cfg.flags &= ~PC8801::Config::digitalpalette;
+            changed = true;
+            // Palette change is critical but usually doesn't need full reset, 
+            // though core runner will apply it.
+        }
+
+        pY += rowH;
         GuiLabel({ x + 20, pY, 300, 20 }, "CRT Filter: Coming Soon!");
     }
     else if (activeTab == 3) { // Input
