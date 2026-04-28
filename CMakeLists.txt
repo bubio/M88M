@@ -120,6 +120,7 @@ if(RAYLIB_FRONT_SRC)
 
     if(APPLE)
         target_link_libraries(m88_raylib PRIVATE
+            iconv
             "-framework Cocoa"
             "-framework IOKit"
             "-framework CoreVideo"

@@ -7,6 +7,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <unistd.h>
 
 int main() {
     // Initialization
@@ -16,6 +17,29 @@ int main() {
     InitWindow(screenWidth, screenHeight, "M88M - PC-8801 Emulator");
     SetExitKey(0); // Disable ESC exit
 
+    // Load Japanese Font with explicit numeric codepoint ranges
+    std::vector<int> cp;
+    for (int i = 32; i < 127; i++) cp.push_back(i);             // ASCII
+    for (int i = 0x3000; i <= 0x30FF; i++) cp.push_back(i);    // Symbols, Hiragana, Katakana
+    for (int i = 0xFF61; i <= 0xFF9F; i++) cp.push_back(i);    // Half-width Katakana
+    for (int i = 0x4E00; i <= 0x6000; i++) cp.push_back(i);    // Kanji
+
+    // Prefer TTF over TTC for better compatibility with raylib LoadFontEx
+    const char* fontPaths[] = {
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        "/Library/Fonts/Arial Unicode.ttf",
+        "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
+        "/System/Library/Fonts/Cache/Hiragino Sans GB.ttc"
+    };
+    
+    Font fontJp = { 0 };
+    for (const char* path : fontPaths) {
+        if (access(path, F_OK) == 0) {
+            fontJp = LoadFontEx(path, 32, cp.data(), (int)cp.size());
+            if (IsFontValid(fontJp)) break;
+        }
+    }
+    
     RaylibDraw draw;
     if (!draw.Init(640, 400, 8)) {
         std::cerr << "Failed to initialize draw" << std::endl;
@@ -24,6 +48,10 @@ int main() {
 
     CoreRunner core;
     core.Init(&draw);
+    if (IsFontValid(fontJp)) {
+        core.GetUIManager()->SetJPFont(fontJp);
+        SetTextureFilter(fontJp.texture, TEXTURE_FILTER_BILINEAR);
+    }
     core.Start();
 
     SetTargetFPS(60);

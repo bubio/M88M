@@ -29,6 +29,7 @@ public:
 
     PC88* GetPC88() { return &pc88; }
     DiskManager* GetDiskManager() { return &diskmgr; }
+    UIManager* GetUIManager() { return &uiManager; }
     bool HasRomError() const { return !romError.empty(); }
     const std::string& GetRomError() const { return romError; }
     void ClearRomError() { romError.clear(); }

@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <unistd.h>
 #include <sys/stat.h>
+#include <iconv.h>
+#include <vector>
 
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
@@ -67,6 +69,45 @@ std::string GetConfigDir() {
         EnsureDirectory(path);
     }
     return path;
+}
+
+std::string SJIStoUTF8(const std::string& strOrg) {
+    if (strOrg.empty()) return "";
+
+    const char* pszEncSrc = "CP932";
+    const char* pszEncDst = "UTF-8";
+
+    iconv_t hConv = iconv_open(pszEncDst, pszEncSrc);
+    if (hConv == (iconv_t)-1) {
+        hConv = iconv_open(pszEncDst, "SHIFT-JIS");
+    }
+    
+    if (hConv == (iconv_t)-1) return strOrg;
+
+    std::vector<char> vectConv(strOrg.length() * 4 + 16, 0);
+    char* pszSrc = const_cast<char*>(strOrg.c_str());
+    size_t nSrcLeft = strOrg.length();
+    char* pszDst = &vectConv[0];
+    size_t nDstLeft = vectConv.size();
+
+    while (nSrcLeft > 0) {
+        size_t nResult = iconv(hConv, &pszSrc, &nSrcLeft, &pszDst, &nDstLeft);
+        if (nResult != (size_t)-1) {
+            continue;
+        }
+        if (errno == E2BIG) {
+            size_t nUsed = vectConv.size() - nDstLeft;
+            vectConv.resize(vectConv.size() * 2 + 16, 0);
+            pszDst = &vectConv[0] + nUsed;
+            nDstLeft = vectConv.size() - nUsed;
+            continue;
+        }
+        break;
+    }
+    
+    std::string result(&vectConv[0], vectConv.size() - nDstLeft);
+    iconv_close(hConv);
+    return result;
 }
 
 } // namespace Paths

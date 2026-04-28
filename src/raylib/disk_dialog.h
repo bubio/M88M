@@ -1,5 +1,6 @@
 #pragma once
 
+#include "raylib.h"
 #include "diskmgr.h"
 #include "pc88/config.h"
 #include <string>
@@ -14,6 +15,7 @@ public:
     void Draw(DiskManager* diskmgr, PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner, bool& shouldExit);
     void OpenNativeDialog(DiskManager* diskmgr, int drive);
     void OpenBothDrives(DiskManager* diskmgr);
+    void SetJPFont(Font font) { fontJp = font; }
 
     bool IsMenuOpen() const { return showMenu; }
     void ToggleMenu() { showMenu = !showMenu; if (!showMenu) showSettings = false; }
@@ -37,4 +39,5 @@ private:
     bool windowScaleEdit;
     
     std::string lastOpenedPath[2];
+    Font fontJp;
 };

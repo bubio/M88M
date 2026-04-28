@@ -4,10 +4,16 @@
 #include "nfd.h"
 #include "config.h"
 #include "pc88.h"
+#include "paths.h"
 #include "status.h"
 #include "core_runner.h"
 #include <string>
 #include <vector>
+
+static bool ContainsJapanese(const std::string& s) {
+    for (unsigned char c : s) if (c >= 0x80) return true;
+    return false;
+}
 
 UIManager::UIManager() :
     showMenu(false), showSettings(false), selectingDiskForDrive(-1), activeTab(0),
@@ -69,11 +75,26 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit)
 
     for (int i = 0; i < 2; i++) {
         int diskIdx = diskmgr->GetCurrentDisk(i);
-        std::string label = (diskIdx >= 0) ? diskmgr->GetImageTitle(i, diskIdx) : (std::string("Drive ") + std::to_string(i + 1) + ": Empty");
+        std::string label;
+        if (diskIdx >= 0) {
+            label = Paths::SJIStoUTF8(diskmgr->GetImageTitle(i, diskIdx));
+        } else {
+            label = std::string("Drive ") + std::to_string(i + 1) + ": Empty";
+        }
 
-        // Drive label / open dialog
+        // Use Japanese font if needed, otherwise default
+        bool isJp = ContainsJapanese(label);
+        if (isJp && IsFontValid(fontJp)) {
+            GuiSetFont(fontJp);
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 15); // Moderate size for JP
+        }
+
         if (GuiButton({ x + 10, btnY, width - 90, btnH }, label.c_str())) OpenNativeDialog(diskmgr, i);
 
+        if (isJp) {
+            GuiSetFont(GetFontDefault());
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 10); // Restore default
+        }
         // Disk selection button (only if multiple disks)
         bool hasMultiple = diskmgr->GetNumDisks(i) > 1;
         if (GuiButton({ x + width - 75, btnY, 30, btnH }, hasMultiple ? GuiIconText(ICON_FILE_COPY, NULL) : GuiIconText(ICON_FILE_OPEN, NULL))) {
@@ -128,10 +149,9 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
 
     for (int i = 0; i < numDisks && i < 8; i++) {
         const char* dTitle = diskmgr->GetImageTitle(selectingDiskForDrive, i);
-        std::string label = std::to_string(i + 1) + ": " + (dTitle ? dTitle : "(No Title)");
+        std::string label = std::to_string(i + 1) + ": " + (dTitle ? Paths::SJIStoUTF8(dTitle) : "(No Title)");
 
-        if (GuiButton({ x + 10, btnY, width - 20, btnH }, label.c_str())) {
-            diskmgr->Mount(selectingDiskForDrive, lastOpenedPath[selectingDiskForDrive].c_str(), false, i, false);
+        if (GuiButton({ x + 10, btnY, width - 20, btnH }, label.c_str())) {            diskmgr->Mount(selectingDiskForDrive, lastOpenedPath[selectingDiskForDrive].c_str(), false, i, false);
             selectingDiskForDrive = -1;
         }
         btnY += 30;
@@ -247,8 +267,19 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         bool fs = isFullscreen, oldFs = fs;
         GuiCheckBox({ x + 150, pY, 20, 20 }, "Fullscreen", &fs);
         if (fs != oldFs) { isFullscreen = fs; ToggleFullscreen(); }
+        
         pY += rowH;
-        GuiLabel({ x + 20, pY, 300, 20 }, "CRT Filter / Scanlines: Coming Soon!");
+        bool sl = (cfg.flag2 & PC8801::Config::scanline) != 0;
+        bool oldSl = sl;
+        GuiCheckBox({ x + 150, pY, 20, 20 }, "Scanlines", &sl);
+        if (sl != oldSl) {
+            if (sl) cfg.flag2 |= PC8801::Config::scanline;
+            else cfg.flag2 &= ~PC8801::Config::scanline;
+            changed = true;
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 300, 20 }, "CRT Filter: Coming Soon!");
     }
     else if (activeTab == 3) { // Input
         GuiLabel({ x + 20, pY, 350, 20 }, "Keyboard Layout: JIS (Standard)");
@@ -280,16 +311,34 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     float sH = (float)GetScreenHeight();
     GuiStatusBar({ 0, sH - 24, sW, 24 }, "");
     int d0 = diskmgr->GetCurrentDisk(0);
-    const char* t0 = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : "Empty";
+    const char* t0_sjis = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : "Empty";
+    std::string t0 = (d0 >= 0) ? Paths::SJIStoUTF8(t0_sjis) : "Empty";
     Color l0 = (statusdisplay.GetFDState(0) & 1) ? RED : DARKGRAY;
     DrawCircle(15, (int)sH - 12, 4, l0);
-    DrawText(TextFormat("FDD1: %s", t0), 25, (int)sH - 18, 10, DARKGRAY);
+    
+    // Draw label in default font
+    DrawText("FDD1:", 25, (int)sH - 18, 10, DARKGRAY);
+    // Draw title (possibly in JP font)
+    if (ContainsJapanese(t0) && IsFontValid(fontJp)) {
+        DrawTextEx(fontJp, t0.c_str(), { 60, sH - 18 }, 14, 1, DARKGRAY);
+    } else {
+        DrawText(t0.c_str(), 60, (int)sH - 18, 10, DARKGRAY);
+    }
 
     int d1 = diskmgr->GetCurrentDisk(1);
-    const char* t1 = (d1 >= 0) ? diskmgr->GetImageTitle(1, d1) : "Empty";
+    const char* t1_sjis = (d1 >= 0) ? diskmgr->GetImageTitle(1, d1) : "Empty";
+    std::string t1 = (d1 >= 0) ? Paths::SJIStoUTF8(t1_sjis) : "Empty";
     Color l1 = (statusdisplay.GetFDState(1) & 1) ? RED : DARKGRAY;
     DrawCircle(215, (int)sH - 12, 4, l1);
-    DrawText(TextFormat("FDD2: %s", t1), 225, (int)sH - 18, 10, DARKGRAY);
+    
+    // Draw label in default font
+    DrawText("FDD2:", 225, (int)sH - 18, 10, DARKGRAY);
+    // Draw title (possibly in JP font)
+    if (ContainsJapanese(t1) && IsFontValid(fontJp)) {
+        DrawTextEx(fontJp, t1.c_str(), { 260, sH - 18 }, 14, 1, DARKGRAY);
+    } else {
+        DrawText(t1.c_str(), 260, (int)sH - 18, 10, DARKGRAY);
+    }
 
     DrawText(TextFormat("%d FPS", GetFPS()), (int)sW - 80, (int)sH - 18, 10, DARKGRAY);
 }
