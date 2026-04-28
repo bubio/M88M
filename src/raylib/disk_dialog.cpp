@@ -18,7 +18,7 @@ static bool ContainsJapanese(const std::string& s) {
 UIManager::UIManager() :
     showMenu(false), showSettings(false), selectingDiskForDrive(-1), activeTab(0),
     windowScale(0), isFullscreen(false),
-    basicModeEdit(false), windowScaleEdit(false)
+    basicModeEdit(false), windowScaleEdit(false), resetPending(false)
 {
     lastOpenedPath[0] = "";
     lastOpenedPath[1] = "";
@@ -32,14 +32,14 @@ UIManager::~UIManager() {
 void UIManager::Init() {}
 
 void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
-    if (IsKeyPressed(KEY_F12)) ToggleMenu();
+    if (IsKeyPressed(KEY_F12)) ToggleMenu(coreRunner);
     if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) && !showMenu) {
-        if (GetMouseY() < GetScreenHeight() - 24) ToggleMenu();
+        if (GetMouseY() < GetScreenHeight() - 24) ToggleMenu(coreRunner);
     }
     if (showMenu && IsKeyPressed(KEY_ESCAPE)) {
         if (selectingDiskForDrive != -1) selectingDiskForDrive = -1;
         else if (showSettings) showSettings = false;
-        else ToggleMenu();
+        else ToggleMenu(coreRunner);
     }
 }
 
@@ -50,17 +50,30 @@ void UIManager::Draw(DiskManager* diskmgr, PC8801::Config& cfg, PC88* pc88, Core
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.4f));
         if (selectingDiskForDrive != -1) DrawDiskSelector(diskmgr);
         else if (showSettings) DrawSettings(cfg, pc88, coreRunner);
-        else DrawMainMenu(diskmgr, pc88, shouldExit);
+        else DrawMainMenu(diskmgr, pc88, shouldExit, coreRunner);
     }
 }
 
-void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit) {
+void UIManager::ToggleMenu(CoreRunner* coreRunner) {
+    showMenu = !showMenu;
+    if (!showMenu) {
+        showSettings = false;
+        // If a critical setting was changed while the menu was open, 
+        // apply the config with a reset request now that the menu is closing.
+        if (resetPending && coreRunner) {
+            coreRunner->RequestConfigApply(Config::Get(), true);
+            resetPending = false;
+        }
+    }
+}
+
+void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit, CoreRunner* coreRunner) {
     float width = 280;
-    float height = 370; // Slightly increased for padding
+    float height = 380; 
     float x = (float)GetScreenWidth() / 2 - width / 2;
     float y = (float)GetScreenHeight() / 2 - height / 2;
 
-    if (GuiWindowBox({ x, y, width, height }, "M88M Main Menu")) ToggleMenu();
+    if (GuiWindowBox({ x, y, width, height }, "M88M Main Menu")) ToggleMenu(coreRunner);
 
     float btnY = y + 45;
     float btnH = 26;
@@ -70,22 +83,20 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit)
     if (!lastOpenedPath[0].empty()) groupTitle = GetFileName(lastOpenedPath[0].c_str());
     else if (!lastOpenedPath[1].empty()) groupTitle = GetFileName(lastOpenedPath[1].c_str());
 
-    // Switch to JP font if filename has multi-byte chars
     bool groupJp = ContainsJapanese(groupTitle);
     if (groupJp && IsFontValid(fontJp)) {
         GuiSetFont(fontJp);
         GuiSetStyle(DEFAULT, TEXT_SIZE, 15);
     }
-
-    GuiGroupBox({ x + 5, btnY - 5, width - 10, 120 }, groupTitle.c_str());
-
+    GuiGroupBox({ x + 10, btnY - 5, width - 20, 115 }, groupTitle.c_str());
     if (groupJp) {
         GuiSetFont(GetFontDefault());
         GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
     }
+
     // Drive 1&2 button
-    if (GuiButton({ x + 15, btnY + 10, width - 70, btnH }, "Drive 1&2 (Dual Mount)...")) OpenBothDrives(diskmgr);
-    if (GuiButton({ x + width - 45, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
+    if (GuiButton({ x + 20, btnY + 10, width - 85, btnH }, "Drive 1&2 (Dual Mount)...")) OpenBothDrives(diskmgr);
+    if (GuiButton({ x + width - 50, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
         diskmgr->Unmount(0); diskmgr->Unmount(1);
         lastOpenedPath[0] = lastOpenedPath[1] = "";
     }
@@ -100,14 +111,13 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit)
             label = std::string("Drive ") + std::to_string(i + 1) + ": Empty";
         }
 
-        // Use Japanese font if needed, otherwise default
         bool isJp = ContainsJapanese(label);
         if (isJp && IsFontValid(fontJp)) {
             GuiSetFont(fontJp);
             GuiSetStyle(DEFAULT, TEXT_SIZE, 15);
         }
 
-        if (GuiButton({ x + 15, btnY + 10, width - 100, btnH }, label.c_str())) OpenNativeDialog(diskmgr, i);
+        if (GuiButton({ x + 20, btnY + 10, width - 110, btnH }, label.c_str())) OpenNativeDialog(diskmgr, i);
 
         if (isJp) {
             GuiSetFont(GetFontDefault());
@@ -115,27 +125,29 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit)
         }
 
         bool hasMultiple = diskmgr->GetNumDisks(i) > 1;
-        if (GuiButton({ x + width - 80, btnY + 10, 30, btnH }, hasMultiple ? GuiIconText(ICON_FILE_COPY, NULL) : GuiIconText(ICON_FILE_OPEN, NULL))) {
+        if (GuiButton({ x + width - 85, btnY + 10, 30, btnH }, hasMultiple ? GuiIconText(ICON_FILE_COPY, NULL) : GuiIconText(ICON_FILE_OPEN, NULL))) {
             if (hasMultiple) selectingDiskForDrive = i;
             else OpenNativeDialog(diskmgr, i);
         }
 
-        if (GuiButton({ x + width - 45, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
+        if (GuiButton({ x + width - 50, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
             diskmgr->Unmount(i);
             lastOpenedPath[i] = "";
         }
         btnY += 34;
     }
 
-    btnY += 30; // Space after group box
-    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset PC-8801")) { pc88->Reset(); ToggleMenu(); }
+    btnY += 35; // Space after group box
+    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset PC-8801")) { pc88->Reset(); ToggleMenu(coreRunner); }
     btnY += 34;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Settings")) showSettings = true;
     btnY += 34;
-    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Resume")) ToggleMenu();
+    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Resume")) ToggleMenu(coreRunner);
 
     if (GuiButton({ x + 10, y + height - 40, width - 20, btnH }, "Quit M88M")) shouldExit = true;
-}void UIManager::OpenBothDrives(DiskManager* diskmgr) {
+}
+
+void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     nfdchar_t *outPath = NULL;
     nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
     if (NFD_OpenDialog(&outPath, filterItem, 1, NULL) == NFD_OKAY) {
@@ -167,7 +179,8 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
         const char* dTitle = diskmgr->GetImageTitle(selectingDiskForDrive, i);
         std::string label = std::to_string(i + 1) + ": " + (dTitle ? Paths::SJIStoUTF8(dTitle) : "(No Title)");
 
-        if (GuiButton({ x + 10, btnY, width - 20, btnH }, label.c_str())) {            diskmgr->Mount(selectingDiskForDrive, lastOpenedPath[selectingDiskForDrive].c_str(), false, i, false);
+        if (GuiButton({ x + 10, btnY, width - 20, btnH }, label.c_str())) {
+            diskmgr->Mount(selectingDiskForDrive, lastOpenedPath[selectingDiskForDrive].c_str(), false, i, false);
             selectingDiskForDrive = -1;
         }
         btnY += 30;
@@ -178,11 +191,11 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
 
 void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRunner) {
     float width = 520;
-    float height = 380;
+    float height = 390;
     float x = (float)GetScreenWidth() / 2 - width / 2;
     float y = (float)GetScreenHeight() / 2 - height / 2;
 
-    if (GuiWindowBox({ x, y, width, height }, "Settings")) ToggleMenu();
+    if (GuiWindowBox({ x, y, width, height }, "Settings")) ToggleMenu(coreRunner);
 
     float tabW = (width - 20) / 5;
     GuiToggleGroup({ x + 10, y + 35, tabW, 26 }, "System;Audio;Video;Input;About", &activeTab);
@@ -203,10 +216,10 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
 
         if (new_is4 && !is4) { 
             cfg.clock = 4; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; changed = true; 
-            coreRunner->RequestConfigApply(cfg, true); // Reset required
+            resetPending = true;
         } else if (new_is8 && !is8) {
             cfg.clock = 8; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; changed = true;
-            coreRunner->RequestConfigApply(cfg, true); // Reset required
+            resetPending = true;
         }
 
         pY += rowH;
@@ -225,7 +238,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
                 else if (modeIndex == 2) cfg.basicmode = PC8801::Config::N80;
                 else if (modeIndex == 3) cfg.basicmode = PC8801::Config::N80V2;
                 changed = true;
-                coreRunner->RequestConfigApply(cfg, true); // Reset required
+                resetPending = true;
             }
         }
         pY += rowH + 4;
@@ -303,8 +316,6 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             if (isDigi) cfg.flags |= PC8801::Config::digitalpalette;
             else cfg.flags &= ~PC8801::Config::digitalpalette;
             changed = true;
-            // Palette change is critical but usually doesn't need full reset, 
-            // though core runner will apply it.
         }
 
         pY += rowH;
@@ -337,34 +348,27 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     }
 
     if (changed) {
-        // Only settings that haven't already requested a reset will fall through here.
-        // We use the current changed flag to save the config and apply non-critical changes.
         coreRunner->RequestConfigApply(cfg, false); 
         Config::Save(cfg);
     }
     if (GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back")) showSettings = false;
 }
+
 void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     float sW = (float)GetScreenWidth();
     float sH = (float)GetScreenHeight();
     GuiStatusBar({ 0, sH - 24, sW, 24 }, "");
     
-    // Y position for baseline alignment
-    // Bar is 24px, so center is sH - 12. 
-    // Small text (10px) baseline should be around sH - 8.
-    // Circle (4px radius) center should be sH - 12.
     float centerY = sH - 12.0f;
     float textY = sH - 17.0f; 
 
     int d0 = diskmgr->GetCurrentDisk(0);
     const char* t0_sjis = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : "Empty";
     std::string t0 = (d0 >= 0) ? Paths::SJIStoUTF8(t0_sjis) : "Empty";
-    Color l0 = (statusdisplay.GetFDState(0) & 1) ? RED : Color{ 60, 20, 20, 255 }; // Real hardware dark red
+    Color l0 = (statusdisplay.GetFDState(0) & 1) ? RED : Color{ 60, 20, 20, 255 }; 
     DrawCircle(15, (int)centerY, 4, l0);
     
-    // Draw label in default font
     DrawText("FDD1:", 25, (int)textY, 10, DARKGRAY);
-    // Draw title (possibly in JP font)
     if (ContainsJapanese(t0) && IsFontValid(fontJp)) {
         DrawTextEx(fontJp, t0.c_str(), { 60, sH - 18 }, 14, 1, DARKGRAY);
     } else {
@@ -374,17 +378,29 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     int d1 = diskmgr->GetCurrentDisk(1);
     const char* t1_sjis = (d1 >= 0) ? diskmgr->GetImageTitle(1, d1) : "Empty";
     std::string t1 = (d1 >= 0) ? Paths::SJIStoUTF8(t1_sjis) : "Empty";
-    Color l1 = (statusdisplay.GetFDState(1) & 1) ? RED : Color{ 60, 20, 20, 255 }; // Real hardware dark red
+    Color l1 = (statusdisplay.GetFDState(1) & 1) ? RED : Color{ 60, 20, 20, 255 }; 
     DrawCircle(215, (int)centerY, 4, l1);
     
-    // Draw label in default font
     DrawText("FDD2:", 225, (int)textY, 10, DARKGRAY);
-    // Draw title (possibly in JP font)
     if (ContainsJapanese(t1) && IsFontValid(fontJp)) {
         DrawTextEx(fontJp, t1.c_str(), { 260, sH - 18 }, 14, 1, DARKGRAY);
     } else {
         DrawText(t1.c_str(), 260, (int)textY, 10, DARKGRAY);
     }
+
+    const auto& cfg = Config::Get();
+    std::string modeStr = "Unknown";
+    switch (cfg.basicmode) {
+        case PC8801::Config::N88V1:  modeStr = "N88 V1"; break;
+        case PC8801::Config::N88V2:  modeStr = "N88 V2"; break;
+        case PC8801::Config::N80:    modeStr = "N80 V1"; break;
+        case PC8801::Config::N80V2:  modeStr = "N80 V2"; break;
+        case PC8801::Config::N88V2CD: modeStr = "N88 V2CD"; break;
+        default: break;
+    }
+    
+    std::string infoStr = TextFormat("[%s] %dMHz", modeStr.c_str(), cfg.clock);
+    DrawText(infoStr.c_str(), (int)sW - 200, (int)textY, 10, DARKGRAY);
 
     DrawText(TextFormat("%d FPS", GetFPS()), (int)sW - 80, (int)textY, 10, DARKGRAY);
 }

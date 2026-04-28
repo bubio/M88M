@@ -18,10 +18,10 @@ public:
     void SetJPFont(Font font) { fontJp = font; }
 
     bool IsMenuOpen() const { return showMenu; }
-    void ToggleMenu() { showMenu = !showMenu; if (!showMenu) showSettings = false; }
+    void ToggleMenu(class CoreRunner* coreRunner = nullptr);
 
 private:
-    void DrawMainMenu(DiskManager* diskmgr, class PC88* pc88, bool& shouldExit);
+    void DrawMainMenu(DiskManager* diskmgr, class PC88* pc88, bool& shouldExit, class CoreRunner* coreRunner);
     void DrawSettings(PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner);
     void DrawDiskSelector(DiskManager* diskmgr);
     void DrawStatusBar(DiskManager* diskmgr);
@@ -40,4 +40,5 @@ private:
     
     std::string lastOpenedPath[2];
     Font fontJp;
+    bool resetPending;
 };
