@@ -23,22 +23,14 @@ uint IOCALL KeyInput::In(uint port) {
 
 bool KeyInput::Init(PC88* pc88) {
     static const IIOBus::Connector connectors[] = {
-        { 0x00, IIOBus::portin, 0 },
-        { 0x01, IIOBus::portin, 0 },
-        { 0x02, IIOBus::portin, 0 },
-        { 0x03, IIOBus::portin, 0 },
-        { 0x04, IIOBus::portin, 0 },
-        { 0x05, IIOBus::portin, 0 },
-        { 0x06, IIOBus::portin, 0 },
-        { 0x07, IIOBus::portin, 0 },
-        { 0x08, IIOBus::portin, 0 },
-        { 0x09, IIOBus::portin, 0 },
-        { 0x0a, IIOBus::portin, 0 },
-        { 0x0b, IIOBus::portin, 0 },
-        { 0x0c, IIOBus::portin, 0 },
-        { 0x0d, IIOBus::portin, 0 },
-        { 0x0e, IIOBus::portin, 0 },
-        { 0x0f, IIOBus::portin, 0 },
+        { 0x00, IIOBus::portin, 0 }, { 0x01, IIOBus::portin, 0 },
+        { 0x02, IIOBus::portin, 0 }, { 0x03, IIOBus::portin, 0 },
+        { 0x04, IIOBus::portin, 0 }, { 0x05, IIOBus::portin, 0 },
+        { 0x06, IIOBus::portin, 0 }, { 0x07, IIOBus::portin, 0 },
+        { 0x08, IIOBus::portin, 0 }, { 0x09, IIOBus::portin, 0 },
+        { 0x0a, IIOBus::portin, 0 }, { 0x0b, IIOBus::portin, 0 },
+        { 0x0c, IIOBus::portin, 0 }, { 0x0d, IIOBus::portin, 0 },
+        { 0x0e, IIOBus::portin, 0 }, { 0x0f, IIOBus::portin, 0 },
         { 0, 0, 0 }
     };
     return pc88->GetBus1()->Connect(this, connectors);
@@ -51,7 +43,28 @@ void KeyInput::Update(PC88* pc88) {
         if (down) matrix[row] &= ~(1 << bit);
     };
 
+    bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+
+    // --- Row 0: Numpad 0-7 ---
+    set_key(0, 0, IsKeyDown(KEY_KP_0));
+    set_key(0, 1, IsKeyDown(KEY_KP_1));
+    set_key(0, 2, IsKeyDown(KEY_KP_2));
+    set_key(0, 3, IsKeyDown(KEY_KP_3));
+    set_key(0, 4, IsKeyDown(KEY_KP_4));
+    set_key(0, 5, IsKeyDown(KEY_KP_5));
+    set_key(0, 6, IsKeyDown(KEY_KP_6));
+    set_key(0, 7, IsKeyDown(KEY_KP_7));
+
+    // --- Row 1: Numpad 8, 9, *, +, =, ,, ., Return ---
+    set_key(1, 0, IsKeyDown(KEY_KP_8));
+    set_key(1, 1, IsKeyDown(KEY_KP_9));
+    set_key(1, 2, IsKeyDown(KEY_KP_MULTIPLY));
+    set_key(1, 3, IsKeyDown(KEY_KP_ADD));
+    set_key(1, 5, IsKeyDown(KEY_KP_ENTER) || IsKeyDown(KEY_ENTER)); // Return
+    set_key(1, 6, IsKeyDown(KEY_KP_DECIMAL));
+
     // --- Row 2: @, A, B, C, D, E, F, G ---
+    set_key(2, 0, IsKeyDown(KEY_LEFT_BRACKET)); // @ (on many layouts)
     set_key(2, 1, IsKeyDown(KEY_A));
     set_key(2, 2, IsKeyDown(KEY_B));
     set_key(2, 3, IsKeyDown(KEY_C));
@@ -84,9 +97,10 @@ void KeyInput::Update(PC88* pc88) {
     set_key(5, 0, IsKeyDown(KEY_X));
     set_key(5, 1, IsKeyDown(KEY_Y));
     set_key(5, 2, IsKeyDown(KEY_Z));
-    set_key(5, 3, IsKeyDown(KEY_LEFT_BRACKET));
+    set_key(5, 3, IsKeyDown(KEY_RIGHT_BRACKET)); // [
     set_key(5, 4, IsKeyDown(KEY_BACKSLASH));
-    set_key(5, 5, IsKeyDown(KEY_RIGHT_BRACKET));
+    set_key(5, 5, IsKeyDown(KEY_APOSTROPHE));    // ]
+    set_key(5, 6, IsKeyDown(KEY_EQUAL));         // ^
     set_key(5, 7, IsKeyDown(KEY_MINUS));
 
     // --- Row 6: 0-7 ---
@@ -95,6 +109,8 @@ void KeyInput::Update(PC88* pc88) {
     // --- Row 7: 8, 9, :, ;, ,, ., /, _ ---
     set_key(7, 0, IsKeyDown(KEY_EIGHT));
     set_key(7, 1, IsKeyDown(KEY_NINE));
+    set_key(7, 2, IsKeyDown(KEY_SEMICOLON)); // :
+    set_key(7, 3, IsKeyDown(KEY_GRAVE));     // ;
     set_key(7, 4, IsKeyDown(KEY_COMMA));
     set_key(7, 5, IsKeyDown(KEY_PERIOD));
     set_key(7, 6, IsKeyDown(KEY_SLASH));
@@ -104,12 +120,13 @@ void KeyInput::Update(PC88* pc88) {
     set_key(8, 1, IsKeyDown(KEY_UP));
     set_key(8, 2, IsKeyDown(KEY_RIGHT));
     set_key(8, 3, IsKeyDown(KEY_BACKSPACE));
-    set_key(8, 4, IsKeyDown(KEY_LEFT_ALT)); // GRPH
-    set_key(8, 6, IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT));
-    set_key(8, 7, IsKeyDown(KEY_LEFT_CONTROL));
+    set_key(8, 4, IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)); // GRPH
+    set_key(8, 5, IsKeyDown(KEY_SCROLL_LOCK)); // KANA
+    set_key(8, 6, shift);
+    set_key(8, 7, IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL));
 
     // --- Row 9: STOP, F1, F2, F3, F4, F5, SPACE, ESC ---
-    set_key(9, 0, IsKeyDown(KEY_END)); // STOP (End as alternative)
+    set_key(9, 0, IsKeyDown(KEY_F11) || IsKeyDown(KEY_PAUSE)); // STOP
     set_key(9, 1, IsKeyDown(KEY_F1));
     set_key(9, 2, IsKeyDown(KEY_F2));
     set_key(9, 3, IsKeyDown(KEY_F3));
@@ -118,15 +135,26 @@ void KeyInput::Update(PC88* pc88) {
     set_key(9, 6, IsKeyDown(KEY_SPACE));
     set_key(9, 7, IsKeyDown(KEY_ESCAPE));
 
-    // --- Row 10: TAB, DOWN, LEFT, HELP, COPY... ---
+    // --- Row 10: TAB, DOWN, LEFT, HELP, COPY, Numpad-, Numpad/, CAPS ---
     set_key(0xa, 0, IsKeyDown(KEY_TAB));
     set_key(0xa, 1, IsKeyDown(KEY_DOWN));
     set_key(0xa, 2, IsKeyDown(KEY_LEFT));
-    set_key(0xa, 3, IsKeyDown(KEY_INSERT)); // HELP
-    set_key(0xa, 4, IsKeyDown(KEY_F12));    // COPY
-    
-    // --- Row 1: Return (Enter) ---
-    set_key(1, 2, IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_KP_ENTER));
+    set_key(0xa, 3, IsKeyDown(KEY_END) || IsKeyDown(KEY_INSERT)); // HELP
+    set_key(0xa, 4, IsKeyDown(KEY_F12)); // COPY
+    set_key(0xa, 5, IsKeyDown(KEY_KP_SUBTRACT));
+    set_key(0xa, 6, IsKeyDown(KEY_KP_DIVIDE));
+    set_key(0xa, 7, IsKeyDown(KEY_CAPS_LOCK));
+
+    // --- Row 11: ROLL DOWN, ROLL UP ---
+    set_key(0xb, 0, IsKeyDown(KEY_PAGE_DOWN));
+    set_key(0xb, 1, IsKeyDown(KEY_PAGE_UP));
+
+    // --- Row 12: F6-F10 (Alternative mapping) ---
+    set_key(0xc, 0, IsKeyDown(KEY_F6));
+    set_key(0xc, 1, IsKeyDown(KEY_F7));
+    set_key(0xc, 2, IsKeyDown(KEY_F8));
+    set_key(0xc, 3, IsKeyDown(KEY_F9));
+    set_key(0xc, 4, IsKeyDown(KEY_F10));
 }
 
 const Device::Descriptor KeyInput::descriptor = { indef, nullptr };
