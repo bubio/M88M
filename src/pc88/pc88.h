@@ -82,7 +82,7 @@ public:
 	PC88();
 	~PC88();
 	
-	bool Init(Draw* draw, DiskManager* diskmgr, TapeManager* tape);
+	bool Init(Draw* draw, DiskManager* diskmgr, TapeManager* tape, const char* romDir = nullptr);
 	void DeInit();
 	
 	void Reset();
@@ -146,8 +146,8 @@ private:
 	
 	int Execute(int ticks);
 	void Shorten(int ticks);
-	bool ConnectDevices();
-	bool ConnectDevices2();
+	bool ConnectDevices(const char* romDir);
+	bool ConnectDevices2(const char* romDir);
 	int GetTicks();
 			
 private:

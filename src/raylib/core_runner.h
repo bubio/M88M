@@ -22,10 +22,10 @@ public:
     void Pause(bool pause);
     void UpdateInput();
     void UpdateUI(bool& shouldExit);
-    void DrawUI();
+    void DrawUI(bool& shouldExit);
     
     // Thread-safe config update
-    void RequestConfigApply(const PC8801::Config& cfg);
+    void RequestConfigApply(const PC8801::Config& cfg, bool requireReset = false);
 
     PC88* GetPC88() { return &pc88; }
     DiskManager* GetDiskManager() { return &diskmgr; }
@@ -53,4 +53,5 @@ private:
     std::mutex configMutex;
     PC8801::Config pendingConfig;
     std::atomic<bool> configPending;
+    std::atomic<bool> configResetPending;
 };

@@ -62,9 +62,9 @@ OPNIF::~OPNIF()
 }
 
 // ---------------------------------------------------------------------------
-//	������
+//	
 //
-bool OPNIF::Init(IOBus* b, int intrport, int io, Scheduler* s)
+bool OPNIF::Init(IOBus* b, int intrport, int io, Scheduler* s, const char* romDir)
 {
 	bus = b;
 	scheduler = s;
@@ -72,8 +72,18 @@ bool OPNIF::Init(IOBus* b, int intrport, int io, Scheduler* s)
 	opn.SetIntr(bus, intrport);
 	clock = baseclock;
 
-	if (!opn.Init(clock, 8000, 0))
-		return false;
+	// FMGen's LoadRhythmSample looks for files like "2608_BD.WAV" in the provided path.
+	// Ensure the path ends with a slash.
+	std::string rhythmPath = "";
+	if (romDir) {
+		rhythmPath = romDir;
+		if (!rhythmPath.empty() && rhythmPath.back() != '/' && rhythmPath.back() != '\\') {
+			rhythmPath += "/";
+		}
+	}
+
+	opn.Init(clock, 8000, 0, rhythmPath.empty() ? nullptr : rhythmPath.c_str());
+	
 	prevtime = scheduler->GetTime();
 	TimeEvent(1);
 	
@@ -157,11 +167,14 @@ void IFCALL OPNIF::Mix(int32* dest, int nsamples)
 }
 
 // ---------------------------------------------------------------------------
-//	���ʐݒ�
+//	ʐݒ
 //
 static inline int ConvertVolume(int volume)
 {
-	return volume > -40 ? volume : -200;
+	if (volume <= 0) return -200;
+	// Map 128 to 0dB, and 0-127 to negative dB values.
+	// Simple linear scale for now: 128=0dB, 64=-32dB, 1=-63dB.
+	return (volume - 128) / 2;
 }
 
 void OPNIF::SetVolume(const Config* config)

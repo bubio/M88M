@@ -32,11 +32,12 @@ bool CoreRunner::Init(Draw* draw) {
     if (!romError.empty()) return false;
     chdir(romDir.c_str());
     if (!diskmgr.Init()) return false;
-    if (!pc88.Init(draw, &diskmgr, &tapemgr)) return false;
+    if (!pc88.Init(draw, &diskmgr, &tapemgr, romDir.c_str())) return false;
     
     pc88.ApplyConfig(&Config::Get());
     pc88.Reset();
     sound.Init();
+    sound.SetVolume(&Config::Get());
     sound.Connect(pc88.GetOPN1());
     sound.Connect(pc88.GetOPN2());
     sound.Connect(pc88.GetBEEP());
@@ -45,10 +46,11 @@ bool CoreRunner::Init(Draw* draw) {
     return true;
 }
 
-void CoreRunner::RequestConfigApply(const PC8801::Config& cfg) {
+void CoreRunner::RequestConfigApply(const PC8801::Config& cfg, bool requireReset) {
     std::lock_guard<std::mutex> lock(configMutex);
     pendingConfig = cfg;
     configPending = true;
+    configResetPending = requireReset;
 }
 
 void CoreRunner::UpdateInput() {
@@ -61,8 +63,8 @@ void CoreRunner::UpdateUI(bool& shouldExit) {
     uiManager.Update(shouldExit, &pc88, this);
 }
 
-void CoreRunner::DrawUI() {
-    uiManager.Draw(&diskmgr, Config::Get(), &pc88, this);
+void CoreRunner::DrawUI(bool& shouldExit) {
+    uiManager.Draw(&diskmgr, Config::Get(), &pc88, this, shouldExit);
 }
 
 void CoreRunner::Start() {
@@ -84,18 +86,32 @@ void CoreRunner::Pause(bool p) { paused = p; }
 void CoreRunner::Run() {
     auto startTime = std::chrono::high_resolution_clock::now();
     uint64_t totalTicksEmulated = 0;
+    bool audioPaused = false;
 
     while (running) {
         if (paused || uiManager.IsMenuOpen()) {
+            if (!audioPaused) {
+                sound.Pause(true);
+                audioPaused = true;
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
             startTime = std::chrono::high_resolution_clock::now();
             totalTicksEmulated = 0;
             continue;
         }
 
+        if (audioPaused) {
+            sound.Pause(false);
+            audioPaused = false;
+        }
+
         if (configPending) {
             std::lock_guard<std::mutex> lock(configMutex);
             pc88.ApplyConfig(&pendingConfig);
+            sound.SetVolume(&pendingConfig);
+            if (configResetPending) {
+                pc88.Reset(); 
+            }
             Config::Get() = pendingConfig;
             Config::Save(pendingConfig);
             configPending = false;

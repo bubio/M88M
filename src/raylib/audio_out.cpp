@@ -1,4 +1,5 @@
 #include "audio_out.h"
+#include "pc88/config.h"
 #include <algorithm>
 #include <iostream>
 #include <cstdio>
@@ -72,4 +73,17 @@ void RaylibSound::Start() {
     s_current_sound = this;
     SetAudioStreamCallback(stream, GlobalAudioCallback);
     PlayAudioStream(stream);
+}
+
+void RaylibSound::Pause(bool paused) {
+    if (IsAudioStreamValid(stream)) {
+        if (paused) PauseAudioStream(stream);
+        else ResumeAudioStream(stream);
+    }
+}
+
+void RaylibSound::SetVolume(const PC8801::Config* cfg) {
+    if (cfg) {
+        ::SetMasterVolume((float)cfg->mastervol / 128.0f);
+    }
 }

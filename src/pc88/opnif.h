@@ -22,7 +22,7 @@ namespace PC8801
 {
 class Config;
 // ---------------------------------------------------------------------------
-//	88 —p‚Ì OPN Unit
+//	88 ï¿½pï¿½ï¿½ OPN Unit
 //
 class OPNIF : public Device, public ISoundSource
 {
@@ -45,7 +45,7 @@ public:
 	OPNIF(const ID& id);
 	~OPNIF();
 	
-	bool Init(IOBus* bus, int intrport, int io, Scheduler* s);
+	bool Init(IOBus* bus, int intrport, int io, Scheduler* s, const char* romDir = nullptr);
 	void SetIMask(uint port, uint bit);
 	
 	bool IFCALL Connect(ISoundControl* c);

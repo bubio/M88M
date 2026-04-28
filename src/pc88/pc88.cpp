@@ -76,7 +76,7 @@ PC88::~PC88()
 // ---------------------------------------------------------------------------
 //	������
 //
-bool PC88::Init(Draw* _draw, DiskManager* disk, TapeManager* tape)
+bool PC88::Init(Draw* _draw, DiskManager* disk, TapeManager* tape, const char* romDir)
 {
 	draw = _draw;
 	diskmgr = disk;
@@ -104,7 +104,7 @@ bool PC88::Init(Draw* _draw, DiskManager* disk, TapeManager* tape)
 	if (!bus1.Init(portend, &devlist) || !bus2.Init(portend2, &devlist))
 		return false;
 
-	if (!ConnectDevices() || !ConnectDevices2()) 
+	if (!ConnectDevices(romDir) || !ConnectDevices2(romDir)) 
 		return false;
 
 	Reset();
@@ -287,7 +287,7 @@ void PC88::Reset()
 // ---------------------------------------------------------------------------
 //	�f�o�C�X�ڑ�
 //
-bool PC88::ConnectDevices()
+bool PC88::ConnectDevices(const char* romDir)
 {
 	static const IOBus::Connector c_cpu1[] =
 	{
@@ -513,7 +513,7 @@ bool PC88::ConnectDevices()
 		{ 0, 0, 0 }
 	};
 	opn1 = new PC8801::OPNIF(DEV_ID('O', 'P', 'N', '1'));
-	if (!opn1 || !opn1->Init(&bus1, pint4, popnio, this)) return false;
+	if (!opn1 || !opn1->Init(&bus1, pint4, popnio, this, romDir)) return false;
 	if (!bus1.Connect(opn1, c_opn1)) return false;
 	opn1->SetIMask(0x32, 0x80);
 
@@ -532,7 +532,7 @@ bool PC88::ConnectDevices()
 		{ 0, 0, 0 }
 	};
 	opn2 = new PC8801::OPNIF(DEV_ID('O', 'P', 'N', '2'));
-	if (!opn2->Init(&bus1, pint4, popnio, this)) return false;
+	if (!opn2->Init(&bus1, pint4, popnio, this, romDir)) return false;
 	if (!opn2 || !bus1.Connect(opn2, c_opn2)) return false;
 	opn2->SetIMask(0xaa, 0x80);
 	
@@ -589,7 +589,7 @@ bool PC88::ConnectDevices()
 // ---------------------------------------------------------------------------
 //	�f�o�C�X�ڑ�(�T�uCPU)
 //
-bool PC88::ConnectDevices2()
+bool PC88::ConnectDevices2(const char* romDir)
 {
 	static const IOBus::Connector c_cpu2[] =
 	{
@@ -642,13 +642,20 @@ void PC88::ApplyConfig(Config* cfg)
 	cfgflag2 = cfg->flag2;
 	
 	base->SetSwitch(cfg);
+	base->Reset(0, 0); // Update sw31 and other registers based on new dipsw/clock
 	scrn->ApplyConfig(cfg);
 	mem1->ApplyConfig(cfg);
 	crtc->ApplyConfig(cfg);
 	fdc->ApplyConfig(cfg);
 	beep->EnableSING(!(cfg->flags & Config::disablesing));
+
+	opn1->Enable(!(cfg->flag2 & Config::disableopn44));
+	opn1->SetOPNMode(!!(cfg->flags & Config::enableopna));
 	opn1->SetFMMixMode(!!(cfg->flag2 & Config::usefmclock));
 	opn1->SetVolume(cfg);
+
+	opn2->Enable(!!(cfg->flags & (Config::opnona8 | Config::opnaona8)));
+	opn2->SetOPNMode(!!(cfg->flags & Config::opnaona8));
 	opn2->SetFMMixMode(!!(cfg->flag2 & Config::usefmclock));
 	opn2->SetVolume(cfg);
 	

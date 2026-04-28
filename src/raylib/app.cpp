@@ -52,7 +52,7 @@ int main() {
             draw.Render();
             
             // Unified Overlay UI
-            core.DrawUI();
+            core.DrawUI(shouldExit);
 
             // ROM Error Dialog
             if (core.HasRomError()) {

@@ -6,6 +6,8 @@
 #include <mutex>
 #include <cstdint>
 
+namespace PC8801 { class Config; }
+
 class RaylibSound : public ISoundControl {
 public:
     RaylibSound();
@@ -20,6 +22,8 @@ public:
 
     void Init();
     void Start();
+    void Pause(bool paused);
+    void SetVolume(const PC8801::Config* cfg);
     void Cleanup();
 
     void MixInternal(int32_t* buffer, unsigned int frames);

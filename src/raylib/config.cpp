@@ -23,16 +23,17 @@ void Load(PC8801::Config& cfg) {
     // Set defaults first
     cfg.basicmode = PC8801::Config::N88V2;
     cfg.clock = 4; // 4MHz
+    cfg.mainsubratio = 1; // 4MHz mode uses ratio 1
     cfg.speed = 100; // 100%
-    cfg.mainsubratio = 1;
     cfg.cpumode = PC8801::Config::msauto;
-    cfg.dipsw = 1829;
+    cfg.dipsw = 1829; // Includes bit 5 = 1 (4MHz)
     cfg.flags = PC8801::Config::enableopna | 
                 PC8801::Config::subcpucontrol |
                 PC8801::Config::precisemixing |
                 PC8801::Config::mixsoundalways;
     cfg.flag2 = PC8801::Config::usefmclock;
     cfg.volfm = 64; cfg.volssg = 64; cfg.voladpcm = 64; cfg.volrhythm = 64; cfg.volbd = 64;
+    cfg.mastervol = 128; // 100%
 
     // Try to load from file
     std::string path = GetConfigFilePath();
@@ -40,6 +41,8 @@ void Load(PC8801::Config& cfg) {
     if (file.Open(path.c_str(), FileIO::open | FileIO::readonly)) {
         file.Read(&cfg, sizeof(cfg));
         file.Close();
+        // Recalculate mainsubratio in case it was saved inconsistently
+        cfg.mainsubratio = (cfg.clock >= 6) ? 2 : 1;
     } else {
         // Save defaults if file doesn't exist
         Save(cfg);
