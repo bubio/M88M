@@ -89,6 +89,7 @@ public:
 	int Proceed(uint us, uint clock, uint eff);
 	void ApplyConfig(PC8801::Config*);
 	void SetVolume(PC8801::Config*);
+	int  GetFlags() const { return cfgflags; }
 	
 	uint IFCALL GetCPUTick() { return cpu1.GetCount(); }
 	uint IFCALL GetCPUSpeed() { return clock; }

@@ -1,6 +1,7 @@
 #include "key_input.h"
 #include "raylib.h"
 #include "pc88.h"
+#include "pc88/config.h"
 #include "ifui.h"
 #include "device_i.h"
 #include <cstring>
@@ -44,27 +45,30 @@ void KeyInput::Update(PC88* pc88) {
     };
 
     bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
+    bool useArrowFor10 = (pc88->GetFlags() & PC8801::Config::usearrowfor10) != 0;
 
-    // --- Row 0: Numpad 0-7 ---
-    set_key(0, 0, IsKeyDown(KEY_KP_0));
-    set_key(0, 1, IsKeyDown(KEY_KP_1));
-    set_key(0, 2, IsKeyDown(KEY_KP_2));
-    set_key(0, 3, IsKeyDown(KEY_KP_3));
-    set_key(0, 4, IsKeyDown(KEY_KP_4));
+    // --- Row 0: Numpad 0-7 (and equivalents) ---
+    set_key(0, 0, IsKeyDown(KEY_KP_0) || IsKeyDown(KEY_INSERT));
+    set_key(0, 1, IsKeyDown(KEY_KP_1) || IsKeyDown(KEY_END));
+    set_key(0, 2, IsKeyDown(KEY_KP_2) || (useArrowFor10 && IsKeyDown(KEY_DOWN)));
+    set_key(0, 3, IsKeyDown(KEY_KP_3) || IsKeyDown(KEY_PAGE_DOWN));
+    set_key(0, 4, IsKeyDown(KEY_KP_4) || (useArrowFor10 && IsKeyDown(KEY_LEFT)));
     set_key(0, 5, IsKeyDown(KEY_KP_5));
-    set_key(0, 6, IsKeyDown(KEY_KP_6));
-    set_key(0, 7, IsKeyDown(KEY_KP_7));
+    set_key(0, 6, IsKeyDown(KEY_KP_6) || (useArrowFor10 && IsKeyDown(KEY_RIGHT)));
+    set_key(0, 7, IsKeyDown(KEY_KP_7) || IsKeyDown(KEY_HOME));
 
     // --- Row 1: Numpad 8, 9, *, +, =, ,, ., Return ---
-    set_key(1, 0, IsKeyDown(KEY_KP_8));
-    set_key(1, 1, IsKeyDown(KEY_KP_9));
+    set_key(1, 0, IsKeyDown(KEY_KP_8) || (useArrowFor10 && IsKeyDown(KEY_UP)));
+    set_key(1, 1, IsKeyDown(KEY_KP_9) || IsKeyDown(KEY_PAGE_UP));
     set_key(1, 2, IsKeyDown(KEY_KP_MULTIPLY));
     set_key(1, 3, IsKeyDown(KEY_KP_ADD));
-    set_key(1, 5, IsKeyDown(KEY_KP_ENTER) || IsKeyDown(KEY_ENTER)); // Return
-    set_key(1, 6, IsKeyDown(KEY_KP_DECIMAL));
+    set_key(1, 4, IsKeyDown(KEY_EQUAL)); // num =
+    set_key(1, 5, IsKeyDown(KEY_COMMA)); // num ,
+    set_key(1, 6, IsKeyDown(KEY_KP_DECIMAL) || IsKeyDown(KEY_DELETE));
+    set_key(1, 7, IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_KP_ENTER)); // Return
 
     // --- Row 2: @, A, B, C, D, E, F, G ---
-    set_key(2, 0, IsKeyDown(KEY_LEFT_BRACKET)); // @ (on many layouts)
+    set_key(2, 0, IsKeyDown(KEY_LEFT_BRACKET)); // @
     set_key(2, 1, IsKeyDown(KEY_A));
     set_key(2, 2, IsKeyDown(KEY_B));
     set_key(2, 3, IsKeyDown(KEY_C));
@@ -114,11 +118,12 @@ void KeyInput::Update(PC88* pc88) {
     set_key(7, 4, IsKeyDown(KEY_COMMA));
     set_key(7, 5, IsKeyDown(KEY_PERIOD));
     set_key(7, 6, IsKeyDown(KEY_SLASH));
+    set_key(7, 7, IsKeyDown(KEY_BACKSLASH)); // _ (approx)
 
     // --- Row 8: CLR, UP, RIGHT, BS, GRPH, KANA, SHIFT, CTRL ---
     set_key(8, 0, IsKeyDown(KEY_HOME));
-    set_key(8, 1, IsKeyDown(KEY_UP));
-    set_key(8, 2, IsKeyDown(KEY_RIGHT));
+    set_key(8, 1, !useArrowFor10 && IsKeyDown(KEY_UP));
+    set_key(8, 2, !useArrowFor10 && IsKeyDown(KEY_RIGHT));
     set_key(8, 3, IsKeyDown(KEY_BACKSPACE));
     set_key(8, 4, IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)); // GRPH
     set_key(8, 5, IsKeyDown(KEY_SCROLL_LOCK)); // KANA
@@ -137,8 +142,8 @@ void KeyInput::Update(PC88* pc88) {
 
     // --- Row 10: TAB, DOWN, LEFT, HELP, COPY, Numpad-, Numpad/, CAPS ---
     set_key(0xa, 0, IsKeyDown(KEY_TAB));
-    set_key(0xa, 1, IsKeyDown(KEY_DOWN));
-    set_key(0xa, 2, IsKeyDown(KEY_LEFT));
+    set_key(0xa, 1, !useArrowFor10 && IsKeyDown(KEY_DOWN));
+    set_key(0xa, 2, !useArrowFor10 && IsKeyDown(KEY_LEFT));
     set_key(0xa, 3, IsKeyDown(KEY_END) || IsKeyDown(KEY_INSERT)); // HELP
     set_key(0xa, 4, IsKeyDown(KEY_F12)); // COPY
     set_key(0xa, 5, IsKeyDown(KEY_KP_SUBTRACT));
@@ -149,7 +154,7 @@ void KeyInput::Update(PC88* pc88) {
     set_key(0xb, 0, IsKeyDown(KEY_PAGE_DOWN));
     set_key(0xb, 1, IsKeyDown(KEY_PAGE_UP));
 
-    // --- Row 12: F6-F10 (Alternative mapping) ---
+    // --- Row 12: F6-F10 ---
     set_key(0xc, 0, IsKeyDown(KEY_F6));
     set_key(0xc, 1, IsKeyDown(KEY_F7));
     set_key(0xc, 2, IsKeyDown(KEY_F8));

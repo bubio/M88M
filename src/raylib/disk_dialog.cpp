@@ -311,6 +311,15 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         GuiLabel({ x + 20, pY, 300, 20 }, "CRT Filter: Coming Soon!");
     }
     else if (activeTab == 3) { // Input
+        bool useArrow = (cfg.flags & PC8801::Config::usearrowfor10) != 0;
+        bool oldUse = useArrow;
+        GuiCheckBox({ x + 20, pY, 20, 20 }, "Use Numpad as Arrow Keys", &useArrow);
+        if (useArrow != oldUse) {
+            if (useArrow) cfg.flags |= PC8801::Config::usearrowfor10;
+            else cfg.flags &= ~PC8801::Config::usearrowfor10;
+            changed = true;
+        }
+        pY += rowH;
         GuiLabel({ x + 20, pY, 350, 20 }, "Keyboard Layout: JIS (Standard)");
     }
     else if (activeTab == 4) { // About
