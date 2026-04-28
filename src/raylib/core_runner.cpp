@@ -5,11 +5,11 @@
 #include "beep.h"
 #include "devices/Z80.h"
 #include <chrono>
+#include <thread>
+#include <mutex>
 #include <unistd.h>
-#include <vector>
-#include <cstdio>
 
-CoreRunner::CoreRunner() : running(false), paused(false), configPending(false) {}
+CoreRunner::CoreRunner() : running(false), paused(false), configPending(false), configResetPending(false) {}
 CoreRunner::~CoreRunner() { Stop(); }
 
 std::string CoreRunner::CheckMandatoryRoms(const std::string& romDir) {
@@ -117,37 +117,35 @@ void CoreRunner::Run() {
             configPending = false;
         }
 
+        // Run one frame (1/60s)
         const auto& cfg = Config::Get();
         uint32_t clockParam = cfg.clock * 10;
-        uint32_t speedParam = (cfg.speed > 0) ? cfg.speed : 100;
+        uint32_t speedParam = clockParam * (cfg.speed > 0 ? cfg.speed : 100) / 100;
+        uint32_t ticksToRun = pc88.GetFramePeriod(); 
 
-        // Run about 1/60th of a second (1667 ticks)
-        uint32_t ticksToRun = 1667; 
-        pc88.Proceed(ticksToRun, clockParam, speedParam);
+        pc88.TimeSync();
+        int actualTicks = pc88.Proceed(ticksToRun, clockParam, speedParam);
         pc88.UpdateScreen(true);
-        totalTicksEmulated += ticksToRun;
+        totalTicksEmulated += actualTicks;
 
         // Synchronization
         auto currentTime = std::chrono::high_resolution_clock::now();
-        auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - startTime).count();
-        
-        // Target time for emulated ticks (1 tick = 10us)
-        // If speed is 100%, 1667 ticks should take 16670us.
+        auto elapsedUs = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - startTime).count();
         uint64_t targetUs = totalTicksEmulated * 10;
-        
-        if (elapsed < targetUs) {
-            uint64_t sleepUs = targetUs - elapsed;
-            if (sleepUs > 2000) {
-                std::this_thread::sleep_for(std::chrono::microseconds(sleepUs - 1000));
+
+        if (elapsedUs < targetUs) {
+            uint64_t waitUs = targetUs - elapsedUs;
+            if (waitUs > 1000) {
+                std::this_thread::sleep_for(std::chrono::microseconds(waitUs - 500));
             }
-            // Busy wait for the remaining time to get better precision
+            // Busy wait for precision
             while (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - startTime).count() < targetUs) {
                 std::this_thread::yield();
             }
         }
 
         // Periodic reset to prevent drift
-        if (totalTicksEmulated > 100000) {
+        if (totalTicksEmulated > 500000) { // 5 seconds
             startTime = std::chrono::high_resolution_clock::now();
             totalTicksEmulated = 0;
         }
