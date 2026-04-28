@@ -56,18 +56,36 @@ void UIManager::Draw(DiskManager* diskmgr, PC8801::Config& cfg, PC88* pc88, Core
 
 void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit) {
     float width = 280;
-    float height = 350; // Increased height for new buttons
+    float height = 370; // Slightly increased for padding
     float x = (float)GetScreenWidth() / 2 - width / 2;
     float y = (float)GetScreenHeight() / 2 - height / 2;
 
     if (GuiWindowBox({ x, y, width, height }, "M88M Main Menu")) ToggleMenu();
 
-    float btnY = y + 40;
+    float btnY = y + 45;
     float btnH = 26;
 
+    // --- Disk Drives Group ---
+    std::string groupTitle = "Disk Drives";
+    if (!lastOpenedPath[0].empty()) groupTitle = GetFileName(lastOpenedPath[0].c_str());
+    else if (!lastOpenedPath[1].empty()) groupTitle = GetFileName(lastOpenedPath[1].c_str());
+
+    // Switch to JP font if filename has multi-byte chars
+    bool groupJp = ContainsJapanese(groupTitle);
+    if (groupJp && IsFontValid(fontJp)) {
+        GuiSetFont(fontJp);
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 15);
+    }
+
+    GuiGroupBox({ x + 5, btnY - 5, width - 10, 120 }, groupTitle.c_str());
+
+    if (groupJp) {
+        GuiSetFont(GetFontDefault());
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
+    }
     // Drive 1&2 button
-    if (GuiButton({ x + 10, btnY, width - 60, btnH }, "Drive 1&2 (Dual Mount)...")) OpenBothDrives(diskmgr);
-    if (GuiButton({ x + width - 40, btnY, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
+    if (GuiButton({ x + 15, btnY + 10, width - 70, btnH }, "Drive 1&2 (Dual Mount)...")) OpenBothDrives(diskmgr);
+    if (GuiButton({ x + width - 45, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
         diskmgr->Unmount(0); diskmgr->Unmount(1);
         lastOpenedPath[0] = lastOpenedPath[1] = "";
     }
@@ -86,40 +104,38 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit)
         bool isJp = ContainsJapanese(label);
         if (isJp && IsFontValid(fontJp)) {
             GuiSetFont(fontJp);
-            GuiSetStyle(DEFAULT, TEXT_SIZE, 15); // Moderate size for JP
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 15);
         }
 
-        if (GuiButton({ x + 10, btnY, width - 90, btnH }, label.c_str())) OpenNativeDialog(diskmgr, i);
+        if (GuiButton({ x + 15, btnY + 10, width - 100, btnH }, label.c_str())) OpenNativeDialog(diskmgr, i);
 
         if (isJp) {
             GuiSetFont(GetFontDefault());
-            GuiSetStyle(DEFAULT, TEXT_SIZE, 10); // Restore default
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
         }
-        // Disk selection button (only if multiple disks)
+
         bool hasMultiple = diskmgr->GetNumDisks(i) > 1;
-        if (GuiButton({ x + width - 75, btnY, 30, btnH }, hasMultiple ? GuiIconText(ICON_FILE_COPY, NULL) : GuiIconText(ICON_FILE_OPEN, NULL))) {
+        if (GuiButton({ x + width - 80, btnY + 10, 30, btnH }, hasMultiple ? GuiIconText(ICON_FILE_COPY, NULL) : GuiIconText(ICON_FILE_OPEN, NULL))) {
             if (hasMultiple) selectingDiskForDrive = i;
             else OpenNativeDialog(diskmgr, i);
         }
 
-        // Eject button
-        if (GuiButton({ x + width - 40, btnY, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
+        if (GuiButton({ x + width - 45, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
             diskmgr->Unmount(i);
             lastOpenedPath[i] = "";
         }
         btnY += 34;
     }
 
-    btnY += 10;
+    btnY += 30; // Space after group box
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset PC-8801")) { pc88->Reset(); ToggleMenu(); }
     btnY += 34;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Settings")) showSettings = true;
     btnY += 34;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Resume")) ToggleMenu();
 
-    // Move Quit to the bottom and set shouldExit flag instead of calling CloseWindow directly
     if (GuiButton({ x + 10, y + height - 40, width - 20, btnH }, "Quit M88M")) shouldExit = true;
-    }void UIManager::OpenBothDrives(DiskManager* diskmgr) {
+}void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     nfdchar_t *outPath = NULL;
     nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
     if (NFD_OpenDialog(&outPath, filterItem, 1, NULL) == NFD_OKAY) {
@@ -162,7 +178,7 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
 
 void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRunner) {
     float width = 520;
-    float height = 340;
+    float height = 380;
     float x = (float)GetScreenWidth() / 2 - width / 2;
     float y = (float)GetScreenHeight() / 2 - height / 2;
 
@@ -230,25 +246,26 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         if ((int)mVal != cfg.mastervol) { cfg.mastervol = (int)mVal; changed = true; }
         pY += 35;
 
-        // Individual sound sources (removed BEEP)
+        // Individual sound sources group
+        GuiGroupBox({ x + 10, pY - 5, width - 20, 165 }, "Mixer (Internal Sound Sources)");
+        
         const char* names[] = { "FM", "SSG", "ADPCM", "Rhythm" };
         int* vPtrs[] = { &cfg.volfm, &cfg.volssg, &cfg.voladpcm, &cfg.volrhythm };
         for (int i = 0; i < 4; i++) {
-            GuiLabel({ x + 20, pY, 80, 20 }, names[i]);
+            GuiLabel({ x + 25, pY + 10, 80, 20 }, names[i]);
             float val = (float)*vPtrs[i];
-            GuiSliderBar({ x + 100, pY, 240, 16 }, "0", "128", &val, 0, 128);
+            GuiSliderBar({ x + 100, pY + 10, 240, 16 }, "0", "128", &val, 0, 128);
             if ((int)val != *vPtrs[i]) { *vPtrs[i] = (int)val; changed = true; }
             pY += 28;
         }
 
         pY += 10;
-        if (GuiButton({ x + 100, pY, 150, 24 }, "Reset to Defaults")) {
+        if (GuiButton({ x + 100, pY + 10, 150, 24 }, "Reset to Defaults")) {
             cfg.volfm = 64; cfg.volssg = 64; cfg.voladpcm = 64; cfg.volrhythm = 64;
-            // mastervol is excluded from reset as requested
             changed = true;
         }
 
-        pY += 34;
+        pY += 50;
         bool lpf = (cfg.lpforder > 0);
         bool oldLpf = lpf;
         GuiCheckBox({ x + 100, pY, 20, 20 }, "Enable LPF (Low Pass Filter)", &lpf);
