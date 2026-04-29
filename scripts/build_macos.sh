@@ -12,4 +12,9 @@ echo "--- Building M88M ---"
 cmake --build build -j$(sysctl -n hw.ncpu)
 
 echo "--- Build Complete ---"
-echo "Executable: ./build/m88"
+if [ "$(uname)" == "Darwin" ]; then
+    echo "Bundle: ./build/M88M.app"
+    echo "Executable: ./build/M88M.app/Contents/MacOS/M88M"
+else
+    echo "Executable: ./build/m88"
+fi

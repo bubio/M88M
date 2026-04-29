@@ -1,10 +1,13 @@
 cmake_minimum_required(VERSION 3.20)
 project(M88M
+    VERSION 0.1.0
     LANGUAGES CXX C
     DESCRIPTION "PC-8801 emulator (M88 改) — raylib frontend"
 )
 
 # --- Global settings -----------------------------------------------------
+set(M88M_VERSION "${M88M_VERSION_MAJOR}.${M88M_VERSION_MINOR}.${M88M_VERSION_PATCH}")
+set(MACOSX_BUNDLE_MINIMUM_SYSTEM_VERSION "13.0")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -114,9 +117,22 @@ FetchContent_MakeAvailable(nfd)
 file(GLOB RAYLIB_FRONT_SRC src/raylib/*.cpp)
 
 if(RAYLIB_FRONT_SRC)
-    add_executable(m88_raylib ${RAYLIB_FRONT_SRC})
+    if(APPLE)
+        add_executable(m88_raylib MACOSX_BUNDLE ${RAYLIB_FRONT_SRC})
+        set_target_properties(m88_raylib PROPERTIES
+            OUTPUT_NAME "M88M"
+            MACOSX_BUNDLE_GUI_IDENTIFIER "com.bubio.m88m"
+            MACOSX_BUNDLE_BUNDLE_NAME "M88M"
+            MACOSX_BUNDLE_BUNDLE_VERSION "${M88M_VERSION}"
+            MACOSX_BUNDLE_SHORT_VERSION_STRING "${M88M_VERSION}"
+            MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/src/raylib/Info.plist.in"
+        )
+    else()
+        add_executable(m88_raylib ${RAYLIB_FRONT_SRC})
+        set_target_properties(m88_raylib PROPERTIES OUTPUT_NAME "m88")
+    endif()
+
     target_link_libraries(m88_raylib PRIVATE m88core raylib raygui nfd)
-    set_target_properties(m88_raylib PROPERTIES OUTPUT_NAME "m88")
 
     if(APPLE)
         target_link_libraries(m88_raylib PRIVATE

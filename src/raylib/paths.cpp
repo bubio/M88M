@@ -24,6 +24,25 @@ static void EnsureDirectory(const std::string& path) {
 }
 
 std::string GetAppDir() {
+#ifdef __APPLE__
+    CFBundleRef mainBundle = CFBundleGetMainBundle();
+    if (mainBundle) {
+        CFURLRef bundleURL = CFBundleCopyBundleURL(mainBundle);
+        if (bundleURL) {
+            char path[1024];
+            if (CFURLGetFileSystemRepresentation(bundleURL, true, (UInt8 *)path, sizeof(path))) {
+                std::string fullPath(path);
+                // On macOS, if it's a bundle, return the directory containing the bundle
+                size_t lastSlash = fullPath.find_last_of('/');
+                if (lastSlash != std::string::npos) {
+                    CFRelease(bundleURL);
+                    return fullPath.substr(0, lastSlash);
+                }
+            }
+            CFRelease(bundleURL);
+        }
+    }
+#endif
     char buffer[1024];
     uint32_t size = sizeof(buffer);
     if (getcwd(buffer, size) != nullptr) {
