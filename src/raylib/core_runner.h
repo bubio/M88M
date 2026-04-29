@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pc88.h"
+#include "sound.h"
 #include "diskmgr.h"
 #include "tapemgr.h"
 #include "audio_out.h"
@@ -23,6 +24,7 @@ public:
     void UpdateInput();
     void UpdateUI(bool& shouldExit);
     void DrawUI(bool& shouldExit);
+    void RequestReset();
     
     // Thread-safe config update
     void RequestConfigApply(const PC8801::Config& cfg, bool requireReset = false);
@@ -41,6 +43,7 @@ private:
     PC88 pc88;
     DiskManager diskmgr;
     TapeManager tapemgr;
+    PC8801::Sound coreSound;
     RaylibSound sound;
     KeyInput keyInput;
     UIManager uiManager;
@@ -55,4 +58,5 @@ private:
     PC8801::Config pendingConfig;
     std::atomic<bool> configPending;
     std::atomic<bool> configResetPending;
+    std::atomic<bool> resetPending;
 };

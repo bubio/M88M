@@ -627,6 +627,11 @@ void OPNABase::SetADPCMBReg(uint addr, uint data)
 	switch (addr)
 	{
 	case 0x00:		// Control Register 1
+		if (((data & 0x60) == 0x20 || (data & 0x60) == 0x60) &&
+			((control1 & 0x60) != (data & 0x60)))
+		{
+			memaddr = startaddr;
+		}
 		if ((data & 0x80) && !adpcmplay)
 		{
 			adpcmplay = true;
@@ -1291,18 +1296,19 @@ bool OPNA::LoadRhythmSample(const char* path)
 		uint32 fsize;
 		char buf[MAX_PATH] = "";
 		if (path)
-			strncpy(buf, path, MAX_PATH);
-		strncat(buf, "2608_", MAX_PATH);
-		strncat(buf, rhythmname[i], MAX_PATH);
-		strncat(buf, ".WAV", MAX_PATH);
+			strncpy(buf, path, MAX_PATH - 1);
+		strncat(buf, "2608_", MAX_PATH - strlen(buf) - 1);
+		strncat(buf, rhythmname[i], MAX_PATH - strlen(buf) - 1);
+		strncat(buf, ".WAV", MAX_PATH - strlen(buf) - 1);
 
 		if (!file.Open(buf, FileIO::readonly))
 		{
 			if (i != 5)
 				break;
+			buf[0] = '\0';
 			if (path)
-				strncpy(buf, path, MAX_PATH);
-			strncpy(buf, "2608_RYM.WAV", MAX_PATH);
+				strncpy(buf, path, MAX_PATH - 1);
+			strncat(buf, "2608_RYM.WAV", MAX_PATH - strlen(buf) - 1);
 			if (!file.Open(buf, FileIO::readonly))
 				break;
 		}
@@ -1334,9 +1340,9 @@ bool OPNA::LoadRhythmSample(const char* path)
 		fsize /= 2;
 		if (fsize >= 0x100000 || whdr.tag != 1 || whdr.nch != 1)
 			break;
-		fsize = Max(fsize, (1<<31)/1024);
+		fsize = Min(fsize, (1<<31)/1024);
 		
-		delete rhythm[i].sample;
+		delete[] rhythm[i].sample;
 		rhythm[i].sample = new int16[fsize];
 		if (!rhythm[i].sample)
 			break;

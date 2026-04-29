@@ -32,7 +32,11 @@ UIManager::~UIManager() {
 void UIManager::Init() {}
 
 void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
-    if (IsKeyPressed(KEY_F12)) ToggleMenu(coreRunner);
+    if (IsKeyPressed(KEY_F10)) ToggleMenu(coreRunner);
+    if (IsKeyPressed(KEY_F12)) {
+        if (coreRunner) coreRunner->RequestReset();
+        else pc88->Reset();
+    }
     if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) && !showMenu) {
         if (GetMouseY() < GetScreenHeight() - 24) ToggleMenu(coreRunner);
     }
@@ -138,7 +142,11 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     }
 
     btnY += 35; // Space after group box
-    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset PC-8801")) { pc88->Reset(); ToggleMenu(coreRunner); }
+    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset PC-8801")) {
+        if (coreRunner) coreRunner->RequestReset();
+        else pc88->Reset();
+        ToggleMenu(coreRunner);
+    }
     btnY += 34;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Settings")) showSettings = true;
     btnY += 34;
@@ -267,14 +275,16 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         for (int i = 0; i < 4; i++) {
             GuiLabel({ x + 25, pY + 10, 80, 20 }, names[i]);
             float val = (float)*vPtrs[i];
-            GuiSliderBar({ x + 100, pY + 10, 240, 16 }, "0", "128", &val, 0, 128);
+            GuiSliderBar({ x + 100, pY + 10, 240, 16 }, "-100dB", "+40dB", &val, -100, 40);
             if ((int)val != *vPtrs[i]) { *vPtrs[i] = (int)val; changed = true; }
             pY += 28;
         }
 
         pY += 10;
         if (GuiButton({ x + 100, pY + 10, 150, 24 }, "Reset to Defaults")) {
-            cfg.volfm = 64; cfg.volssg = 64; cfg.voladpcm = 64; cfg.volrhythm = 64;
+            cfg.volfm = 0; cfg.volssg = 0; cfg.voladpcm = 0; cfg.volrhythm = 0;
+            cfg.volbd = 0; cfg.volsd = 0; cfg.voltop = 0;
+            cfg.volhh = 0; cfg.voltom = 0; cfg.volrim = 0;
             changed = true;
         }
 

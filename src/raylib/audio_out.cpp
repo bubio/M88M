@@ -1,36 +1,16 @@
 #include "audio_out.h"
 #include "pc88/config.h"
 #include <algorithm>
-#include <iostream>
-#include <cstdio>
 
 static RaylibSound* s_current_sound = nullptr;
 
 static void GlobalAudioCallback(void* buffer, unsigned int frames) {
     if (s_current_sound) {
-        short* out = (short*)buffer;
-        static std::vector<int32_t> mixBuf;
-        mixBuf.assign(frames * 2, 0);
-        s_current_sound->MixInternal(mixBuf.data(), frames);
-
-        long long sum = 0;
-        for (unsigned int i = 0; i < frames * 2; i++) {
-            int32_t s = mixBuf[i];
-            if (s > 32767) s = 32767;
-            if (s < -32768) s = -32768;
-            out[i] = (short)s;
-            sum += (s < 0 ? -s : s);
-        }
-        
-        static int audioCounter = 0;
-        if (audioCounter++ % 100 == 0 && sum > 0) {
-            fprintf(stderr, "[VERIFY] Audio is ACTIVE (avg amplitude: %lld)\n", sum / (frames * 2));
-            fflush(stderr);
-        }
+        s_current_sound->FillOutput((int16_t*)buffer, frames);
     }
 }
 
-RaylibSound::RaylibSound() : sampleRate(44100) { stream = {0}; }
+RaylibSound::RaylibSound() : outputSource(nullptr), sampleRate(44100) { stream = {0}; }
 RaylibSound::~RaylibSound() { Cleanup(); }
 
 void RaylibSound::Init() {
@@ -46,27 +26,21 @@ void RaylibSound::Cleanup() {
     if (s_current_sound == this) s_current_sound = nullptr;
 }
 
-bool IFCALL RaylibSound::Connect(ISoundSource* src) {
+void RaylibSound::SetSource(SoundSource* src) {
     std::lock_guard<std::recursive_mutex> lock(mutex);
-    for (auto* s : sources) if (s == src) return true;
-    sources.push_back(src);
-    src->SetRate(sampleRate);
-    return true;
+    outputSource = src;
 }
 
-bool IFCALL RaylibSound::Disconnect(ISoundSource* src) {
+void RaylibSound::FillOutput(int16_t* buffer, unsigned int frames) {
     std::lock_guard<std::recursive_mutex> lock(mutex);
-    auto it = std::find(sources.begin(), sources.end(), src);
-    if (it != sources.end()) { sources.erase(it); return true; }
-    return false;
-}
-
-bool IFCALL RaylibSound::Update(ISoundSource* src) { return true; }
-int IFCALL RaylibSound::GetSubsampleTime(ISoundSource* src) { return 0; }
-
-void RaylibSound::MixInternal(int32_t* buffer, unsigned int frames) {
-    std::lock_guard<std::recursive_mutex> lock(mutex);
-    for (auto* src : sources) src->Mix(buffer, frames);
+    if (outputSource) {
+        int got = outputSource->Get(buffer, frames);
+        if (got < (int)frames) {
+            std::fill(buffer + got * 2, buffer + frames * 2, 0);
+        }
+    } else {
+        std::fill(buffer, buffer + frames * 2, 0);
+    }
 }
 
 void RaylibSound::Start() {

@@ -9,7 +9,7 @@
 #include <mutex>
 #include <unistd.h>
 
-CoreRunner::CoreRunner() : running(false), paused(false), configPending(false), configResetPending(false) {}
+CoreRunner::CoreRunner() : running(false), paused(false), configPending(false), configResetPending(false), resetPending(false) {}
 CoreRunner::~CoreRunner() { Stop(); }
 
 std::string CoreRunner::CheckMandatoryRoms(const std::string& romDir) {
@@ -36,11 +36,16 @@ bool CoreRunner::Init(Draw* draw) {
     
     pc88.ApplyConfig(&Config::Get());
     pc88.Reset();
+    uint soundBuffer = Config::Get().soundbuffer;
+    if (soundBuffer < 1024) soundBuffer = 4096;
+    if (!coreSound.Init(&pc88, 44100, soundBuffer)) return false;
+    coreSound.ApplyConfig(&Config::Get());
     sound.Init();
     sound.SetVolume(&Config::Get());
-    sound.Connect(pc88.GetOPN1());
-    sound.Connect(pc88.GetOPN2());
-    sound.Connect(pc88.GetBEEP());
+    sound.SetSource(coreSound.GetSoundSource());
+    pc88.GetOPN1()->Connect(&coreSound);
+    pc88.GetOPN2()->Connect(&coreSound);
+    pc88.GetBEEP()->Connect(&coreSound);
     keyInput.Init(&pc88);
     uiManager.Init();
     return true;
@@ -51,6 +56,10 @@ void CoreRunner::RequestConfigApply(const PC8801::Config& cfg, bool requireReset
     pendingConfig = cfg;
     configPending = true;
     configResetPending = requireReset;
+}
+
+void CoreRunner::RequestReset() {
+    resetPending = true;
 }
 
 void CoreRunner::UpdateInput() {
@@ -105,9 +114,14 @@ void CoreRunner::Run() {
             audioPaused = false;
         }
 
+        if (resetPending.exchange(false)) {
+            pc88.Reset();
+        }
+
         if (configPending) {
             std::lock_guard<std::mutex> lock(configMutex);
             pc88.ApplyConfig(&pendingConfig);
+            coreSound.ApplyConfig(&pendingConfig);
             sound.SetVolume(&pendingConfig);
             if (configResetPending) {
                 pc88.Reset(); 
