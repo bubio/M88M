@@ -8,6 +8,18 @@ namespace Config {
 
 static PC8801::Config g_config;
 
+static void NormalizeLoadedConfig(PC8801::Config& cfg) {
+    if (cfg.volrhythm > 0 && cfg.volbd > 0 &&
+        cfg.volsd == 0 && cfg.voltop == 0 && cfg.volhh == 0 &&
+        cfg.voltom == 0 && cfg.volrim == 0) {
+        cfg.volsd = cfg.volbd;
+        cfg.voltop = cfg.volbd;
+        cfg.volhh = cfg.volbd;
+        cfg.voltom = cfg.volbd;
+        cfg.volrim = cfg.volbd;
+    }
+}
+
 static std::string GetConfigFilePath() {
     std::string dir = Paths::GetConfigDir();
     struct stat st;
@@ -32,8 +44,11 @@ void Load(PC8801::Config& cfg) {
                 PC8801::Config::precisemixing |
                 PC8801::Config::mixsoundalways;
     cfg.flag2 = PC8801::Config::usefmclock;
-    cfg.volfm = 64; cfg.volssg = 64; cfg.voladpcm = 64; cfg.volrhythm = 64; cfg.volbd = 64;
+    cfg.volfm = 64; cfg.volssg = 64; cfg.voladpcm = 64; cfg.volrhythm = 64;
+    cfg.volbd = 64; cfg.volsd = 64; cfg.voltop = 64;
+    cfg.volhh = 64; cfg.voltom = 64; cfg.volrim = 64;
     cfg.mastervol = 128; // 100%
+    cfg.soundbuffer = 4096;
 
     // Try to load from file
     std::string path = GetConfigFilePath();
@@ -43,6 +58,7 @@ void Load(PC8801::Config& cfg) {
         file.Close();
         // Recalculate mainsubratio in case it was saved inconsistently
         cfg.mainsubratio = (cfg.clock >= 6) ? 2 : 1;
+        NormalizeLoadedConfig(cfg);
     } else {
         // Save defaults if file doesn't exist
         Save(cfg);

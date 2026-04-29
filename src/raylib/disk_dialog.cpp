@@ -275,6 +275,8 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         pY += 10;
         if (GuiButton({ x + 100, pY + 10, 150, 24 }, "Reset to Defaults")) {
             cfg.volfm = 64; cfg.volssg = 64; cfg.voladpcm = 64; cfg.volrhythm = 64;
+            cfg.volbd = 64; cfg.volsd = 64; cfg.voltop = 64;
+            cfg.volhh = 64; cfg.voltom = 64; cfg.volrim = 64;
             changed = true;
         }
 
