@@ -8,16 +8,21 @@ namespace Config {
 
 static PC8801::Config g_config;
 
+static int NormalizeVolume(int volume) {
+    return volume > 40 ? 0 : volume;
+}
+
 static void NormalizeLoadedConfig(PC8801::Config& cfg) {
-    if (cfg.volrhythm > 0 && cfg.volbd > 0 &&
-        cfg.volsd == 0 && cfg.voltop == 0 && cfg.volhh == 0 &&
-        cfg.voltom == 0 && cfg.volrim == 0) {
-        cfg.volsd = cfg.volbd;
-        cfg.voltop = cfg.volbd;
-        cfg.volhh = cfg.volbd;
-        cfg.voltom = cfg.volbd;
-        cfg.volrim = cfg.volbd;
-    }
+    cfg.volfm = NormalizeVolume(cfg.volfm);
+    cfg.volssg = NormalizeVolume(cfg.volssg);
+    cfg.voladpcm = NormalizeVolume(cfg.voladpcm);
+    cfg.volrhythm = NormalizeVolume(cfg.volrhythm);
+    cfg.volbd = NormalizeVolume(cfg.volbd);
+    cfg.volsd = NormalizeVolume(cfg.volsd);
+    cfg.voltop = NormalizeVolume(cfg.voltop);
+    cfg.volhh = NormalizeVolume(cfg.volhh);
+    cfg.voltom = NormalizeVolume(cfg.voltom);
+    cfg.volrim = NormalizeVolume(cfg.volrim);
 }
 
 static std::string GetConfigFilePath() {
@@ -44,9 +49,9 @@ void Load(PC8801::Config& cfg) {
                 PC8801::Config::precisemixing |
                 PC8801::Config::mixsoundalways;
     cfg.flag2 = PC8801::Config::usefmclock;
-    cfg.volfm = 64; cfg.volssg = 64; cfg.voladpcm = 64; cfg.volrhythm = 64;
-    cfg.volbd = 64; cfg.volsd = 64; cfg.voltop = 64;
-    cfg.volhh = 64; cfg.voltom = 64; cfg.volrim = 64;
+    cfg.volfm = 0; cfg.volssg = 0; cfg.voladpcm = 0; cfg.volrhythm = 0;
+    cfg.volbd = 0; cfg.volsd = 0; cfg.voltop = 0;
+    cfg.volhh = 0; cfg.voltom = 0; cfg.volrim = 0;
     cfg.mastervol = 128; // 100%
     cfg.soundbuffer = 4096;
 
