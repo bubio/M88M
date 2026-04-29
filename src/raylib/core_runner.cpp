@@ -36,11 +36,16 @@ bool CoreRunner::Init(Draw* draw) {
     
     pc88.ApplyConfig(&Config::Get());
     pc88.Reset();
+    uint soundBuffer = Config::Get().soundbuffer;
+    if (soundBuffer < 1024) soundBuffer = 4096;
+    if (!coreSound.Init(&pc88, 44100, soundBuffer)) return false;
+    coreSound.ApplyConfig(&Config::Get());
     sound.Init();
     sound.SetVolume(&Config::Get());
-    sound.Connect(pc88.GetOPN1());
-    sound.Connect(pc88.GetOPN2());
-    sound.Connect(pc88.GetBEEP());
+    sound.SetSource(coreSound.GetSoundSource());
+    pc88.GetOPN1()->Connect(&coreSound);
+    pc88.GetOPN2()->Connect(&coreSound);
+    pc88.GetBEEP()->Connect(&coreSound);
     keyInput.Init(&pc88);
     uiManager.Init();
     return true;
@@ -116,6 +121,7 @@ void CoreRunner::Run() {
         if (configPending) {
             std::lock_guard<std::mutex> lock(configMutex);
             pc88.ApplyConfig(&pendingConfig);
+            coreSound.ApplyConfig(&pendingConfig);
             sound.SetVolume(&pendingConfig);
             if (configResetPending) {
                 pc88.Reset(); 

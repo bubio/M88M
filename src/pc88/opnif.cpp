@@ -171,10 +171,7 @@ void IFCALL OPNIF::Mix(int32* dest, int nsamples)
 //
 static inline int ConvertVolume(int volume)
 {
-	if (volume <= 0) return -200;
-	// Map 128 to 0dB, and 0-127 to negative dB values.
-	// Simple linear scale for now: 128=0dB, 64=-32dB, 1=-63dB.
-	return (volume - 128) / 2;
+	return Limit(volume, 40, -100);
 }
 
 void OPNIF::SetVolume(const Config* config)

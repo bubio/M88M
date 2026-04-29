@@ -48,6 +48,8 @@ PC88::PC88()
 {
 	assert((1 << MemoryManager::pagebits) <= 0x400); 
 	clock = 100;
+	cfgflags = 0;
+	cfgflag2 = 0;
 	DIAGINIT(&cpu1);
 	dexc = 0;
 }
@@ -532,7 +534,7 @@ bool PC88::ConnectDevices(const char* romDir)
 		{ 0, 0, 0 }
 	};
 	opn2 = new PC8801::OPNIF(DEV_ID('O', 'P', 'N', '2'));
-	if (!opn2->Init(&bus1, pint4, popnio, this, romDir)) return false;
+	if (!opn2->Init(&bus1, pint4, popnio2, this, romDir)) return false;
 	if (!opn2 || !bus1.Connect(opn2, c_opn2)) return false;
 	opn2->SetIMask(0xaa, 0x80);
 	

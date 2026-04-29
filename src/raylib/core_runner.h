@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pc88.h"
+#include "sound.h"
 #include "diskmgr.h"
 #include "tapemgr.h"
 #include "audio_out.h"
@@ -42,6 +43,7 @@ private:
     PC88 pc88;
     DiskManager diskmgr;
     TapeManager tapemgr;
+    PC8801::Sound coreSound;
     RaylibSound sound;
     KeyInput keyInput;
     UIManager uiManager;
