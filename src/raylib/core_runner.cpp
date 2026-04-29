@@ -9,7 +9,7 @@
 #include <mutex>
 #include <unistd.h>
 
-CoreRunner::CoreRunner() : running(false), paused(false), configPending(false), configResetPending(false) {}
+CoreRunner::CoreRunner() : running(false), paused(false), configPending(false), configResetPending(false), resetPending(false) {}
 CoreRunner::~CoreRunner() { Stop(); }
 
 std::string CoreRunner::CheckMandatoryRoms(const std::string& romDir) {
@@ -51,6 +51,10 @@ void CoreRunner::RequestConfigApply(const PC8801::Config& cfg, bool requireReset
     pendingConfig = cfg;
     configPending = true;
     configResetPending = requireReset;
+}
+
+void CoreRunner::RequestReset() {
+    resetPending = true;
 }
 
 void CoreRunner::UpdateInput() {
@@ -103,6 +107,10 @@ void CoreRunner::Run() {
         if (audioPaused) {
             sound.Pause(false);
             audioPaused = false;
+        }
+
+        if (resetPending.exchange(false)) {
+            pc88.Reset();
         }
 
         if (configPending) {
