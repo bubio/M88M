@@ -1,58 +1,77 @@
+# M88M - PC-8801 Series Emulator
 
-# M88 - PC8801 Series Emulator
+> [!WARNING]
+> **Work In Progress**: This project is currently under active development. Features and stability may vary.
 
-## 初めに
+M88M is a modern, cross-platform port of the classic PC-8801 emulator **M88**, originally developed by **cisc**. 
 
-cisc氏作のPC-8801エミュレータ[M88](http://retropc.net/cisc/m88/)を改造した私家版です。
+While the original M88 was tightly coupled with the Win32 API and DirectX, M88M leverages **raylib** and **raygui** for its frontend, making it natively compatible with **macOS (Intel/Apple Silicon)**, **Linux**, and **Windows** via a single CMake-based build system.
 
-* 最近のコンパイラでビルドできる様に修正。
-* 今時の環境に合わせてデフォルトの設定値を変更。
-* 英語101キーモードの追加。
-* ウインドウ座標を保存するオプションを追加。
-* PC-8001mkIISR ひらがなフォントファイルの形式を変更。
-* fmgenの修正。
-* [c86ctl](https://launchpad.net/c86ctl)用の制御を追加。
+## Key Features
 
-## 動作環境
+- **Cross-Platform:** Native support for macOS, Linux, and Windows.
+- **Raylib Frontend:** Modern, lightweight hardware-accelerated rendering and audio.
+- **Core Integrity:** Retains the highly accurate emulation core of the original M88 while replacing the platform-dependent layers.
+- **Modern Build System:** Uses CMake for easy compilation with modern compilers (Clang, GCC, MSVC).
+- **Dual-Threaded Architecture:** Maintains the original high-performance design with separate threads for emulation and UI/rendering.
+- **Enhanced UI:** Includes a built-in overlay for disk management and system configuration.
 
-* Windows Vista以降
+## Status
 
-## C86CTLの使用
+M88M is currently in a "Playable Prototype" stage. The core emulation (Z80, OPNA/PSG, CRTC, FDC) is fully functional. 
 
-OPNA並びにOPN3Lモジュールに対応しています。
-現在の所[G.I.M.I.C](http://gimic.jp/index.php?G.I.M.I.C)が使用可能です。
+**Working Features:**
+- N88-BASIC (V1/V2) and compatible modes.
+- Soundboard II (OPNA) emulation (FM, PSG, Rhythm, ADPCM).
+- D88 disk image support (Mount/Unmount).
+- Keyboard matrix emulation.
+- Modern window scaling and aspect ratio maintenance.
 
-[c86ctl](https://launchpad.net/c86ctl)が必要です。
-事前にM88.exeと同じパスにc86ctl.dllを配置して下さい。
+## Prerequisites
 
-OPN3Lはハードウェア的にFM/SSG音量バランスが固定で(88的には)小さい為、少々聞き苦しいと思います。
+To run the emulator, you must provide the necessary PC-8801 ROM files. Place the following files in the same directory as the executable or in a folder named `roms`:
 
-## 80SRひらがなフォント
+- `N88.ROM` (or `N88.ROM` + `N88_0.ROM`, etc.)
+- `DISK.ROM`
+- `FONT.ROM`
+- (Optional) `KANJI1.ROM`, `KANJI2.ROM`
 
-ファイル名はFONT80SR.ROMです。
+*Note: You must own the original hardware to legally use these ROM files.*
 
-ファイル形式は[J80](http://www.geocities.jp/upd780c1/pc-8001/index.html)のPC-8001mkIISR.fonと同等の物です。
+## Building
 
-ソフトウェア的に読み出す方法が無い為、ROMリーダーを使って吸い出して下さい。
+### macOS / Linux
+```bash
+# Clone the repository
+git clone <repository-url>
+cd M88M
 
-## ライセンス
+# Configure and build
+cmake -S . -B build
+cmake --build build -j$(sysctl -n hw.ncpu || nproc)
+```
+The executable will be generated at `./build/m88`.
 
-c86ctl.hは2条項BSDライセンスです。
+### Windows (CMake)
+You can use CMake with Visual Studio or MinGW.
+```cmd
+cmake -S . -B build
+cmake --build build --config Release
+```
 
-新規ファイル/追加コードは2条項BSDライセンスになります。
+## Usage
 
-既存のファイルは以下のオリジナルライセンスに従います。
+- **F1 / F2:** Open file dialog to mount disk to Drive 1 or Drive 2.
+- **F10 / Right Click:** Toggle the Main Menu / Settings overlay.
+- **F12:** Reset the emulator.
+- **Drag & Drop:** Drop a `.d88` file onto the window to mount it.
 
-* M88 はcisc氏が著作権を所有しています。
-* M88 とそのソースコードは一切無保証です。
-* M88 そのもの、または M88 の使用や、M88 を使用できなかったことなど、M88 に関して生じた損害はすべて使用者が自ら負うものとします。作者は一切責任を負いません。また、作者は M88 に関してバグ、不具合等があったとしてもそれに対処する義務を負いません。
-* M88 の転載、及び配布は禁止します。但し，M88 のソースコードに改変を加えたもの，及び M88 のソースコードを利用したソフトに関しては，その限りではありません。
-* M88.exe の使用者は NEC PC-8801 シリーズの本体を所有しなければなりません。また、使用する ROM データはその本体から直接取り出した ROM データでなければなりません。使用者の所有物でない本体から取り出した ROM データは使用できません。
+## License
 
-* M88 のソースコードの一部，または全部を組み込んだソフトは，フリーソフトとして公開することが出来ます。
-* 但し，src\pc88 のディレクトリの下にあるファイルを組み込む場合，または商用ソフト(シェアウェア含む)へのプラグインソフトとして配布する場合は，同時にそのソフトのソースコードもフリーソフトとして公開ください。
-* 公開の際には，ドキュメント等に M88 のソースコードの一部または全部を組み込んだ事と，著作権表示を明示してください．また，作者への連絡を頂ければ幸いです。
-* M88 のソースコードを利用したソフトのソースを配布する際には，M88 のソースコードのうち，そのソフトのコンパイルに必要なものに限り，添付することを認めます。
-* 商用ソフト(シェアウェア含む) に M88 のソースコードの一部，または全部を組み込む際には，事前に M88 の作者の合意を得る必要があります。
-* M88 に改変を加えたソフトを配布する場合は，M88 の著作権表示，および改変内容を明示してください。
+- The original **M88** core is copyright (C) **cisc**. Please refer to `docs/README.md` for the original license terms.
+- New code, porting layers, and Raylib integration are provided under the **2-Clause BSD License**.
+- `c86ctl.h` is provided under the **2-Clause BSD License**.
 
+---
+
+*This project is a fan-made port and is not affiliated with the original author cisc.*
