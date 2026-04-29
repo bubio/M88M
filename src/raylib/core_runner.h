@@ -23,6 +23,7 @@ public:
     void UpdateInput();
     void UpdateUI(bool& shouldExit);
     void DrawUI(bool& shouldExit);
+    void RequestReset();
     
     // Thread-safe config update
     void RequestConfigApply(const PC8801::Config& cfg, bool requireReset = false);
@@ -55,4 +56,5 @@ private:
     PC8801::Config pendingConfig;
     std::atomic<bool> configPending;
     std::atomic<bool> configResetPending;
+    std::atomic<bool> resetPending;
 };

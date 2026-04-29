@@ -32,7 +32,11 @@ UIManager::~UIManager() {
 void UIManager::Init() {}
 
 void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
-    if (IsKeyPressed(KEY_F12)) ToggleMenu(coreRunner);
+    if (IsKeyPressed(KEY_F10)) ToggleMenu(coreRunner);
+    if (IsKeyPressed(KEY_F12)) {
+        if (coreRunner) coreRunner->RequestReset();
+        else pc88->Reset();
+    }
     if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) && !showMenu) {
         if (GetMouseY() < GetScreenHeight() - 24) ToggleMenu(coreRunner);
     }
@@ -138,7 +142,11 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     }
 
     btnY += 35; // Space after group box
-    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset PC-8801")) { pc88->Reset(); ToggleMenu(coreRunner); }
+    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset PC-8801")) {
+        if (coreRunner) coreRunner->RequestReset();
+        else pc88->Reset();
+        ToggleMenu(coreRunner);
+    }
     btnY += 34;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Settings")) showSettings = true;
     btnY += 34;
