@@ -1,7 +1,7 @@
 #include "key_input.h"
 #include "raylib.h"
 #include "pc88.h"
-#include "pc88/config.h"
+#include "config.h"
 #include "ifui.h"
 #include "device_i.h"
 #include <cstring>
@@ -22,8 +22,8 @@ uint IOCALL KeyInput::In(uint port) {
     return matrix[port & 0x0f];
 }
 
-bool KeyInput::Init(PC88* pc88) {
-    static const IIOBus::Connector connectors[] = {
+bool KeyInput::Init(IOBus* bus) {
+    static const IOBus::Connector connectors[] = {
         { 0x00, IIOBus::portin, 0 }, { 0x01, IIOBus::portin, 0 },
         { 0x02, IIOBus::portin, 0 }, { 0x03, IIOBus::portin, 0 },
         { 0x04, IIOBus::portin, 0 }, { 0x05, IIOBus::portin, 0 },
@@ -34,10 +34,10 @@ bool KeyInput::Init(PC88* pc88) {
         { 0x0e, IIOBus::portin, 0 }, { 0x0f, IIOBus::portin, 0 },
         { 0, 0, 0 }
     };
-    return pc88->GetBus1()->Connect(this, connectors);
+    return bus->Connect(this, connectors);
 }
 
-void KeyInput::Update(PC88* pc88) {
+void KeyInput::Update() {
     memset(matrix, 0xff, sizeof(matrix));
 
     auto set_key = [&](int row, int bit, bool down) {
@@ -45,7 +45,8 @@ void KeyInput::Update(PC88* pc88) {
     };
 
     bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
-    bool useArrowFor10 = (pc88->GetFlags() & PC8801::Config::usearrowfor10) != 0;
+    const auto& cfg = Config::Get();
+    bool useArrowFor10 = (cfg.flags & PC8801::Config::usearrowfor10) != 0;
 
     // --- Row 0: Numpad 0-7 (and equivalents) ---
     set_key(0, 0, IsKeyDown(KEY_KP_0) || IsKeyDown(KEY_INSERT));

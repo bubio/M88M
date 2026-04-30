@@ -3,7 +3,7 @@
 #include "device.h"
 #include <cstdint>
 
-class PC88;
+class IOBus;
 
 class KeyInput : public Device {
 public:
@@ -19,8 +19,8 @@ public:
     // IO Handlers
     uint IOCALL In(uint port);
 
-    void Update(PC88* pc88);
-    bool Init(PC88* pc88);
+    void Update();
+    bool Init(IOBus* bus);
 
 private:
     uint8_t matrix[16];

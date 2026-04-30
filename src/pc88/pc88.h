@@ -89,7 +89,6 @@ public:
 	int Proceed(uint us, uint clock, uint eff);
 	void ApplyConfig(PC8801::Config*);
 	void SetVolume(PC8801::Config*);
-	int  GetFlags() const { return cfgflags; }
 	
 	uint IFCALL GetCPUTick() { return cpu1.GetCount(); }
 	uint IFCALL GetCPUSpeed() { return clock; }
@@ -108,9 +107,7 @@ public:
 	Z80*			GetCPU1() { return &cpu1; }
 	Z80*			GetCPU2() { return &cpu2; }
 	PC8801::PD8257*	GetDMAC() { return dmac; }
-	PC8801::Memory*	GetMemory() { return mem1; }
 	PC8801::Beep*	GetBEEP() { return beep; }
-	IIOBus*			GetBus1() { return &bus1; }
 
 	bool SaveShapshot(const char* filename);
 	bool LoadShapshot(const char* filename);

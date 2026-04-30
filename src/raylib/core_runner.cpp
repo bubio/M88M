@@ -32,21 +32,21 @@ bool CoreRunner::Init(Draw* draw) {
     if (!romError.empty()) return false;
     chdir(romDir.c_str());
     if (!diskmgr.Init()) return false;
-    if (!pc88.Init(draw, &diskmgr, &tapemgr, romDir.c_str())) return false;
+    if (!PC88::Init(draw, &diskmgr, &tapemgr, romDir.c_str())) return false;
 
-    pc88.ApplyConfig(&Config::Get());
-    pc88.Reset();
+    ApplyConfig(&Config::Get());
+    Reset();
     uint soundBuffer = Config::Get().soundbuffer;
     if (soundBuffer < 1024) soundBuffer = 4096;
-    if (!coreSound.Init(&pc88, 44100, soundBuffer)) return false;
+    if (!coreSound.Init(this, 44100, soundBuffer)) return false;
     coreSound.ApplyConfig(&Config::Get());
     sound.Init();
     sound.SetVolume(&Config::Get());
     sound.SetSource(coreSound.GetSoundSource());
-    pc88.GetOPN1()->Connect(&coreSound);
-    pc88.GetOPN2()->Connect(&coreSound);
-    pc88.GetBEEP()->Connect(&coreSound);
-    keyInput.Init(&pc88);
+    GetOPN1()->Connect(&coreSound);
+    GetOPN2()->Connect(&coreSound);
+    GetBEEP()->Connect(&coreSound);
+    keyInput.Init(&bus1);
     uiManager.Init();
     return true;
 }
@@ -64,16 +64,16 @@ void CoreRunner::RequestReset() {
 
 void CoreRunner::UpdateInput() {
     if (!uiManager.IsMenuOpen()) {
-        if (running) keyInput.Update(&pc88);
+        if (running) keyInput.Update();
     }
 }
 
 void CoreRunner::UpdateUI(bool& shouldExit) {
-    uiManager.Update(shouldExit, &pc88, this);
+    uiManager.Update(shouldExit, this, this);
 }
 
 void CoreRunner::DrawUI(bool& shouldExit) {
-    uiManager.Draw(&diskmgr, Config::Get(), &pc88, this, shouldExit);
+    uiManager.Draw(&diskmgr, Config::Get(), this, this, shouldExit);
 }
 
 void CoreRunner::Start() {
@@ -115,31 +115,32 @@ void CoreRunner::Run() {
         }
 
         if (resetPending.exchange(false)) {
-            pc88.Reset();
+            Reset();
         }
 
         if (configPending) {
-            std::lock_guard<std::mutex> lock(configMutex);
-            pc88.ApplyConfig(&pendingConfig);
+            // Reset();
+            ApplyConfig(&pendingConfig);
             coreSound.ApplyConfig(&pendingConfig);
             sound.SetVolume(&pendingConfig);
             if (configResetPending) {
-                pc88.Reset();
+                Reset();
             }
             Config::Get() = pendingConfig;
             Config::Save(pendingConfig);
             configPending = false;
-        }
+            }
 
-        // Run one frame (1/60s)
-        const auto& cfg = Config::Get();
-        uint32_t clockParam = cfg.clock;
-        uint32_t speedParam = clockParam * (cfg.speed > 0 ? cfg.speed : 100) / 100;
-        uint32_t ticksToRun = pc88.GetFramePeriod();
+            // Run one frame (1/60s)
+            const auto& cfg = Config::Get();
+            uint32_t clockParam = cfg.clock;
+            uint32_t speedParam = clockParam * (cfg.speed > 0 ? cfg.speed : 100) / 100;
+            uint32_t ticksToRun = GetFramePeriod();
 
-        pc88.TimeSync();
-        int actualTicks = pc88.Proceed(ticksToRun, clockParam, speedParam);
-        pc88.UpdateScreen(true);
+            TimeSync();
+            int actualTicks = Proceed(ticksToRun, clockParam, speedParam);
+            UpdateScreen(true);
+
         totalTicksEmulated += actualTicks;
 
         // Synchronization

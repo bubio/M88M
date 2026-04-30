@@ -12,10 +12,10 @@
 #include <string>
 #include <mutex>
 
-class CoreRunner {
+class CoreRunner : public PC88 {
 public:
     CoreRunner();
-    ~CoreRunner();
+    virtual ~CoreRunner();
 
     bool Init(Draw* draw);
     void Start();
@@ -29,7 +29,7 @@ public:
     // Thread-safe config update
     void RequestConfigApply(const PC8801::Config& cfg, bool requireReset = false);
 
-    PC88* GetPC88() { return &pc88; }
+    PC88* GetPC88() { return this; }
     DiskManager* GetDiskManager() { return &diskmgr; }
     UIManager* GetUIManager() { return &uiManager; }
     bool HasRomError() const { return !romError.empty(); }
@@ -40,7 +40,6 @@ private:
     void Run();
     std::string CheckMandatoryRoms(const std::string& romDir);
 
-    PC88 pc88;
     DiskManager diskmgr;
     TapeManager tapemgr;
     PC8801::Sound coreSound;

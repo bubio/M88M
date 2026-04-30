@@ -35,7 +35,7 @@ void Load(PC8801::Config& cfg) {
     cfg.volfm = 0; cfg.volssg = 0; cfg.voladpcm = 0; cfg.volrhythm = 0;
     cfg.volbd = 0; cfg.volsd = 0; cfg.voltop = 0;
     cfg.volhh = 0; cfg.voltom = 0; cfg.volrim = 0;
-    cfg.mastervol = 128; // 100%
+    cfg.mastervol = 64; // 50%
     cfg.soundbuffer = 4096;
 
     // Try to load from file
