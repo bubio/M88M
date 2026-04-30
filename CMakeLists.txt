@@ -80,19 +80,53 @@ target_link_libraries(m88core PUBLIC ZLIB::ZLIB)
 
 # --- raylib ------------------------------------------------------------
 include(FetchContent)
-set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
-set(SUPPORT_MODULE_RAUDIO  ON  CACHE BOOL "" FORCE)
-set(SUPPORT_MODULE_RMODELS OFF CACHE BOOL "" FORCE)
 
-FetchContent_Declare(
-    raylib
-    GIT_REPOSITORY https://github.com/raysan5/raylib.git
-    GIT_TAG        5.5
-    GIT_SHALLOW    TRUE
-)
-FetchContent_MakeAvailable(raylib)
+# Automatically select binary URL based on platform/arch
+if(APPLE)
+    # raylib 5.5 release uses a universal binary for macOS
+    set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_macos.tar.gz")
+elseif(WIN32)
+    set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_mingw-w64.zip")
+endif()
 
+if(RAYLIB_BINARY_URL)
+    message(STATUS "Downloading raylib binary: ${RAYLIB_BINARY_URL}")
+    FetchContent_Declare(
+        raylib_bin
+        URL ${RAYLIB_BINARY_URL}
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+    )
+    FetchContent_MakeAvailable(raylib_bin)
+
+    add_library(raylib STATIC IMPORTED GLOBAL)
+    if(WIN32)
+        set_target_properties(raylib PROPERTIES
+            IMPORTED_LOCATION "${raylib_bin_SOURCE_DIR}/lib/libraylib.a"
+            INTERFACE_INCLUDE_DIRECTORIES "${raylib_bin_SOURCE_DIR}/include"
+        )
+    else()
+        set_target_properties(raylib PROPERTIES
+            IMPORTED_LOCATION "${raylib_bin_SOURCE_DIR}/lib/libraylib.a"
+            INTERFACE_INCLUDE_DIRECTORIES "${raylib_bin_SOURCE_DIR}/include"
+        )
+    endif()
+else()
+    message(STATUS "No pre-compiled binary for this platform. Falling back to source build.")
+    set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(BUILD_GAMES    OFF CACHE BOOL "" FORCE)
+    set(SUPPORT_MODULE_RAUDIO  ON  CACHE BOOL "" FORCE)
+    set(SUPPORT_MODULE_RMODELS OFF CACHE BOOL "" FORCE)
+
+    FetchContent_Declare(
+        raylib
+        GIT_REPOSITORY https://github.com/raysan5/raylib.git
+        GIT_TAG        5.5
+        GIT_SHALLOW    TRUE
+    )
+    FetchContent_MakeAvailable(raylib)
+endif()
+
+include(FetchContent)
 FetchContent_Declare(
     raygui
     GIT_REPOSITORY https://github.com/raysan5/raygui.git
