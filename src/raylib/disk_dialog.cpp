@@ -62,7 +62,7 @@ void UIManager::ToggleMenu(CoreRunner* coreRunner) {
     showMenu = !showMenu;
     if (!showMenu) {
         showSettings = false;
-        // If a critical setting was changed while the menu was open, 
+        // If a critical setting was changed while the menu was open,
         // apply the config with a reset request now that the menu is closing.
         if (resetPending && coreRunner) {
             coreRunner->RequestConfigApply(Config::Get(), true);
@@ -73,7 +73,7 @@ void UIManager::ToggleMenu(CoreRunner* coreRunner) {
 
 void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit, CoreRunner* coreRunner) {
     float width = 280;
-    float height = 380; 
+    float height = 380;
     float x = (float)GetScreenWidth() / 2 - width / 2;
     float y = (float)GetScreenHeight() / 2 - height / 2;
 
@@ -215,18 +215,18 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     if (activeTab == 0) { // System
         GuiLabel({ x + 20, pY, 120, 20 }, "CPU Clock:");
 
-        bool is4 = (cfg.clock == 4);
-        bool is8 = (cfg.clock == 8);
+        bool is4 = (cfg.clock < 60);
+        bool is8 = (cfg.clock >= 60);
         bool new_is4 = is4, new_is8 = is8;
 
         GuiToggle({ x + 150, pY, 70, 24 }, "4MHz", &new_is4);
         GuiToggle({ x + 225, pY, 70, 24 }, "8MHz", &new_is8);
 
-        if (new_is4 && !is4) { 
-            cfg.clock = 4; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; changed = true; 
+        if (new_is4 && !is4) {
+            cfg.clock = 40; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; changed = true;
             resetPending = true;
         } else if (new_is8 && !is8) {
-            cfg.clock = 8; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; changed = true;
+            cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; changed = true;
             resetPending = true;
         }
 
@@ -269,7 +269,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
 
         // Individual sound sources group
         GuiGroupBox({ x + 10, pY - 5, width - 20, 165 }, "Mixer (Internal Sound Sources)");
-        
+
         const char* names[] = { "FM", "SSG", "ADPCM", "Rhythm" };
         int* vPtrs[] = { &cfg.volfm, &cfg.volssg, &cfg.voladpcm, &cfg.volrhythm };
         for (int i = 0; i < 4; i++) {
@@ -307,7 +307,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         bool fs = isFullscreen, oldFs = fs;
         GuiCheckBox({ x + 150, pY, 20, 20 }, "Fullscreen", &fs);
         if (fs != oldFs) { isFullscreen = fs; ToggleFullscreen(); }
-        
+
         pY += rowH;
         bool sl = (cfg.flag2 & PC8801::Config::scanline) != 0;
         bool oldSl = sl;
@@ -358,7 +358,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     }
 
     if (changed) {
-        coreRunner->RequestConfigApply(cfg, false); 
+        coreRunner->RequestConfigApply(cfg, false);
         Config::Save(cfg);
     }
     if (GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back")) showSettings = false;
@@ -368,16 +368,16 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     float sW = (float)GetScreenWidth();
     float sH = (float)GetScreenHeight();
     GuiStatusBar({ 0, sH - 24, sW, 24 }, "");
-    
+
     float centerY = sH - 12.0f;
-    float textY = sH - 17.0f; 
+    float textY = sH - 17.0f;
 
     int d0 = diskmgr->GetCurrentDisk(0);
     const char* t0_sjis = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : "Empty";
     std::string t0 = (d0 >= 0) ? Paths::SJIStoUTF8(t0_sjis) : "Empty";
-    Color l0 = (statusdisplay.GetFDState(0) & 1) ? RED : Color{ 60, 20, 20, 255 }; 
+    Color l0 = (statusdisplay.GetFDState(0) & 1) ? RED : Color{ 60, 20, 20, 255 };
     DrawCircle(15, (int)centerY, 4, l0);
-    
+
     DrawText("FDD1:", 25, (int)textY, 10, DARKGRAY);
     if (ContainsJapanese(t0) && IsFontValid(fontJp)) {
         DrawTextEx(fontJp, t0.c_str(), { 60, sH - 18 }, 14, 1, DARKGRAY);
@@ -388,9 +388,9 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     int d1 = diskmgr->GetCurrentDisk(1);
     const char* t1_sjis = (d1 >= 0) ? diskmgr->GetImageTitle(1, d1) : "Empty";
     std::string t1 = (d1 >= 0) ? Paths::SJIStoUTF8(t1_sjis) : "Empty";
-    Color l1 = (statusdisplay.GetFDState(1) & 1) ? RED : Color{ 60, 20, 20, 255 }; 
+    Color l1 = (statusdisplay.GetFDState(1) & 1) ? RED : Color{ 60, 20, 20, 255 };
     DrawCircle(215, (int)centerY, 4, l1);
-    
+
     DrawText("FDD2:", 225, (int)textY, 10, DARKGRAY);
     if (ContainsJapanese(t1) && IsFontValid(fontJp)) {
         DrawTextEx(fontJp, t1.c_str(), { 260, sH - 18 }, 14, 1, DARKGRAY);
@@ -408,8 +408,8 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
         case PC8801::Config::N88V2CD: modeStr = "N88 V2CD"; break;
         default: break;
     }
-    
-    std::string infoStr = TextFormat("[%s] %dMHz", modeStr.c_str(), cfg.clock);
+
+    std::string infoStr = TextFormat("[%s] %dMHz", modeStr.c_str(), cfg.clock / 10);
     DrawText(infoStr.c_str(), (int)sW - 200, (int)textY, 10, DARKGRAY);
 
     DrawText(TextFormat("%d FPS", GetFPS()), (int)sW - 80, (int)textY, 10, DARKGRAY);

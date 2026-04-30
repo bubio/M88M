@@ -33,7 +33,7 @@ bool CoreRunner::Init(Draw* draw) {
     chdir(romDir.c_str());
     if (!diskmgr.Init()) return false;
     if (!pc88.Init(draw, &diskmgr, &tapemgr, romDir.c_str())) return false;
-    
+
     pc88.ApplyConfig(&Config::Get());
     pc88.Reset();
     uint soundBuffer = Config::Get().soundbuffer;
@@ -124,7 +124,7 @@ void CoreRunner::Run() {
             coreSound.ApplyConfig(&pendingConfig);
             sound.SetVolume(&pendingConfig);
             if (configResetPending) {
-                pc88.Reset(); 
+                pc88.Reset();
             }
             Config::Get() = pendingConfig;
             Config::Save(pendingConfig);
@@ -133,9 +133,9 @@ void CoreRunner::Run() {
 
         // Run one frame (1/60s)
         const auto& cfg = Config::Get();
-        uint32_t clockParam = cfg.clock * 10;
+        uint32_t clockParam = cfg.clock;
         uint32_t speedParam = clockParam * (cfg.speed > 0 ? cfg.speed : 100) / 100;
-        uint32_t ticksToRun = pc88.GetFramePeriod(); 
+        uint32_t ticksToRun = pc88.GetFramePeriod();
 
         pc88.TimeSync();
         int actualTicks = pc88.Proceed(ticksToRun, clockParam, speedParam);
