@@ -48,8 +48,6 @@ PC88::PC88()
 {
 	assert((1 << MemoryManager::pagebits) <= 0x400); 
 	clock = 100;
-	cfgflags = 0;
-	cfgflag2 = 0;
 	DIAGINIT(&cpu1);
 	dexc = 0;
 }
@@ -644,20 +642,13 @@ void PC88::ApplyConfig(Config* cfg)
 	cfgflag2 = cfg->flag2;
 	
 	base->SetSwitch(cfg);
-	base->Reset(0, 0); // Update sw31 and other registers based on new dipsw/clock
 	scrn->ApplyConfig(cfg);
 	mem1->ApplyConfig(cfg);
 	crtc->ApplyConfig(cfg);
 	fdc->ApplyConfig(cfg);
 	beep->EnableSING(!(cfg->flags & Config::disablesing));
-
-	opn1->Enable(!(cfg->flag2 & Config::disableopn44));
-	opn1->SetOPNMode(!!(cfg->flags & Config::enableopna));
 	opn1->SetFMMixMode(!!(cfg->flag2 & Config::usefmclock));
 	opn1->SetVolume(cfg);
-
-	opn2->Enable(!!(cfg->flags & (Config::opnona8 | Config::opnaona8)));
-	opn2->SetOPNMode(!!(cfg->flags & Config::opnaona8));
 	opn2->SetFMMixMode(!!(cfg->flag2 & Config::usefmclock));
 	opn2->SetVolume(cfg);
 	
@@ -716,16 +707,4 @@ bool PC88::IsN80Supported()
 bool PC88::IsN80V2Supported()
 {
 	return mem1->IsN80V2Ready();
-}
-
-bool PC88::SaveShapshot(const char* filename)
-{
-    // Snapshot implementation (stub for now, but linked)
-    return false;
-}
-
-bool PC88::LoadShapshot(const char* filename)
-{
-    // Snapshot implementation (stub for now, but linked)
-    return false;
 }
