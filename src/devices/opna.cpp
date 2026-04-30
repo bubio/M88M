@@ -627,11 +627,6 @@ void OPNABase::SetADPCMBReg(uint addr, uint data)
 	switch (addr)
 	{
 	case 0x00:		// Control Register 1
-		if (((data & 0x60) == 0x20 || (data & 0x60) == 0x60) &&
-			((control1 & 0x60) != (data & 0x60)))
-		{
-			memaddr = startaddr;
-		}
 		if ((data & 0x80) && !adpcmplay)
 		{
 			adpcmplay = true;
