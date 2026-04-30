@@ -82,8 +82,9 @@ bool OPNIF::Init(IOBus* b, int intrport, int io, Scheduler* s, const char* romDi
 		}
 	}
 
-	opn.Init(clock, 8000, 0, rhythmPath.empty() ? nullptr : rhythmPath.c_str());
-	
+	if (!opn.Init(clock, 8000, 0, rhythmPath.empty() ? nullptr : rhythmPath.c_str()))
+		return false;
+
 	prevtime = scheduler->GetTime();
 	TimeEvent(1);
 	
@@ -171,7 +172,7 @@ void IFCALL OPNIF::Mix(int32* dest, int nsamples)
 //
 static inline int ConvertVolume(int volume)
 {
-	return Limit(volume, 40, -100);
+	return volume > -40 ? volume : -200;
 }
 
 void OPNIF::SetVolume(const Config* config)
