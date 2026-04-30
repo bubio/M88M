@@ -372,30 +372,30 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     float centerY = sH - 12.0f;
     float textY = sH - 17.0f;
 
-    int d0 = diskmgr->GetCurrentDisk(0);
-    const char* t0_sjis = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : "Empty";
-    std::string t0 = (d0 >= 0) ? Paths::SJIStoUTF8(t0_sjis) : "Empty";
-    Color l0 = (statusdisplay.GetFDState(0) & 1) ? RED : Color{ 60, 20, 20, 255 };
-    DrawCircle(15, (int)centerY, 4, l0);
-
-    DrawText("FDD1:", 25, (int)textY, 10, DARKGRAY);
-    if (ContainsJapanese(t0) && IsFontValid(fontJp)) {
-        DrawTextEx(fontJp, t0.c_str(), { 60, sH - 18 }, 14, 1, DARKGRAY);
-    } else {
-        DrawText(t0.c_str(), 60, (int)textY, 10, DARKGRAY);
-    }
-
     int d1 = diskmgr->GetCurrentDisk(1);
     const char* t1_sjis = (d1 >= 0) ? diskmgr->GetImageTitle(1, d1) : "Empty";
     std::string t1 = (d1 >= 0) ? Paths::SJIStoUTF8(t1_sjis) : "Empty";
     Color l1 = (statusdisplay.GetFDState(1) & 1) ? RED : Color{ 60, 20, 20, 255 };
-    DrawCircle(215, (int)centerY, 4, l1);
+    DrawCircle(15, (int)centerY, 4, l1);
 
-    DrawText("FDD2:", 225, (int)textY, 10, DARKGRAY);
+    DrawText("FDD2:", 25, (int)textY, 10, DARKGRAY);
     if (ContainsJapanese(t1) && IsFontValid(fontJp)) {
-        DrawTextEx(fontJp, t1.c_str(), { 260, sH - 18 }, 14, 1, DARKGRAY);
+        DrawTextEx(fontJp, t1.c_str(), { 60, sH - 18 }, 14, 1, DARKGRAY);
     } else {
-        DrawText(t1.c_str(), 260, (int)textY, 10, DARKGRAY);
+        DrawText(t1.c_str(), 60, (int)textY, 10, DARKGRAY);
+    }
+
+    int d0 = diskmgr->GetCurrentDisk(0);
+    const char* t0_sjis = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : "Empty";
+    std::string t0 = (d0 >= 0) ? Paths::SJIStoUTF8(t0_sjis) : "Empty";
+    Color l0 = (statusdisplay.GetFDState(0) & 1) ? RED : Color{ 60, 20, 20, 255 };
+    DrawCircle(215, (int)centerY, 4, l0);
+
+    DrawText("FDD1:", 225, (int)textY, 10, DARKGRAY);
+    if (ContainsJapanese(t0) && IsFontValid(fontJp)) {
+        DrawTextEx(fontJp, t0.c_str(), { 260, sH - 18 }, 14, 1, DARKGRAY);
+    } else {
+        DrawText(t0.c_str(), 260, (int)textY, 10, DARKGRAY);
     }
 
     const auto& cfg = Config::Get();
