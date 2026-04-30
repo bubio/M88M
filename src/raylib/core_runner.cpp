@@ -36,9 +36,10 @@ bool CoreRunner::Init(Draw* draw) {
 
     ApplyConfig(&Config::Get());
     Reset();
-    uint soundBuffer = Config::Get().soundbuffer;
-    if (soundBuffer < 1024) soundBuffer = 4096;
-    if (!coreSound.Init(this, 44100, soundBuffer)) return false;
+    const uint outrate = 48000;
+    int bufsize = (int)Config::Get().soundbuffer;
+    if (bufsize < 1024) bufsize = 4096;
+    if (!coreSound.Init(this, outrate, bufsize)) return false;
     coreSound.ApplyConfig(&Config::Get());
     sound.Init();
     sound.SetVolume(&Config::Get());

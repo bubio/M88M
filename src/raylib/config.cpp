@@ -24,14 +24,15 @@ void Load(PC8801::Config& cfg) {
     cfg.basicmode = PC8801::Config::N88V2;
     cfg.clock = 40; // 4MHz
     cfg.mainsubratio = 1; // 4MHz mode uses ratio 1
-    cfg.speed = 100; // 100%
+    cfg.speed = 100; // matches PC88::Proceed eff = clock * speed / 100
     cfg.cpumode = PC8801::Config::msauto;
     cfg.dipsw = 1829; // Includes bit 5 = 1 (4MHz)
     cfg.flags = PC8801::Config::enableopna |
                 PC8801::Config::subcpucontrol |
+                PC8801::Config::enablewait |
                 PC8801::Config::precisemixing |
                 PC8801::Config::mixsoundalways;
-    cfg.flag2 = PC8801::Config::usefmclock;
+    cfg.flag2 = 0;
     cfg.volfm = 0; cfg.volssg = 0; cfg.voladpcm = 0; cfg.volrhythm = 0;
     cfg.volbd = 0; cfg.volsd = 0; cfg.voltop = 0;
     cfg.volhh = 0; cfg.voltom = 0; cfg.volrim = 0;

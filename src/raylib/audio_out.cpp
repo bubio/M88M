@@ -10,7 +10,7 @@ static void GlobalAudioCallback(void* buffer, unsigned int frames) {
     }
 }
 
-RaylibSound::RaylibSound() : outputSource(nullptr), sampleRate(44100) { stream = {0}; }
+RaylibSound::RaylibSound() : outputSource(nullptr), sampleRate(48000) { stream = {0}; }
 RaylibSound::~RaylibSound() { Cleanup(); }
 
 void RaylibSound::Init() {
@@ -27,14 +27,13 @@ void RaylibSound::Cleanup() {
 }
 
 void RaylibSound::SetSource(SoundSource* src) {
-    std::lock_guard<std::recursive_mutex> lock(mutex);
-    outputSource = src;
+    outputSource.store(src, std::memory_order_release);
 }
 
 void RaylibSound::FillOutput(int16_t* buffer, unsigned int frames) {
-    std::lock_guard<std::recursive_mutex> lock(mutex);
-    if (outputSource) {
-        int got = outputSource->Get(buffer, frames);
+    SoundSource* src = outputSource.load(std::memory_order_acquire);
+    if (src) {
+        int got = src->Get(buffer, frames);
         if (got < (int)frames) {
             std::fill(buffer + got * 2, buffer + frames * 2, 0);
         }

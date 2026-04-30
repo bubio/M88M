@@ -2,7 +2,7 @@
 
 #include "raylib.h"
 #include "soundsrc.h"
-#include <mutex>
+#include <atomic>
 #include <cstdint>
 
 namespace PC8801 { class Config; }
@@ -25,7 +25,6 @@ private:
     static void AudioCallback(void* buffer, unsigned int frames);
 
     AudioStream stream;
-    SoundSource* outputSource;
-    std::recursive_mutex mutex;
+    std::atomic<SoundSource*> outputSource;
     int sampleRate;
 };
