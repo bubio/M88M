@@ -7,7 +7,8 @@
 #include <chrono>
 #include <thread>
 #include <mutex>
-#include <unistd.h>
+#include <vector>
+#include <string>
 
 CoreRunner::CoreRunner() : running(false), paused(false), configPending(false), configResetPending(false), resetPending(false) {}
 CoreRunner::~CoreRunner() { Stop(); }

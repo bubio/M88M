@@ -7,7 +7,14 @@
 #include <vector>
 #include <string>
 #include <sstream>
+
+#ifdef _WIN32
+#include <io.h>
+#define access _access
+#define F_OK 0
+#else
 #include <unistd.h>
+#endif
 
 int main() {
     // Initialization
@@ -22,14 +29,24 @@ int main() {
     for (int i = 32; i < 127; i++) cp.push_back(i);             // ASCII
     for (int i = 0x3000; i <= 0x30FF; i++) cp.push_back(i);    // Symbols, Hiragana, Katakana
     for (int i = 0xFF61; i <= 0xFF9F; i++) cp.push_back(i);    // Half-width Katakana
-    for (int i = 0x4E00; i <= 0x6000; i++) cp.push_back(i);    // Kanji
+    for (int i = 0x4E00; i <= 0x9FFF; i++) cp.push_back(i);    // CJK Unified Ideographs (expanded)
 
-    // Prefer TTF over TTC for better compatibility with raylib LoadFontEx
+    // Font paths for different platforms
     const char* fontPaths[] = {
+#ifdef __APPLE__
         "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
         "/Library/Fonts/Arial Unicode.ttf",
         "/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc",
         "/System/Library/Fonts/Cache/Hiragino Sans GB.ttc"
+#elif defined(_WIN32)
+        "C:\\Windows\\Fonts\\msgothic.ttc",
+        "C:\\Windows\\Fonts\\msmincho.ttc",
+        "C:\\Windows\\Fonts\\meiryo.ttc",
+        "C:\\Windows\\Fonts\\meiryob.ttc"
+#else
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"
+#endif
     };
     
     Font fontJp = { 0 };
@@ -39,7 +56,6 @@ int main() {
             if (IsFontValid(fontJp)) break;
         }
     }
-    
     RaylibDraw draw;
     if (!draw.Init(640, 400, 8)) {
         std::cerr << "Failed to initialize draw" << std::endl;

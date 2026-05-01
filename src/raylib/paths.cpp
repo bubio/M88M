@@ -1,9 +1,20 @@
 #include "paths.h"
 #include <cstdlib>
-#include <unistd.h>
 #include <sys/stat.h>
-#include <iconv.h>
 #include <vector>
+#include <string>
+
+#ifdef _WIN32
+#include <windows.h>
+#include <direct.h>
+#include <io.h>
+#define getcwd _getcwd
+#define mkdir(p, m) _mkdir(p)
+#else
+#include <unistd.h>
+#include <iconv.h>
+#include <errno.h>
+#endif
 
 #ifdef __APPLE__
 #include <CoreFoundation/CoreFoundation.h>
@@ -44,8 +55,7 @@ std::string GetAppDir() {
     }
 #endif
     char buffer[1024];
-    uint32_t size = sizeof(buffer);
-    if (getcwd(buffer, size) != nullptr) {
+    if (getcwd(buffer, sizeof(buffer)) != nullptr) {
         return std::string(buffer);
     }
     return ".";
@@ -69,6 +79,16 @@ std::string GetConfigDir() {
     if (home) {
         path = std::string(home) + "/Library/Application Support/M88M";
     }
+#elif defined(_WIN32)
+    const char* appData = std::getenv("APPDATA");
+    if (appData) {
+        path = std::string(appData) + "/M88M";
+    } else {
+        const char* userProfile = std::getenv("USERPROFILE");
+        if (userProfile) {
+            path = std::string(userProfile) + "/.m88m";
+        }
+    }
 #else
     const char* xdg = std::getenv("XDG_CONFIG_HOME");
     if (xdg) {
@@ -82,8 +102,9 @@ std::string GetConfigDir() {
 #endif
     if (!path.empty()) {
         // Recursive directory creation would be better, but for now:
-#ifndef __APPLE__
-        EnsureDirectory(std::string(std::getenv("HOME")) + "/.config");
+#if !defined(__APPLE__) && !defined(_WIN32)
+        const char* home = std::getenv("HOME");
+        if (home) EnsureDirectory(std::string(home) + "/.config");
 #endif
         EnsureDirectory(path);
     }
@@ -93,6 +114,20 @@ std::string GetConfigDir() {
 std::string SJIStoUTF8(const std::string& strOrg) {
     if (strOrg.empty()) return "";
 
+#ifdef _WIN32
+    // SJIS (CP932) -> WideChar
+    int nw = MultiByteToWideChar(932, 0, strOrg.c_str(), (int)strOrg.length(), nullptr, 0);
+    if (nw <= 0) return strOrg;
+    std::vector<wchar_t> wbuf(nw);
+    MultiByteToWideChar(932, 0, strOrg.c_str(), (int)strOrg.length(), wbuf.data(), nw);
+
+    // WideChar -> UTF-8
+    int nu = WideCharToMultiByte(CP_UTF8, 0, wbuf.data(), nw, nullptr, 0, nullptr, nullptr);
+    if (nu <= 0) return "";
+    std::vector<char> ubuf(nu);
+    WideCharToMultiByte(CP_UTF8, 0, wbuf.data(), nw, ubuf.data(), nu, nullptr, nullptr);
+    return std::string(ubuf.data(), nu);
+#else
     const char* pszEncSrc = "CP932";
     const char* pszEncDst = "UTF-8";
 
@@ -127,6 +162,7 @@ std::string SJIStoUTF8(const std::string& strOrg) {
     std::string result(&vectConv[0], vectConv.size() - nDstLeft);
     iconv_close(hConv);
     return result;
+#endif
 }
 
 } // namespace Paths
