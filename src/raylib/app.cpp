@@ -84,7 +84,7 @@ int main() {
 
             // ROM Error Dialog
             if (core.HasRomError()) {
-                float boxWidth = 740; 
+                float boxWidth = 500; 
                 float boxHeight = 360;
                 float x = (float)GetScreenWidth()/2 - boxWidth/2;
                 float y = (float)GetScreenHeight()/2 - boxHeight/2;
@@ -97,7 +97,7 @@ int main() {
                 int lineY = (int)y + 60;
                 Color textColor = GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL));
                 while (std::getline(ss, line, '\n')) {
-                    DrawText(line.c_str(), (int)x + 25, lineY, 20, textColor);
+                    DrawText(line.c_str(), (int)x + 25, lineY, 10, textColor);
                     lineY += 25;
                 }
                 if (GuiButton({ x + boxWidth/2 - 50, y + boxHeight - 50, 100, 30 }, "Exit")) shouldExit = true;
