@@ -11,8 +11,18 @@
 #include <vector>
 
 static bool ContainsJapanese(const std::string& s) {
-    for (unsigned char c : s) if (c >= 0x80) return true;
+    for (size_t i = 0; i < s.length(); i++) {
+        unsigned char c = (unsigned char)s[i];
+        if (c >= 0x80) return true; // Any non-ASCII is likely Japanese in our context
+    }
     return false;
+}
+
+static const char* GetFileName(const char* path) {
+    const char* f1 = strrchr(path, '/');
+    const char* f2 = strrchr(path, '\\');
+    const char* f = (f1 > f2) ? f1 : f2;
+    return f ? f + 1 : path;
 }
 
 UIManager::UIManager() :
@@ -110,7 +120,10 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
         int diskIdx = diskmgr->GetCurrentDisk(i);
         std::string label;
         if (diskIdx >= 0) {
-            label = Paths::SJIStoUTF8(diskmgr->GetImageTitle(i, diskIdx));
+            const char* title = diskmgr->GetImageTitle(i, diskIdx);
+            label = Paths::SJIStoUTF8(title ? std::string(title, 16) : "");
+            size_t last = label.find_last_not_of(" \0", label.length());
+            if (last != std::string::npos) label = label.substr(0, last + 1);
         } else {
             label = std::string("Drive ") + std::to_string(i + 1) + ": Empty";
         }
@@ -142,10 +155,22 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     }
 
     btnY += 35; // Space after group box
-    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset PC-8801")) {
+    const char* resetLabel = "Reset あいうえお";
+    
+    if (IsFontValid(fontJp)) {
+        GuiSetFont(fontJp);
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 18);
+    }
+    
+    if (GuiButton({ x + 10, btnY, width - 20, btnH }, resetLabel)) {
         if (coreRunner) coreRunner->RequestReset();
         else pc88->Reset();
         ToggleMenu(coreRunner);
+    }
+    
+    if (IsFontValid(fontJp)) {
+        GuiSetFont(GetFontDefault());
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
     }
     btnY += 34;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Settings")) showSettings = true;
@@ -185,11 +210,26 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
 
     for (int i = 0; i < numDisks && i < 8; i++) {
         const char* dTitle = diskmgr->GetImageTitle(selectingDiskForDrive, i);
-        std::string label = std::to_string(i + 1) + ": " + (dTitle ? Paths::SJIStoUTF8(dTitle) : "(No Title)");
+        std::string dLabel = dTitle ? Paths::SJIStoUTF8(std::string(dTitle, 16)) : "(No Title)";
+        size_t last = dLabel.find_last_not_of(" \0", dLabel.length());
+        if (last != std::string::npos) dLabel = dLabel.substr(0, last + 1);
+
+        bool isJp = ContainsJapanese(dLabel);
+        if (isJp && IsFontValid(fontJp)) {
+            GuiSetFont(fontJp);
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 15);
+        }
+
+        std::string label = std::to_string(i + 1) + ": " + dLabel;
 
         if (GuiButton({ x + 10, btnY, width - 20, btnH }, label.c_str())) {
             diskmgr->Mount(selectingDiskForDrive, lastOpenedPath[selectingDiskForDrive].c_str(), false, i, false);
             selectingDiskForDrive = -1;
+        }
+
+        if (isJp) {
+            GuiSetFont(GetFontDefault());
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
         }
         btnY += 30;
     }
@@ -373,8 +413,13 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     float textY = sH - 17.0f;
 
     int d1 = diskmgr->GetCurrentDisk(1);
-    const char* t1_sjis = (d1 >= 0) ? diskmgr->GetImageTitle(1, d1) : "Empty";
-    std::string t1 = (d1 >= 0) ? Paths::SJIStoUTF8(t1_sjis) : "Empty";
+    const char* t1_raw = (d1 >= 0) ? diskmgr->GetImageTitle(1, d1) : nullptr;
+    std::string t1 = (t1_raw) ? Paths::SJIStoUTF8(std::string(t1_raw, 16)) : "Empty";
+    if (t1_raw) {
+        size_t last = t1.find_last_not_of(" \0", t1.length());
+        if (last != std::string::npos) t1 = t1.substr(0, last + 1);
+    }
+
     Color l1 = (statusdisplay.GetFDState(1) & 1) ? RED : Color{ 60, 20, 20, 255 };
     DrawCircle(15, (int)centerY, 4, l1);
 
@@ -386,8 +431,13 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     }
 
     int d0 = diskmgr->GetCurrentDisk(0);
-    const char* t0_sjis = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : "Empty";
-    std::string t0 = (d0 >= 0) ? Paths::SJIStoUTF8(t0_sjis) : "Empty";
+    const char* t0_raw = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : nullptr;
+    std::string t0 = (d0 >= 0) ? Paths::SJIStoUTF8(std::string(t0_raw, 16)) : "Empty";
+    if (t0_raw) {
+        size_t last = t0.find_last_not_of(" \0", t0.length());
+        if (last != std::string::npos) t0 = t0.substr(0, last + 1);
+    }
+
     Color l0 = (statusdisplay.GetFDState(0) & 1) ? RED : Color{ 60, 20, 20, 255 };
     DrawCircle(215, (int)centerY, 4, l0);
 

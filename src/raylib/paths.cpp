@@ -116,10 +116,18 @@ std::string SJIStoUTF8(const std::string& strOrg) {
 
 #ifdef _WIN32
     // SJIS (CP932) -> WideChar
-    int nw = MultiByteToWideChar(932, 0, strOrg.c_str(), (int)strOrg.length(), nullptr, 0);
-    if (nw <= 0) return strOrg;
+    // D88 titles are fixed 16 bytes, but might have \0 in the middle.
+    // We must find the actual string length up to the first \0.
+    const char* p = strOrg.c_str();
+    int len = 0;
+    while (len < (int)strOrg.length() && p[len] != '\0') len++;
+
+    if (len == 0) return "";
+
+    int nw = MultiByteToWideChar(932, 0, p, len, nullptr, 0);
+    if (nw <= 0) return "";
     std::vector<wchar_t> wbuf(nw);
-    MultiByteToWideChar(932, 0, strOrg.c_str(), (int)strOrg.length(), wbuf.data(), nw);
+    MultiByteToWideChar(932, 0, p, len, wbuf.data(), nw);
 
     // WideChar -> UTF-8
     int nu = WideCharToMultiByte(CP_UTF8, 0, wbuf.data(), nw, nullptr, 0, nullptr, nullptr);

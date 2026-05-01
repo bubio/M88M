@@ -180,6 +180,13 @@ if(RAYLIB_FRONT_SRC)
 
     target_link_libraries(m88_raylib PRIVATE m88core raylib raygui nfd)
 
+    if(MSVC)
+        # Force UTF-8 for the entire frontend target (including headers and literals)
+        # This resolves the common MSVC encoding issue mentioned in the Teratail link.
+        target_compile_options(m88_raylib PRIVATE "/utf-8")
+        target_compile_definitions(m88_raylib PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
+
     if(APPLE)
         target_link_libraries(m88_raylib PRIVATE
             iconv
