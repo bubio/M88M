@@ -24,6 +24,7 @@ public:
     bool SetFlipMode(bool flip) override;
 
     void Render();
+    bool SavePNG(const char* path);
 
 private:
     uint width, height;

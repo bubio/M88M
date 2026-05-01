@@ -9,6 +9,36 @@
 #include "core_runner.h"
 #include <string>
 #include <vector>
+#include <sys/stat.h>
+#include <cctype>
+#include <ctime>
+#include <cstdio>
+
+namespace {
+struct StateSlotInfo {
+    bool exists = false;
+    std::string modified;
+};
+
+static std::string FormatTime(time_t t) {
+    char buf[64] = {};
+    struct tm tmv;
+    if (localtime_r(&t, &tmv)) {
+        strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tmv);
+    }
+    return buf[0] ? std::string(buf) : std::string("Unknown");
+}
+
+static StateSlotInfo ReadStateSlotInfo(const std::string& path) {
+    StateSlotInfo info;
+    struct stat st;
+    if (stat(path.c_str(), &st) != 0) return info;
+
+    info.exists = true;
+    info.modified = FormatTime(st.st_mtime);
+    return info;
+}
+}
 
 static bool ContainsJapanese(const std::string& s) {
     for (unsigned char c : s) if (c >= 0x80) return true;
@@ -16,16 +46,19 @@ static bool ContainsJapanese(const std::string& s) {
 }
 
 UIManager::UIManager() :
-    showMenu(false), showSettings(false), selectingDiskForDrive(-1), activeTab(0),
+    showMenu(false), showSettings(false), showStateDialog(false), selectingDiskForDrive(-1), activeTab(0),
+    currentStateSlot(0),
     windowScale(0), isFullscreen(false),
     basicModeEdit(false), windowScaleEdit(false), resetPending(false)
 {
     lastOpenedPath[0] = "";
     lastOpenedPath[1] = "";
+    statePreviewTexture = {0};
     NFD_Init();
 }
 
 UIManager::~UIManager() {
+    if (IsTextureValid(statePreviewTexture)) UnloadTexture(statePreviewTexture);
     NFD_Quit();
 }
 
@@ -42,6 +75,7 @@ void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
     }
     if (showMenu && IsKeyPressed(KEY_ESCAPE)) {
         if (selectingDiskForDrive != -1) selectingDiskForDrive = -1;
+        else if (showStateDialog) showStateDialog = false;
         else if (showSettings) showSettings = false;
         else ToggleMenu(coreRunner);
     }
@@ -53,6 +87,7 @@ void UIManager::Draw(DiskManager* diskmgr, PC8801::Config& cfg, PC88* pc88, Core
     if (showMenu) {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.4f));
         if (selectingDiskForDrive != -1) DrawDiskSelector(diskmgr);
+        else if (showStateDialog) DrawStateDialog(diskmgr, coreRunner);
         else if (showSettings) DrawSettings(cfg, pc88, coreRunner);
         else DrawMainMenu(diskmgr, pc88, shouldExit, coreRunner);
     }
@@ -62,6 +97,7 @@ void UIManager::ToggleMenu(CoreRunner* coreRunner) {
     showMenu = !showMenu;
     if (!showMenu) {
         showSettings = false;
+        showStateDialog = false;
         // If a critical setting was changed while the menu was open,
         // apply the config with a reset request now that the menu is closing.
         if (resetPending && coreRunner) {
@@ -147,10 +183,13 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
         else pc88->Reset();
         ToggleMenu(coreRunner);
     }
+    btnY += 44;
+    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "State Save / Load")) {
+        showStateDialog = true;
+        stateMessage.clear();
+    }
     btnY += 34;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Settings")) showSettings = true;
-    btnY += 34;
-    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Resume")) ToggleMenu(coreRunner);
 
     if (GuiButton({ x + 10, y + height - 40, width - 20, btnH }, "Quit M88M")) shouldExit = true;
 }
@@ -195,6 +234,149 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
     }
 
     if (GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back")) selectingDiskForDrive = -1;
+}
+
+static std::string SanitizeStateName(const std::string& in) {
+    std::string out;
+    for (unsigned char c : in) {
+        if (std::isalnum(c) || c == '-' || c == '_') out.push_back((char)c);
+        else if (c >= 0x80) out.push_back((char)c);
+    }
+    if (out.empty()) out = "snapshot";
+    if (out.size() > 64) out.resize(64);
+    return out;
+}
+
+std::string UIManager::GetStatePath(DiskManager* diskmgr, int slot) const {
+    std::string dir = Paths::GetConfigDir() + "/states";
+    struct stat st;
+    if (stat(dir.c_str(), &st) != 0) mkdir(dir.c_str(), 0755);
+
+    std::string title = "snapshot";
+    int diskIdx = diskmgr->GetCurrentDisk(0);
+    if (diskIdx >= 0) {
+        title = Paths::SJIStoUTF8(diskmgr->GetImageTitle(0, diskIdx));
+    } else if (!lastOpenedPath[0].empty()) {
+        title = GetFileName(lastOpenedPath[0].c_str());
+    }
+    return dir + "/" + SanitizeStateName(title) + "_" + std::to_string(slot) + ".s88";
+}
+
+std::string UIManager::GetStateScreenshotPath(DiskManager* diskmgr, int slot) const {
+    std::string path = GetStatePath(diskmgr, slot);
+    size_t dot = path.find_last_of('.');
+    if (dot != std::string::npos) path.resize(dot);
+    return path + ".png";
+}
+
+bool UIManager::StateSlotExists(DiskManager* diskmgr, int slot) const {
+    std::string path = GetStatePath(diskmgr, slot);
+    struct stat st;
+    return stat(path.c_str(), &st) == 0;
+}
+
+void UIManager::LoadStatePreview(const std::string& path) {
+    if (statePreviewPath == path) return;
+    if (IsTextureValid(statePreviewTexture)) {
+        UnloadTexture(statePreviewTexture);
+        statePreviewTexture = {0};
+    }
+    statePreviewPath = path;
+    struct stat st;
+    if (stat(path.c_str(), &st) == 0) {
+        statePreviewTexture = LoadTexture(path.c_str());
+        if (IsTextureValid(statePreviewTexture)) {
+            SetTextureFilter(statePreviewTexture, TEXTURE_FILTER_POINT);
+        }
+    }
+}
+
+static std::string GetCurrentDiskDisplayName(DiskManager* diskmgr, const std::string& fallbackPath) {
+    int diskIdx = diskmgr->GetCurrentDisk(0);
+    if (diskIdx >= 0) {
+        return Paths::SJIStoUTF8(diskmgr->GetImageTitle(0, diskIdx));
+    }
+    if (!fallbackPath.empty()) {
+        return GetFileName(fallbackPath.c_str());
+    }
+    return "snapshot";
+}
+
+void UIManager::DrawStateDialog(DiskManager* diskmgr, CoreRunner* coreRunner) {
+    float width = 500;
+    float height = 360;
+    float x = (float)GetScreenWidth() / 2 - width / 2;
+    float y = (float)GetScreenHeight() / 2 - height / 2;
+
+    if (GuiWindowBox({ x, y, width, height }, "State Save / Load")) {
+        showStateDialog = false;
+        return;
+    }
+
+    float slotY = y + 45;
+    float slotW = 42;
+    for (int i = 0; i < 10; i++) {
+        bool exists = StateSlotExists(diskmgr, i);
+        const char* label = TextFormat("%d%s", i, exists ? "*" : "");
+        Rectangle r = { x + 20 + i * (slotW + 4), slotY, slotW, 30 };
+        if (GuiButton(r, label)) {
+            currentStateSlot = i;
+            stateMessage.clear();
+        }
+        if (currentStateSlot == i) {
+            DrawRectangleLinesEx({ r.x - 2, r.y - 2, r.width + 4, r.height + 4 }, 2, SKYBLUE);
+        }
+    }
+
+    std::string path = GetStatePath(diskmgr, currentStateSlot);
+    std::string screenshotPath = GetStateScreenshotPath(diskmgr, currentStateSlot);
+    StateSlotInfo info = ReadStateSlotInfo(path);
+    bool exists = info.exists;
+    std::string diskName = GetCurrentDiskDisplayName(diskmgr, lastOpenedPath[0]);
+    std::string fileLabel = "Slot " + std::to_string(currentStateSlot) + ": " + (exists ? info.modified : "Empty");
+    GuiLabel({ x + 20, y + 85, width - 40, 22 }, fileLabel.c_str());
+
+    LoadStatePreview(screenshotPath);
+    float previewWidth = 220;
+    Rectangle preview = { x + ((width - previewWidth) / 2), y + 112, previewWidth, previewWidth * 0.625f };
+    DrawRectangleRec(preview, Color{ 20, 20, 20, 255 });
+    DrawRectangleLinesEx(preview, 1, DARKGRAY);
+    if (IsTextureValid(statePreviewTexture)) {
+        DrawTexturePro(
+            statePreviewTexture,
+            { 0, 0, (float)statePreviewTexture.width, (float)statePreviewTexture.height },
+            preview,
+            { 0, 0 },
+            0,
+            WHITE
+        );
+    } else {
+        GuiLabel({ preview.x + 58, preview.y + 58, 120, 20 }, "No Screenshot");
+    }
+
+    if (GuiButton({ x + 30, y + height - 122 + 26, 195, 28 }, "Save State")) {
+        if (coreRunner) {
+            coreRunner->SaveState(path, screenshotPath, &stateMessage);
+            statePreviewPath.clear();
+            LoadStatePreview(screenshotPath);
+        }
+    }
+
+    GuiState statePush = (GuiState)GuiGetState();
+    if (!exists) GuiSetState(STATE_DISABLED);
+    if (GuiButton({ x + 275, y + height - 122 + 26, 195, 28 }, exists ? "Load State" : "No State")) {
+        if (coreRunner && exists) coreRunner->LoadState(path, &stateMessage);
+        else stateMessage = "No saved state in this slot";
+    }
+    GuiSetState(statePush);
+
+    if (!stateMessage.empty()) {
+        GuiLabel({ x + 30, y + height - 72, width - 60, 24 }, stateMessage.c_str());
+    }
+
+    if (GuiButton({ x + width / 2 - 50, y + height - 42, 100, 28 }, "Back")) {
+        showStateDialog = false;
+    }
 }
 
 void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRunner) {

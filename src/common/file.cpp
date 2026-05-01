@@ -29,7 +29,7 @@ bool FileIO::Open(const char* filename, uint flg)
 
     strncpy_s(path_, MAX_PATH, filename, _TRUNCATE);
 
-    const char* mode = (flg & readonly) ? "rb" : "r+b";
+    const char* mode = (flg & create) ? "w+b" : ((flg & readonly) ? "rb" : "r+b");
     fp_ = fopen(filename, mode);
     if (!fp_ && !(flg & readonly)) {
         // Existing file but no write permission — fall back to read-only.

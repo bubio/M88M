@@ -24,13 +24,20 @@ private:
     void DrawMainMenu(DiskManager* diskmgr, class PC88* pc88, bool& shouldExit, class CoreRunner* coreRunner);
     void DrawSettings(PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner);
     void DrawDiskSelector(DiskManager* diskmgr);
+    void DrawStateDialog(DiskManager* diskmgr, class CoreRunner* coreRunner);
     void DrawStatusBar(DiskManager* diskmgr);
     void DrawDriveStatus(DiskManager* diskmgr, int drive, float x, float y);
+    std::string GetStatePath(DiskManager* diskmgr, int slot) const;
+    std::string GetStateScreenshotPath(DiskManager* diskmgr, int slot) const;
+    bool StateSlotExists(DiskManager* diskmgr, int slot) const;
+    void LoadStatePreview(const std::string& path);
 
     bool showMenu;
     bool showSettings;
+    bool showStateDialog;
     int selectingDiskForDrive; // -1: none, 0: Drive 1, 1: Drive 2
     int activeTab;
+    int currentStateSlot;
     
     // UI state
     int windowScale;
@@ -39,6 +46,9 @@ private:
     bool windowScaleEdit;
     
     std::string lastOpenedPath[2];
+    std::string stateMessage;
+    std::string statePreviewPath;
+    Texture2D statePreviewTexture;
     Font fontJp;
     bool resetPending;
 };

@@ -107,3 +107,30 @@ void RaylibDraw::Render() {
         }
     }
 }
+
+bool RaylibDraw::SavePNG(const char* path) {
+    std::lock_guard<std::recursive_mutex> lock(mutex);
+    if (!path || width == 0 || height == 0 || buffer.empty()) return false;
+
+    Image img = GenImageColor((int)width, (int)height, BLACK);
+    Color* pixels = LoadImageColors(img);
+    if (!pixels) {
+        UnloadImage(img);
+        return false;
+    }
+
+    for (size_t i = 0; i < width * height; ++i) {
+        pixels[i] = raylib_palette[buffer[i]];
+    }
+    Image out = {
+        pixels,
+        (int)width,
+        (int)height,
+        1,
+        PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
+    };
+    bool ok = ExportImage(out, path);
+    UnloadImageColors(pixels);
+    UnloadImage(img);
+    return ok;
+}

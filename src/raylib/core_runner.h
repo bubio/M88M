@@ -25,6 +25,8 @@ public:
     void UpdateUI(bool& shouldExit);
     void DrawUI(bool& shouldExit);
     void RequestReset();
+    bool SaveState(const std::string& path, const std::string& screenshotPath = "", std::string* message = nullptr);
+    bool LoadState(const std::string& path, std::string* message = nullptr);
     
     // Thread-safe config update
     void RequestConfigApply(const PC8801::Config& cfg, bool requireReset = false);
@@ -58,4 +60,5 @@ private:
     std::atomic<bool> configPending;
     std::atomic<bool> configResetPending;
     std::atomic<bool> resetPending;
+    std::mutex stateMutex;
 };
