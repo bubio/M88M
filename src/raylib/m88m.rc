@@ -1,0 +1,9 @@
+// M88M Windows Resource File
+#include <windows.h>
+
+// ID for the font resource
+#define IDR_FONT_NOTOSANS 101
+
+// Embed the font as a custom user-defined resource type "FONT"
+// Path is relative to this .rc file (src/raylib/m88m.rc)
+IDR_FONT_NOTOSANS FONT "../../assets/NotoSansJP-Regular.ttf"

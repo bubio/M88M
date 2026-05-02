@@ -14,6 +14,7 @@
 #endif
 
 #ifdef _WIN32
+#include <windows.h>
 #include <io.h>
 #define access _access
 #define F_OK 0
@@ -21,39 +22,69 @@
 #undef ShowCursor
 #undef DrawText
 #undef DrawTextEx
+
+// Resource ID from m88m.rc
+#ifndef IDR_FONT_NOTOSANS
+#define IDR_FONT_NOTOSANS 101
+#endif
 #endif
 
-int main() {
-    const int screenWidth = 640;
-    const int screenHeight = 424; // 400 (emulation) + 24 (status bar)
-
-    InitWindow(screenWidth, screenHeight, "M88M - PC-8801 Emulator");
-    SetExitKey(0);
-
-    // Standard codepoints for Japanese
+static Font LoadJapaneseFont() {
+    // Codepoints to load
     std::vector<int> cp;
     for (int i = 32; i < 127; i++) cp.push_back(i);
     for (int i = 0x3000; i <= 0x30FF; i++) cp.push_back(i);
     for (int i = 0xFF61; i <= 0xFF9F; i++) cp.push_back(i);
     for (int i = 0x4E00; i <= 0x6000; i++) cp.push_back(i);
 
+    Font font = { 0 };
+
+#ifdef _WIN32
+    // Try loading from Windows Resource first (embedded in exe)
+    // Use RT_RCDATA or a custom string if "FONT" fails, but .rc uses "FONT"
+    HRSRC hRes = FindResourceA(NULL, (LPCSTR)IDR_FONT_NOTOSANS, "FONT");
+    if (hRes) {
+        HGLOBAL hData = LoadResource(NULL, hRes);
+        if (hData) {
+            void* pData = LockResource(hData);
+            unsigned int size = SizeofResource(NULL, hRes);
+            if (pData && size > 0) {
+                font = LoadFontFromMemory(".ttf", (const unsigned char*)pData, (int)size, 24, cp.data(), (int)cp.size());
+                if (IsFontValid(font) && font.glyphCount > 300) {
+                    return font;
+                }
+            }
+        }
+    }
+#endif
+
+    // Fallback: Try loading from external file (standard way)
     const char* fontCandidates[] = {
         "assets/NotoSansJP-Regular.ttf",
         "../assets/NotoSansJP-Regular.ttf",
         "../../assets/NotoSansJP-Regular.ttf"
     };
     
-    Font fontJp = { 0 };
     for (const char* path : fontCandidates) {
         if (access(path, F_OK) == 0) {
-            fontJp = LoadFontEx(path, 32, cp.data(), (int)cp.size());
-            if (IsFontValid(fontJp) && fontJp.glyphCount > 300) {
-                break;
-            }
-            if (IsFontValid(fontJp)) UnloadFont(fontJp);
-            fontJp = { 0 };
+            font = LoadFontEx(path, 24, cp.data(), (int)cp.size());
+            if (IsFontValid(font) && font.glyphCount > 300) return font;
+            if (IsFontValid(font)) UnloadFont(font);
         }
     }
+    
+    Font emptyFont = { 0 };
+    return emptyFont;
+}
+
+int main() {
+    const int screenWidth = 640;
+    const int screenHeight = 424; // 400 (emulation) + 24 (status bar)
+
+    InitWindow(screenWidth, screenHeight, "M88M - PC-8801 Emulator");
+    SetExitKey(0); // Disable ESC exit
+
+    Font fontJp = LoadJapaneseFont();
     
     RaylibDraw draw;
     if (!draw.Init(640, 400, 8)) return 1;
@@ -72,6 +103,7 @@ int main() {
     SetTargetFPS(60);
     bool shouldExit = false;
 
+    // Main game loop
     while (!WindowShouldClose() && !shouldExit)
     {
         core.UpdateUI(shouldExit);

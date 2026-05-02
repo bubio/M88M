@@ -155,22 +155,10 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     }
 
     btnY += 35; // Space after group box
-    const char* resetLabel = "Reset あいうえお";
-    
-    if (IsFontValid(fontJp)) {
-        GuiSetFont(fontJp);
-        GuiSetStyle(DEFAULT, TEXT_SIZE, 18);
-    }
-    
-    if (GuiButton({ x + 10, btnY, width - 20, btnH }, resetLabel)) {
+    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset PC-8801")) {
         if (coreRunner) coreRunner->RequestReset();
         else pc88->Reset();
         ToggleMenu(coreRunner);
-    }
-    
-    if (IsFontValid(fontJp)) {
-        GuiSetFont(GetFontDefault());
-        GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
     }
     btnY += 34;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Settings")) showSettings = true;
