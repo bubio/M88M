@@ -204,13 +204,24 @@
       }
   }
 
-  // Microsoft localtime_s(struct tm*, const time_t*) → POSIX localtime_r,
-  // which has the argument order reversed. Wrap so callers compile unchanged.
+  // Cross-platform localtime shims.
+  // POSIX localtime_r(const time_t*, struct tm*) vs Microsoft localtime_s(struct tm*, const time_t*).
   #include <time.h>
-  static inline int m88_localtime_s(struct tm* out, const time_t* t) {
-      return localtime_r(t, out) ? 0 : 1;
-  }
-  #define localtime_s m88_localtime_s
+  #ifdef _WIN32
+    static inline struct tm* m88_localtime_r(const time_t* t, struct tm* out) {
+        return localtime_s(out, t) == 0 ? out : NULL;
+    }
+    #ifndef localtime_r
+      #define localtime_r m88_localtime_r
+    #endif
+  #else
+    static inline int m88_localtime_s(struct tm* out, const time_t* t) {
+        return localtime_r(t, out) ? 0 : 1;
+    }
+    #ifndef localtime_s
+      #define localtime_s m88_localtime_s
+    #endif
+  #endif
 
   // Win32 kernel32!MulDiv computes (a * b) / c with 64-bit intermediate.
   static inline int MulDiv(int a, int b, int c) {

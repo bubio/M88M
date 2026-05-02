@@ -23,7 +23,7 @@ struct StateSlotInfo {
 static std::string FormatTime(time_t t) {
     char buf[64] = {};
     struct tm tmv;
-    if (localtime_r(&t, &tmv)) {
+    if (localtime_s(&tmv, &t) == 0) {
         strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tmv);
     }
     return buf[0] ? std::string(buf) : std::string("Unknown");
