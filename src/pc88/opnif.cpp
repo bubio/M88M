@@ -14,7 +14,7 @@
 // c86ctl/Romeo (real-OPNA passthrough) is Win32-only and lives under
 // src/win32/romeo/. The portable build links against a no-op stub so the
 // fmgen emulated OPNA path is the only one taken at runtime.
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(M88_PORTABLE)
 #include "romeo/piccolo.h"
 #else
 #include "piccolo_stub.h"
@@ -51,6 +51,7 @@ OPNIF::OPNIF(const ID& id)
 	nextcount = 0;
 	fmmixmode = true;
 	imaskport = 0;
+	currentrate = 44100;
 
 	delay = 100000;
 }
@@ -143,6 +144,9 @@ bool IFCALL OPNIF::Connect(ISoundControl* c)
 //
 bool IFCALL OPNIF::SetRate(uint rate)
 {
+	if (rate == 0) {
+		return false;
+	}
 	opn.SetReg(prescaler, 0);
 	opn.SetRate(clock, rate, fmmixmode);
 	currentrate = rate;
@@ -150,7 +154,7 @@ bool IFCALL OPNIF::SetRate(uint rate)
 }
 
 // ---------------------------------------------------------------------------
-//	FM �����̍������[�h��ݒ�
+//	FM ̍[hݒ
 //
 void OPNIF::SetFMMixMode(bool mm)
 {

@@ -185,7 +185,7 @@ struct IModule
 //	/ WPARAM / LPARAM). They are consumed exclusively by src/win32/ and the
 //	.m88 extension modules, so the portable build elides them.
 //
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(M88_PORTABLE)
 
 struct IConfigPropSheet;
 
@@ -193,7 +193,7 @@ struct IConfigPropBase
 {
 	virtual bool IFCALL Add(IConfigPropSheet*) = 0;
 	virtual bool IFCALL Remove(IConfigPropSheet*) = 0;
-	
+
 	virtual bool IFCALL Apply() = 0;
 	virtual bool IFCALL PageSelected(IConfigPropSheet*) = 0;
 	virtual bool IFCALL PageChanged(HWND) = 0;
@@ -201,7 +201,7 @@ struct IConfigPropBase
 };
 
 // ----------------------------------------------------------------------------
-//	�u�ݒ�v�̃v���p�e�B�V�[�g�̊�{�C���^�[�t�F�[�X
+//	uݒṽvpeBV[g̊{C^[tF[X
 //
 struct IConfigPropSheet
 {
@@ -209,7 +209,7 @@ struct IConfigPropSheet
 };
 
 // ----------------------------------------------------------------------------
-//	UI �g���p�C���^�[�t�F�[�X
+//	UI gpC^[tF[X
 //
 struct IWinUIExtention
 {
@@ -219,14 +219,14 @@ struct IWinUIExtention
 };
 
 // ----------------------------------------------------------------------------
-//	UI �ɑ΂���C���^�[�t�F�[�X
+//	UI ɑ΂C^[tF[X
 //
 struct IWinUI2
 {
 	virtual HWND IFCALL GetHWnd() = 0;
 };
 
-#endif // _WIN32
+#endif // _WIN32 && !M88_PORTABLE
 
 // ----------------------------------------------------------------------------
 //	�G�~�����[�^��̃V�X�e���������鎞�Ɏg�����b�N

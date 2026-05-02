@@ -12,7 +12,10 @@
 #include <mutex>
 #include <vector>
 #include <string.h>
+#include <string>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 namespace {
     // Snapshot constants and header (moved from pc88.cpp)

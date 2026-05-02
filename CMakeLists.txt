@@ -29,12 +29,18 @@ endif()
 
 # FMGEN's table maths rely on type-punning; -fno-strict-aliasing keeps the
 # emitted code identical to the MSVC original.
-add_compile_options(
-    $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-strict-aliasing>
-    $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-multichar>
-    $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-deprecated-declarations>
-    $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-error=c++11-narrowing>
-)
+if(MSVC)
+    add_compile_options(
+        /wd4244 /wd4267 /wd4018 /wd4100 /wd4800 /wd4091 /wd4996
+    )
+else()
+    add_compile_options(
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-strict-aliasing>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-multichar>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-deprecated-declarations>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-error=c++11-narrowing>
+    )
+endif()
 
 # --- zlib ---------------------------------------------------------------
 find_package(ZLIB QUIET)
@@ -75,6 +81,7 @@ target_include_directories(m88core PUBLIC
 
 target_compile_definitions(m88core PUBLIC
     M88_NO_Z80_X86
+    M88_PORTABLE
 )
 
 target_link_libraries(m88core PUBLIC ZLIB::ZLIB)
@@ -87,7 +94,11 @@ if(APPLE)
     # raylib 5.5 release uses a universal binary for macOS
     set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_macos.tar.gz")
 elseif(WIN32)
-    set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_mingw-w64.zip")
+    if(MSVC)
+        set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_msvc16.zip")
+    else()
+        set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_mingw-w64.zip")
+    endif()
 endif()
 
 if(RAYLIB_BINARY_URL)
@@ -100,9 +111,9 @@ if(RAYLIB_BINARY_URL)
     FetchContent_MakeAvailable(raylib_bin)
 
     add_library(raylib STATIC IMPORTED GLOBAL)
-    if(WIN32)
+    if(MSVC)
         set_target_properties(raylib PROPERTIES
-            IMPORTED_LOCATION "${raylib_bin_SOURCE_DIR}/lib/libraylib.a"
+            IMPORTED_LOCATION "${raylib_bin_SOURCE_DIR}/lib/raylib.lib"
             INTERFACE_INCLUDE_DIRECTORIES "${raylib_bin_SOURCE_DIR}/include"
         )
     else()
@@ -150,6 +161,9 @@ FetchContent_MakeAvailable(nfd)
 
 # --- raylib frontend executable ----------------------------------------
 file(GLOB RAYLIB_FRONT_SRC src/raylib/*.cpp)
+if(WIN32)
+    list(APPEND RAYLIB_FRONT_SRC src/raylib/m88m.rc)
+endif()
 
 if(RAYLIB_FRONT_SRC)
     if(APPLE)
@@ -164,7 +178,7 @@ if(RAYLIB_FRONT_SRC)
         )
     else()
         add_executable(m88_raylib ${RAYLIB_FRONT_SRC})
-        set_target_properties(m88_raylib PROPERTIES OUTPUT_NAME "m88")
+        set_target_properties(m88_raylib PROPERTIES OUTPUT_NAME "m88m")
     endif()
 
     target_link_libraries(m88_raylib PRIVATE m88core raylib raygui nfd)
@@ -177,6 +191,15 @@ if(RAYLIB_FRONT_SRC)
             "-framework CoreVideo"
             "-framework CoreAudio"
             "-framework AudioToolbox"
+        )
+    elseif(WIN32)
+        target_link_libraries(m88_raylib PRIVATE
+            winmm
+            gdi32
+            shell32
+            ole32
+            uuid
+            comdlg32
         )
     elseif(UNIX)
         target_link_libraries(m88_raylib PRIVATE pthread dl m)

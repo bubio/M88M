@@ -78,6 +78,7 @@ PC88::~PC88()
 //
 bool PC88::Init(Draw* _draw, DiskManager* disk, TapeManager* tape, const char* romDir)
 {
+	fprintf(stderr, "[PC88] Init started. ROM Dir: %s\n", romDir ? romDir : "NULL");
 	draw = _draw;
 	diskmgr = disk;
 	tapemgr = tape;
@@ -85,31 +86,47 @@ bool PC88::Init(Draw* _draw, DiskManager* disk, TapeManager* tape, const char* r
 	if (!Scheduler::Init())
 		return false;
 	
+	fprintf(stderr, "[PC88] Initializing Draw...\n");
 	if (!draw->Init(640, 400, 8))
 		return false;
 	
+	fprintf(stderr, "[PC88] Initializing TapeManager...\n");
 	if (!tapemgr->Init(this, 0, 0))
 		return false;
 
 	MemoryPage* read, * write;
 
+	fprintf(stderr, "[PC88] Setting up MemoryManager 1...\n");
 	cpu1.GetPages(&read, &write);
 	if (!mm1.Init(0x10000, read, write))
 		return false;
 	
+	fprintf(stderr, "[PC88] Setting up MemoryManager 2...\n");
 	cpu2.GetPages(&read, &write);
 	if (!mm2.Init(0x10000, read, write))
 		return false;
 
+	fprintf(stderr, "[PC88] Initializing IOBuses...\n");
 	if (!bus1.Init(portend, &devlist) || !bus2.Init(portend2, &devlist))
 		return false;
 
-	if (!ConnectDevices(romDir) || !ConnectDevices2(romDir)) 
+	fprintf(stderr, "[PC88] Calling ConnectDevices...\n");
+	if (!ConnectDevices(romDir)) {
+		fprintf(stderr, "[PC88] ConnectDevices failed\n");
 		return false;
+	}
+	
+	fprintf(stderr, "[PC88] Calling ConnectDevices2...\n");
+	if (!ConnectDevices2(romDir)) {
+		fprintf(stderr, "[PC88] ConnectDevices2 failed\n");
+		return false;
+	}
 
+	fprintf(stderr, "[PC88] Core Resetting...\n");
 	Reset();
 	region.Reset();
 	clock = 1;
+	fprintf(stderr, "[PC88] Init completed successfully\n");
 	return true;
 }
 
@@ -666,12 +683,6 @@ void PC88::ApplyConfig(Config* cfg)
 	{
 		joypad->SetButtonMode(JoyPad::DISABLED);
 	}
-
-//	EnablePad((cfg->flags & PC8801::Config::enablepad) != 0);
-//	if (padenable)
-//		cfg->flags &= ~PC8801::Config::enablemouse;
-//	EnableMouse((cfg->flags & PC8801::Config::enablemouse) != 0);
-
 }
 
 // ---------------------------------------------------------------------------
