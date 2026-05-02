@@ -62,16 +62,31 @@ static Font LoadJapaneseFont() {
     }
 #endif
 
-    // Fallback: Try loading from external file (standard way)
-    const char* fontCandidates[] = {
-        "assets/NotoSansJP-Regular.ttf",
-        "../assets/NotoSansJP-Regular.ttf",
-        "../../assets/NotoSansJP-Regular.ttf"
-    };
+    // Fallback: Try loading from external file or bundle
+    std::vector<std::string> fontCandidates;
     
-    for (const char* path : fontCandidates) {
-        if (access(path, F_OK) == 0) {
-            font = LoadFontEx(path, 24, cp.data(), (int)cp.size());
+#ifdef __APPLE__
+    // macOS: Look in the app bundle's Resources/fonts directory
+    const char* base = GetApplicationDirectory();
+    if (base) {
+        fontCandidates.push_back(std::string(base) + "fonts/NotoSansJP-Regular.ttf");
+    }
+#endif
+
+    fontCandidates.push_back("assets/NotoSansJP-Regular.ttf");
+    fontCandidates.push_back("../assets/NotoSansJP-Regular.ttf");
+    fontCandidates.push_back("../../assets/NotoSansJP-Regular.ttf");
+    
+    // Platform-specific system fonts for extra robustness
+#ifdef __APPLE__
+    fontCandidates.push_back("/System/Library/Fonts/Supplemental/Arial Unicode.ttf");
+    fontCandidates.push_back("/Library/Fonts/Arial Unicode.ttf");
+    fontCandidates.push_back("/System/Library/Fonts/ヒラギノ角ゴシック W3.ttc");
+#endif
+    
+    for (const auto& path : fontCandidates) {
+        if (access(path.c_str(), F_OK) == 0) {
+            font = LoadFontEx(path.c_str(), 24, cp.data(), (int)cp.size());
             if (IsFontValid(font) && font.glyphCount > 300) return font;
             if (IsFontValid(font)) UnloadFont(font);
         }

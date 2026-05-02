@@ -161,6 +161,8 @@ FetchContent_MakeAvailable(nfd)
 
 # --- raylib frontend executable ----------------------------------------
 file(GLOB RAYLIB_FRONT_SRC src/raylib/*.cpp)
+set(M88M_FONT_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/assets/NotoSansJP-Regular.ttf")
+
 if(WIN32)
     list(APPEND RAYLIB_FRONT_SRC src/raylib/m88m.rc)
 endif()
@@ -168,6 +170,12 @@ endif()
 if(RAYLIB_FRONT_SRC)
     if(APPLE)
         add_executable(m88_raylib MACOSX_BUNDLE ${RAYLIB_FRONT_SRC})
+        
+        # macOS bundle resources
+        set_source_files_properties(${M88M_FONT_RESOURCES} PROPERTIES
+            MACOSX_PACKAGE_LOCATION "Resources/fonts")
+        target_sources(m88_raylib PRIVATE ${M88M_FONT_RESOURCES})
+
         set_target_properties(m88_raylib PROPERTIES
             OUTPUT_NAME "M88M"
             MACOSX_BUNDLE_GUI_IDENTIFIER "com.bubio.m88m"
