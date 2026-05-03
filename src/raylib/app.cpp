@@ -33,6 +33,10 @@
 #endif
 #endif
 
+#ifdef M88_EMBED_FONT
+#include "embedded_font.h"
+#endif
+
 static Font LoadJapaneseFont() {
     // Codepoints to load
     std::vector<int> cp;
@@ -42,6 +46,11 @@ static Font LoadJapaneseFont() {
     for (int i = 0x4E00; i <= 0x6000; i++) cp.push_back(i);
 
     Font font = { 0 };
+
+#ifdef M88_EMBED_FONT
+    font = LoadFontFromMemory(".ttf", embedded_font_data, (int)embedded_font_size, 24, cp.data(), (int)cp.size());
+    if (IsFontValid(font) && font.glyphCount > 300) return font;
+#endif
 
 #ifdef _WIN32
     // Try loading from Windows Resource first (embedded in exe)

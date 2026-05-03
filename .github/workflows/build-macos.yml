@@ -1,0 +1,32 @@
+name: Build macOS (Universal)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Build
+      env:
+        MACOS_UNIVERSAL: 1
+      run: chmod +x scripts/build_macos.sh && ./scripts/build_macos.sh
+
+    - name: Package App Bundle
+      run: |
+        # build_macos.sh creates build/M88M.app
+        cd build
+        zip -r ../M88M-macos.zip M88M.app
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: M88M-macos
+        path: M88M-macos.zip

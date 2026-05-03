@@ -1,0 +1,40 @@
+name: Build Windows (x86_64)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install ImageMagick
+      run: |
+        # Already installed on windows-latest, but ensuring just in case or using magick directly
+        magick --version
+
+    - name: Generate Icon
+      run: |
+        magick assets/AppIcon.png -define icon:auto-resize=256,128,64,48,32,16 assets/AppIcon.ico
+
+    - name: Build
+      run: ./scripts/build_win.ps1
+
+    - name: Prepare Artifact
+      shell: bash
+      run: |
+        mkdir -p dist
+        cp build/RelWithDebInfo/m88m.exe dist/
+        zip -j m88m-windows.zip dist/m88m.exe
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: m88m-windows
+        path: m88m-windows.zip

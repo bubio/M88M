@@ -199,6 +199,23 @@ if(RAYLIB_FRONT_SRC)
 
     target_link_libraries(m88_raylib PRIVATE m88core raylib raygui nfd)
 
+    # --- Embedded Font (Linux only) ------------------------------------
+    if(UNIX AND NOT APPLE)
+        message(STATUS "Embedding font for Linux binary...")
+        set(FONT_INPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/NotoSansJP-Regular.ttf")
+        set(FONT_HEADER_FILE "${CMAKE_CURRENT_BINARY_DIR}/embedded_font.h")
+        
+        file(READ "${FONT_INPUT_FILE}" FONT_DATA HEX)
+        string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " FONT_DATA_FORMATTED "${FONT_DATA}")
+        
+        file(WRITE "${FONT_HEADER_FILE}" 
+            "static const unsigned char embedded_font_data[] = { ${FONT_DATA_FORMATTED} };\n"
+            "static const unsigned int embedded_font_size = sizeof(embedded_font_data);\n"
+        )
+        target_compile_definitions(m88_raylib PRIVATE M88_EMBED_FONT)
+        target_include_directories(m88_raylib PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
+
     if(APPLE)
         target_link_libraries(m88_raylib PRIVATE
             iconv
@@ -207,7 +224,42 @@ if(RAYLIB_FRONT_SRC)
             "-framework CoreVideo"
             "-framework CoreAudio"
             "-framework AudioToolbox"
+            "-framework CoreFoundation"
         )
+        
+        # macOS App Icon compilation (actool)
+        set(ICON_DOC      ${CMAKE_CURRENT_SOURCE_DIR}/assets/AppIcon.icon)
+        set(ICON_OUT_DIR  ${CMAKE_CURRENT_BINARY_DIR}/AppIconCompiled)
+        set(ICON_CAR      ${ICON_OUT_DIR}/Assets.car)
+        set(ICON_ICNS     ${ICON_OUT_DIR}/AppIcon.icns)
+
+        file(GLOB_RECURSE ICON_DOC_SOURCES CONFIGURE_DEPENDS "${ICON_DOC}/*")
+
+        add_custom_command(
+            OUTPUT  ${ICON_CAR} ${ICON_ICNS}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${ICON_OUT_DIR}
+            COMMAND xcrun actool --compile ${ICON_OUT_DIR}
+                                 --platform macosx
+                                 --minimum-deployment-target ${CMAKE_OSX_DEPLOYMENT_TARGET}
+                                 --app-icon AppIcon
+                                 --output-partial-info-plist ${ICON_OUT_DIR}/AppIcon-partial.plist
+                                 --output-format human-readable-text
+                                 ${ICON_DOC}
+            DEPENDS ${ICON_DOC_SOURCES}
+            COMMENT "Compiling AppIcon.icon with actool"
+            VERBATIM
+        )
+
+        set_source_files_properties(${ICON_ICNS} ${ICON_CAR} PROPERTIES
+            MACOSX_PACKAGE_LOCATION Resources
+            GENERATED TRUE
+        )
+        target_sources(m88_raylib PRIVATE ${ICON_ICNS} ${ICON_CAR})
+
+        set_target_properties(m88_raylib PROPERTIES
+            MACOSX_BUNDLE_ICON_FILE "AppIcon.icns"
+        )
+
     elseif(WIN32)
         target_link_libraries(m88_raylib PRIVATE
             winmm
@@ -220,6 +272,45 @@ if(RAYLIB_FRONT_SRC)
     elseif(UNIX)
         target_link_libraries(m88_raylib PRIVATE pthread dl m)
     endif()
+
+    # --- Installation and Packaging ------------------------------------
+    include(GNUInstallDirs)
+
+    if(APPLE)
+        install(TARGETS m88_raylib BUNDLE DESTINATION .)
+    else()
+        install(TARGETS m88_raylib RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        if(NOT WIN32)
+            # Linux specific desktop file and icon
+            install(FILES assets/AppIcon.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps RENAME m88m.png)
+            
+            file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/m88m.desktop"
+                "[Desktop Entry]\n"
+                "Name=M88M\n"
+                "Exec=m88m\n"
+                "Icon=m88m\n"
+                "Type=Application\n"
+                "Categories=Game;Emulator;\n"
+                "Comment=PC-8801 Emulator\n"
+            )
+            install(FILES "${CMAKE_CURRENT_BINARY_DIR}/m88m.desktop" DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+        endif()
+    endif()
+
+    set(CPACK_PACKAGE_NAME "m88m")
+    set(CPACK_PACKAGE_VENDOR "bubio")
+    set(CPACK_PACKAGE_VERSION "${M88M_VERSION}")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "PC-8801 emulator (M88 改) — raylib frontend")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+
+    if(UNIX AND NOT APPLE)
+        set(CPACK_GENERATOR "DEB;RPM")
+        set(CPACK_DEBIAN_PACKAGE_MAINTAINER "seiji")
+        # Basic dependencies for raylib/nfd on Ubuntu
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS "libasound2, libgtk-3-0, libx11-6")
+    endif()
+
+    include(CPack)
 else()
     message(STATUS "src/raylib/ has no .cpp files yet — skipping m88_raylib target.")
 endif()
