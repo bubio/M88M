@@ -231,12 +231,13 @@ if(RAYLIB_FRONT_SRC)
         # macOS App Icon compilation (actool)
         set(ICON_DOC      ${CMAKE_CURRENT_SOURCE_DIR}/assets/AppIcon.icon)
         set(ICON_OUT_DIR  ${CMAKE_CURRENT_BINARY_DIR}/AppIconCompiled)
+        set(ICON_CAR      ${ICON_OUT_DIR}/Assets.car)
         set(ICON_ICNS     ${ICON_OUT_DIR}/AppIcon.icns)
 
         file(GLOB_RECURSE ICON_DOC_SOURCES CONFIGURE_DEPENDS "${ICON_DOC}/*")
 
         add_custom_command(
-            OUTPUT  ${ICON_ICNS}
+            OUTPUT  ${ICON_CAR} ${ICON_ICNS}
             COMMAND ${CMAKE_COMMAND} -E make_directory ${ICON_OUT_DIR}
             COMMAND xcrun actool --compile ${ICON_OUT_DIR}
                                  --platform macosx
@@ -250,11 +251,11 @@ if(RAYLIB_FRONT_SRC)
             VERBATIM
         )
 
-        set_source_files_properties(${ICON_ICNS} PROPERTIES
+        set_source_files_properties(${ICON_ICNS} ${ICON_CAR} PROPERTIES
             MACOSX_PACKAGE_LOCATION Resources
             GENERATED TRUE
         )
-        target_sources(m88_raylib PRIVATE ${ICON_ICNS})
+        target_sources(m88_raylib PRIVATE ${ICON_ICNS} ${ICON_CAR})
 
         set_target_properties(m88_raylib PROPERTIES
             MACOSX_BUNDLE_ICON_FILE "AppIcon.icns"
