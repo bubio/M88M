@@ -9,7 +9,13 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#else
+#include <dirent.h>
+#include <strings.h>
+#include <unistd.h>
+#endif
 
+#ifdef _WIN32
 static std::wstring UTF8ToWide(const char* utf8) {
     if (!utf8 || !*utf8) return L"";
     int nw = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, nullptr, 0);
@@ -49,22 +55,25 @@ bool FileIO::Open(const char* filename, uint flg)
 {
     Close();
 
-    strncpy_s(path_, MAX_PATH, filename, _TRUNCATE);
+    std::string resolved = ResolvePathCaseInsensitive(filename);
+    const char* target = resolved.c_str();
+
+    strncpy_s(path_, MAX_PATH, target, _TRUNCATE);
 
     const char* mode = (flg & create) ? "w+b" : ((flg & readonly) ? "rb" : "r+b");
 
 #ifdef _WIN32
-    std::wstring wpath = UTF8ToWide(filename);
+    std::wstring wpath = UTF8ToWide(target);
     fp_ = _wfopen(wpath.c_str(), ModeToWide(mode).c_str());
     if (!fp_ && !(flg & readonly) && !(flg & create)) {
         fp_ = _wfopen(wpath.c_str(), L"rb");
         if (fp_) flg |= readonly;
     }
 #else
-    fp_ = fopen(filename, mode);
+    fp_ = fopen(target, mode);
     if (!fp_ && !(flg & readonly) && !(flg & create)) {
         // Existing file but no write permission — fall back to read-only.
-        fp_ = fopen(filename, "rb");
+        fp_ = fopen(target, "rb");
         if (fp_) flg |= readonly;
     }
 #endif
@@ -161,4 +170,31 @@ bool FileIO::SetEndOfFile()
     if (!fp_) return false;
     fflush(fp_);
     return true;
+}
+
+std::string FileIO::ResolvePathCaseInsensitive(const std::string& path) {
+#ifdef _WIN32
+    return path;
+#else
+    if (access(path.c_str(), F_OK) == 0) return path;
+
+    size_t lastSlash = path.find_last_of('/');
+    std::string dir = (lastSlash == std::string::npos) ? "." : path.substr(0, lastSlash);
+    if (dir.empty() && !path.empty() && path[0] == '/') dir = "/";
+    std::string file = (lastSlash == std::string::npos) ? path : path.substr(lastSlash + 1);
+
+    DIR* dp = opendir(dir.empty() ? "." : dir.c_str());
+    if (!dp) return path;
+
+    struct dirent* ep;
+    std::string result = path;
+    while ((ep = readdir(dp))) {
+        if (strcasecmp(ep->d_name, file.c_str()) == 0) {
+            result = (dir == "." ? "" : dir + "/") + ep->d_name;
+            break;
+        }
+    }
+    closedir(dp);
+    return result;
+#endif
 }

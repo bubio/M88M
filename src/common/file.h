@@ -12,6 +12,7 @@
 
 #include "types.h"
 #include <stdio.h>
+#include <string>
 
 class FileIO
 {
@@ -54,6 +55,8 @@ public:
 
     uint  GetFlags() { return flags_; }
     void  SetLogicalOrigin(int32 origin) { lorigin_ = (uint32)origin; }
+
+    static std::string ResolvePathCaseInsensitive(const std::string& path);
 
 private:
     FileIO(const FileIO&);

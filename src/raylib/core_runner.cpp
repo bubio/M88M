@@ -44,7 +44,7 @@ std::string CoreRunner::CheckMandatoryRoms(const std::string& romDir) {
     std::vector<std::string> mandatory = { "N88.ROM", "DISK.ROM", "FONT.ROM" };
     std::vector<std::string> missing;
     for (const auto& file : mandatory) {
-        std::string path = romDir + "/" + file;
+        std::string path = FileIO::ResolvePathCaseInsensitive(romDir + "/" + file);
         if (access(path.c_str(), F_OK) != 0) missing.push_back(file);
     }
     if (missing.empty()) return "";
