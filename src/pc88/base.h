@@ -42,6 +42,7 @@ public:
 	void IOCALL Reset(uint=0, uint=0);
 	void SetFDBoot(bool autoboot_) { autoboot = autoboot_; }
 
+	void ResetRTC();
 	void IOCALL RTC(uint=0);
 	void IOCALL VRTC(uint, uint en);
 	
