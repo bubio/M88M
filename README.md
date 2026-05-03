@@ -41,6 +41,13 @@ To run the emulator, you must provide the necessary PC-8801 ROM files. Place the
 ## Building
 
 ### macOS / Linux
+#### Dependencies (Linux)
+On Debian-based systems (Ubuntu, etc.), you will need the following packages:
+```bash
+sudo apt-get install build-essential cmake libasound2-dev libx11-dev libxcursor-dev libxinerama-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev
+```
+
+#### Build
 ```bash
 # Clone the repository
 git clone <repository-url>
@@ -48,9 +55,9 @@ cd M88M
 
 # Configure and build
 cmake -S . -B build
-cmake --build build -j$(sysctl -n hw.ncpu || nproc)
+cmake --build build -j
 ```
-The executable will be generated at `./build/m88`.
+The executable will be generated at `./build/m88m`.
 
 ### Windows (CMake)
 You can use CMake with Visual Studio or MinGW.

@@ -38,7 +38,7 @@ else()
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-fno-strict-aliasing>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-multichar>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-deprecated-declarations>
-        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-error=c++11-narrowing>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-narrowing>
     )
 endif()
 
@@ -187,6 +187,14 @@ if(RAYLIB_FRONT_SRC)
     else()
         add_executable(m88_raylib ${RAYLIB_FRONT_SRC})
         set_target_properties(m88_raylib PROPERTIES OUTPUT_NAME "m88m")
+
+        # Copy assets to the output directory so the executable can find them
+        add_custom_command(TARGET m88_raylib POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${CMAKE_CURRENT_SOURCE_DIR}/assets
+            $<TARGET_FILE_DIR:m88_raylib>/assets
+            COMMENT "Copying assets to output directory..."
+        )
     endif()
 
     target_link_libraries(m88_raylib PRIVATE m88core raylib raygui nfd)

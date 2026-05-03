@@ -8,8 +8,8 @@
 
 #include "headers.h"
 
-#include "FDC.h"
-#include "FDU.h"
+#include "fdc.h"
+#include "fdu.h"
 #include "misc.h"
 #include "critsect.h"
 #include "diskmgr.h"

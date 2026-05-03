@@ -29,6 +29,15 @@ static bool DirectoryExists(const std::string& path) {
 }
 
 static void EnsureDirectory(const std::string& path) {
+    if (path.empty() || DirectoryExists(path)) return;
+
+    size_t pos = 0;
+    while ((pos = path.find_first_of("/\\", pos + 1)) != std::string::npos) {
+        std::string subdir = path.substr(0, pos);
+        if (!subdir.empty() && subdir != "/" && subdir.find(':') == std::string::npos && !DirectoryExists(subdir)) {
+            mkdir(subdir.c_str(), 0755);
+        }
+    }
     if (!DirectoryExists(path)) {
         mkdir(path.c_str(), 0755);
     }
@@ -65,11 +74,28 @@ std::string GetRomDir() {
     const char* env = std::getenv("M88M_ROM_DIR");
     if (env) return std::string(env);
 
+    std::string path;
+#if defined(__linux__)
+    const char* xdgData = std::getenv("XDG_DATA_HOME");
+    if (xdgData) {
+        path = std::string(xdgData) + "/M88M/roms";
+    } else {
+        const char* home = std::getenv("HOME");
+        if (home) {
+            path = std::string(home) + "/.local/share/M88M/roms";
+        }
+    }
+    if (path.empty()) path = "/usr/local/share/M88M/roms";
+#else
     std::string appDir = GetAppDir();
     std::string localRom = appDir + "/roms";
     if (DirectoryExists(localRom)) return localRom;
 
-    return GetConfigDir() + "/roms";
+    path = GetConfigDir() + "/roms";
+#endif
+
+    EnsureDirectory(path);
+    return path;
 }
 
 std::string GetConfigDir() {
