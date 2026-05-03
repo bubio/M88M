@@ -1083,79 +1083,72 @@ void Z80C::SingleStep(uint m)
 // arthimatic operation
 
 	case 0x27:	// DAA
-		b = 0;
-		if (!GetNF())
 		{
-			if ((RegA & 0x0f) > 9 || GetHF())
-			{
-				if ((RegA & 0x0f) > 9)
-					b = HF;
-				RegA += 6;
-			}
-			if (RegA > 0x9f || GetCF())
-			{
-				RegA += 0x60;
-				b |= CF;
-			}
+			uint8 a = RegA;
+			uint8 adj = 0;
+			if (GetHF() || (!GetNF() && (a & 0x0f) > 9)) adj |= 6;
+			if (GetCF() || (!GetNF() && a > 0x99)) adj |= 0x60;
+			
+			if (GetNF())
+				RegA -= adj;
+			else
+				RegA += adj;
+			
+			SetZSP(RegA);
+			SetFlags(HF|CF, ((a ^ RegA) & HF) | (GetCF() || (!GetNF() && a > 0x99) ? CF : 0));
+			CLK(4);
 		}
-		else
-		{
-			if ((RegA & 0x0f) > 9 || GetHF())
-			{
-				if ((RegA & 0x0f) < 6)
-					b = HF;
-				RegA -= 6;
-			}
-			if (RegA > 0x9f || GetCF())
-			{
-				RegA -= 0x60;
-				b |= CF;
-			}
-		}
-		SetZSP(RegA);
-		SetFlags(HF|CF, b);
-		CLK(4);
 		break;
 
 	case 0x2f:	// CPL
 		RegA = ~RegA;
 		SetFlags(NF|HF, NF|HF);
+		SetXF(RegA);
 		CLK(4);
 		break;
 
 	case 0x37:	// SCF
 		SetFlags(CF|NF|HF, CF);
+		SetXF(RegA);
 		CLK(4);
 		break;
 
 	case 0x3f:	// CCF
-		b = GetCF(); SetFlags(CF|NF, b ^ CF);
+		b = GetCF(); 
+		SetFlags(CF|NF|HF, (b ^ CF) | (b ? HF : 0));
+		SetXF(RegA);
 		CLK(4);
 		break;
 
 //	I/O access
 
 	case 0xdb:	// IN A,(n)
-		w = /*(uint(RegA) << 8) +*/ Fetch8();
-		if (bus->IsSyncPort(w) && !Sync())
 		{
-			PCDec(2);
-			break;
+			uint port = Fetch8();
+			w = (uint(RegA) << 8) | port;
+			if (bus->IsSyncPort(port) && !Sync())
+			{
+				PCDec(2);
+				break;
+			}
+			RegA = Inp(w);
+			CLK(11);
 		}
-		RegA = Inp(w);
-		CLK(11);
 		break;
 
 	case 0xd3:	// OUT (n),A
-		w = /*(uint(RegA) << 8) + */ Fetch8();
-		if (bus->IsSyncPort(w) && !Sync())
 		{
-			PCDec(2);
-			break;
+			uint port = Fetch8();
+			w = (uint(RegA) << 8) | port;
+			if (bus->IsSyncPort(port) && !Sync())
+			{
+				PCDec(2);
+				break;
+			}
+			Outp(w, RegA);
+			CLK(11);
+			OutTestIntr();
 		}
-		Outp(w, RegA);
-		CLK(11);
-		OutTestIntr();
 		break;
 
 //	branch op.
@@ -1890,14 +1883,14 @@ void Z80C::SingleStep(uint m)
 			case 0x57: // LD A,I
 				RegA = (reg.ireg);
 				SetZS(reg.ireg);
-				SetFlags(NF|HF|PF, reg.iff1 ? PF : 0);
+				SetFlags(NF|HF|PF, reg.iff2 ? PF : 0);
 				CLK(9);
 				break;
 
 			case 0x5F: // LD A,R
 				RegA = (reg.rreg & 0x7f) + (reg.rreg7 & 0x80);
 				SetZS(RegA);
-				SetFlags(NF|HF|PF, (reg.iff1 ? PF : 0));
+				SetFlags(NF|HF|PF, (reg.iff2 ? PF : 0));
 				CLK(9);
 				break;
 
@@ -2002,79 +1995,96 @@ void Z80C::CodeCB()
 	uint  rg = fn & 7;
 	uint  bit = (fn >> 3) & 7;
 	
-	if (rg != 6)
+	if (index_mode == USEHL)
 	{
-		uint8* p = ref_byte[rg];		/* ����Ώۂւ̃|�C���^ */
-		switch ((fn >> 6) & 3)
+		if (rg != 6)
 		{
-		case 0:
-			*p = (this->*func[bit])(*p);
-			break;
-		case 1:
-			BIT(*p, bit);
-			break;
-		case 2:
-			*p = RES(*p, bit);
-			break;
-		case 3:
-			*p = SET(*p, bit);
-			break;
+			uint8* p = ref_byte[rg];
+			switch ((fn >> 6) & 3)
+			{
+			case 0: *p = (this->*func[bit])(*p); break;
+			case 1: BIT(*p, bit); break;
+			case 2: *p = RES(*p, bit); break;
+			case 3: *p = SET(*p, bit); break;
+			}
+			CLK(8);
 		}
-		CLK(8);
+		else
+		{
+			uint8 d = Read8(RegHL);
+			switch ((fn >> 6) & 3)
+			{
+			case 0: Write8(RegHL, (this->*func[bit])(d)); CLK(15); break;
+			case 1: BIT(d, bit); CLK(12); break;
+			case 2: Write8(RegHL, RES(d, bit)); CLK(15); break;
+			case 3: Write8(RegHL, SET(d, bit)); CLK(15); break;
+			}
+		}
 	}
 	else
 	{
 		uint b = *ref_hl[index_mode] + ref;
 		uint8 d = Read8(b);
-		switch ((fn >> 6) & 3)
-		{
-		case 0:
-			Write8(b, (this->*func[bit])(d));
-			CLK(15);
-			break;
-		case 1:
-			BIT(d, bit);
-			CLK(12);
-			break;
-		case 2:
-			Write8(b, RES(d, bit));
-			CLK(15);
-			break;
-		case 3:
-			Write8(b, SET(d, bit));
-			CLK(15);
-			break;
-		}
+		uint8 res;
+	switch ((fn >> 6) & 3)
+	{
+	case 0:
+		res = (this->*func[bit])(d);
+		Write8(b, res);
+		if (rg != 6) *ref_byte[rg] = res;
+		CLK(23);
+		break;
+	case 1:
+		BIT(d, bit);
+		SetXF((b >> 8) & 0x28);
+		CLK(20);
+		break;	case 2:
+		res = RES(d, bit);
+		Write8(b, res);
+		if (rg != 6) *ref_byte[rg] = res;
+		CLK(23);
+		break;
+	case 3:
+		res = SET(d, bit);
+		Write8(b, res);
+		if (rg != 6) *ref_byte[rg] = res;
+		CLK(23);
+		break;
+	}
 	}
 }
 
-// ---------------------------------------------------------------------------
-//	�u���b�N��r -------------------------------------------------------------
 //
 void Z80C::CPI()
 {
-	uint8 n, f;
+	uint8 n, f, res;
 	n = Read8(RegHL++);
 	RegBC = (RegBC-1) & 0xffff;
+	res = RegA - n;
 	f = (((RegA & 0x0f) < (n & 0x0f)) ? HF : 0)
 	  | (RegBC ? PF : 0)
 	  | NF;
 
 	SetFlags(HF|PF|NF, f);
-	SetZS(RegA-n);
+	SetZS(res);
+	res -= (f & HF ? 1 : 0);
+	SetXF(((res << 4) & 0x20) | (res & 0x08));
 	CLK(16);
 }
 
 void Z80C::CPD()
 {
-	uint8 n, f;
+	uint8 n, f, res;
 	n = Read8(RegHL--);
 	RegBC = (RegBC-1) & 0xffff;
+	res = RegA - n;
 	f = (((RegA & 0x0f) < (n & 0x0f)) ? HF : 0)
 	  | (RegBC ? PF : 0)
 	  | NF;
 	SetFlags(HF|PF|NF, f);
-	SetZS(RegA-n);
+	SetZS(res);
+	res -= (f & HF ? 1 : 0);
+	SetXF(((res << 4) & 0x20) | (res & 0x08));
 	CLK(16);
 }
 
