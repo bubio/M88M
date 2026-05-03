@@ -91,13 +91,13 @@ include(FetchContent)
 
 # Automatically select binary URL based on platform/arch
 if(APPLE)
-    # raylib 5.5 release uses a universal binary for macOS
-    set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_macos.tar.gz")
+    # raylib 6.0 release uses a universal binary for macOS
+    set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_macos.tar.gz")
 elseif(WIN32)
     if(MSVC)
-        set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_msvc16.zip")
+        set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_win64_msvc16.zip")
     else()
-        set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/5.5/raylib-5.5_win64_mingw-w64.zip")
+        set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_win64_mingw-w64.zip")
     endif()
 endif()
 
@@ -132,7 +132,7 @@ else()
     FetchContent_Declare(
         raylib
         GIT_REPOSITORY https://github.com/raysan5/raylib.git
-        GIT_TAG        5.5
+        GIT_TAG        6.0
         GIT_SHALLOW    TRUE
     )
     FetchContent_MakeAvailable(raylib)
@@ -142,7 +142,7 @@ include(FetchContent)
 FetchContent_Declare(
     raygui
     GIT_REPOSITORY https://github.com/raysan5/raygui.git
-    GIT_TAG        4.0
+    GIT_TAG        master
     GIT_SHALLOW    TRUE
 )
 FetchContent_MakeAvailable(raygui)
