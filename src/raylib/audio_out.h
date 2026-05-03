@@ -17,6 +17,7 @@ public:
     void Pause(bool paused);
     void SetVolume(const PC8801::Config* cfg);
     void Cleanup();
+    void ClearBuffer();
     void SetSource(SoundSource* src);
 
     void FillOutput(int16_t* buffer, unsigned int frames);

@@ -16,7 +16,7 @@ public:
 	SamplingRateConverter();
 	~SamplingRateConverter();
 
-	bool	Init(SoundSourceL* source, int bufsize, ulong outrate);	// bufsize ‚ÍƒTƒ“ƒvƒ‹’PˆÊ
+	bool	Init(SoundSourceL* source, int bufsize, ulong outrate);	// bufsize ï¿½ÍƒTï¿½ï¿½ï¿½vï¿½ï¿½ï¿½Pï¿½ï¿½
 	void	Cleanup();
 
 	int		Get(Sample* dest, int size);
@@ -24,9 +24,11 @@ public:
 	int		GetChannels();
 	int		GetAvail();
 
-	int		Fill(int samples);			// ƒoƒbƒtƒ@‚ÉÅ‘å sample •ªƒf[ƒ^‚ğ’Ç‰Á
+	int		Fill(int samples);			// ï¿½oï¿½bï¿½tï¿½@ï¿½ÉÅ‘ï¿½ sample ï¿½ï¿½ï¿½fï¿½[ï¿½^ï¿½ï¿½Ç‰ï¿½
 	bool	IsEmpty();
-	void	FillWhenEmpty(bool f);		// ƒoƒbƒtƒ@‚ª‹ó‚É‚È‚Á‚½‚ç•â[‚·‚é‚©
+	void	FillWhenEmpty(bool f);
+	void	Clear();
+		// ï¿½oï¿½bï¿½tï¿½@ï¿½ï¿½ï¿½ï¿½É‚È‚ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½[ï¿½ï¿½ï¿½é‚©
 
 private:
 	enum
@@ -44,10 +46,10 @@ private:
 	SampleL* buffer;
 	float* h2;
 
-	int buffersize;						// ƒoƒbƒtƒ@‚ÌƒTƒCƒY (in samples)
-	int read;							// “ÇˆÊ’u (in samples)
-	int write;							// ‘‚«‚İˆÊ’u (in samples)
-	int ch;								// ƒ`ƒƒƒlƒ‹”(1sample = ch*Sample)
+	int buffersize;						// ï¿½oï¿½bï¿½tï¿½@ï¿½ÌƒTï¿½Cï¿½Y (in samples)
+	int read;							// ï¿½Çï¿½ï¿½Ê’u (in samples)
+	int write;							// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½İˆÊ’u (in samples)
+	int ch;								// ï¿½`ï¿½ï¿½ï¿½lï¿½ï¿½ï¿½ï¿½(1sample = ch*Sample)
 	bool fillwhenempty;
 
 	int n;
@@ -79,7 +81,7 @@ inline int SamplingRateConverter::GetChannels()
 }
 
 // ---------------------------------------------------------------------------
-//	ƒoƒbƒtƒ@‚ª‹ó‚©C‹ó‚É‹ß‚¢ó‘Ô‚©?
+//	ï¿½oï¿½bï¿½tï¿½@ï¿½ï¿½ï¿½ó‚©Cï¿½ï¿½É‹ß‚ï¿½ï¿½ï¿½Ô‚ï¿½?
 //
 inline int SamplingRateConverter::Avail()
 {

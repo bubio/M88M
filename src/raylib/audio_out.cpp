@@ -26,6 +26,13 @@ void RaylibSound::Cleanup() {
     if (s_current_sound == this) s_current_sound = nullptr;
 }
 
+void RaylibSound::ClearBuffer() {
+    if (IsAudioStreamValid(stream)) {
+        StopAudioStream(stream);
+        PlayAudioStream(stream);
+    }
+}
+
 void RaylibSound::SetSource(SoundSource* src) {
     outputSource.store(src, std::memory_order_release);
 }

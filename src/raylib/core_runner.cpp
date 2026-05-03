@@ -72,6 +72,13 @@ bool CoreRunner::Init(Draw* draw) {
     sound.Init();
     sound.SetVolume(&Config::Get());
     sound.SetSource(coreSound.GetSoundSource());
+
+    static const IOBus::Connector c_sound[] = {
+        { pres, IOBus::portout, 0 },
+        { 0, 0, 0 }
+    };
+    bus1.Connect(&coreSound, c_sound);
+
     GetOPN1()->Connect(&coreSound);
     GetOPN2()->Connect(&coreSound);
     GetBEEP()->Connect(&coreSound);
@@ -282,6 +289,7 @@ void CoreRunner::Run() {
 
             if (resetPending.exchange(false)) {
                 Reset();
+                sound.ClearBuffer();
                 startTime = std::chrono::high_resolution_clock::now();
                 totalTicksEmulated = 0;
             }

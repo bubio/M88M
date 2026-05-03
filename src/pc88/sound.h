@@ -31,6 +31,7 @@ public:
 	bool Init(PC88* pc, uint rate, int bufsize);
 	void Cleanup();	
 	
+	void IOCALL Reset(uint = 0, uint = 0);
 	void ApplyConfig(const Config* config);
 	bool SetRate(uint rate, int bufsize);
 
@@ -52,10 +53,11 @@ public:
 	
 	int		GetAvail() { return INT_MAX; }
 
+	const Descriptor* IFCALL GetDesc() const { return &descriptor; }
 
 protected:
 	uint mixrate;
-	uint samplingrate;		// ƒTƒ“ƒvƒŠƒ“ƒOƒŒ[ƒg
+	uint samplingrate;		// ï¿½Tï¿½ï¿½ï¿½vï¿½ï¿½ï¿½ï¿½ï¿½Oï¿½ï¿½ï¿½[ï¿½g
 	uint rate50;			// samplingrate / 50
 
 private:
@@ -82,6 +84,9 @@ private:
 	
 	SSNode* sslist;
 	CriticalSection cs_ss;
+
+	static const Descriptor descriptor;
+	static const OutFuncPtr outdef[];
 };
 
 }
