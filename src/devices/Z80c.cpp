@@ -640,9 +640,20 @@ void IOCALL Z80C::Reset(uint, uint)
 	SetPC(0);				/* pc, sp = 0 */
 	RegSP = 0;
 	waitstate = 0;
-	intr = false;			// ���荞�݃N���A
+	intr = false;			// 荞݃NA
 	execcount = 0;
+	clockcount = 0;
+	stopcount = 0;
+	delaycount = 0;
+	startcount = 0;
+	index_mode = USEHL;
+	nfa = 0;
+	xf = 0;
+	fx32 = fy32 = 0;
+	fx = fy = 0;
+	eshift = 0;
 }
+
 
 // ---------------------------------------------------------------------------
 //  �������荞��

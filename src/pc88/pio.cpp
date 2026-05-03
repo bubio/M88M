@@ -18,7 +18,7 @@ using namespace PC8801;
 void PIO::Reset()
 {
 	port[0] = port[1] = port[2] = 0;
-	SetCW(0);
+	SetCW(0x80);
 }
 
 void PIO::SetCW(uint data)

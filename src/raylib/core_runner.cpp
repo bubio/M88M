@@ -282,6 +282,8 @@ void CoreRunner::Run() {
 
             if (resetPending.exchange(false)) {
                 Reset();
+                startTime = std::chrono::high_resolution_clock::now();
+                totalTicksEmulated = 0;
             }
 
             if (configPending) {

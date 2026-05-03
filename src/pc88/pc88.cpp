@@ -252,12 +252,18 @@ void PC88::UpdateScreen(bool refresh)
 //
 void PC88::Reset()
 {
+	Scheduler::Init();
+	dexc = 0;
+	updated = false;
+
 	bool cd = false;
 	if (IsCDSupported())
 		cd = (base->GetBasicMode() & 0x40) != 0;
 
 	base->SetFDBoot(cd || diskmgr->GetCurrentDisk(0) >= 0);
-	base->Reset();		// Switch �֌W�̍X�V
+	base->Reset();		// Switch ֌W̍XV
+	base->ResetRTC();
+
 
 	bool isv2 = (bus1.In(0x31) & 0x40) != 0;
 	bool isn80v2 = (base->GetBasicMode() == Config::N80V2);
@@ -297,6 +303,9 @@ void PC88::Reset()
 	bus1.Out(0xe6, 0);
 	bus1.Out(0xf1, 1);
 	bus2.Out(pres2, 0);
+
+	cpu1.SetPC(0);
+	cpu2.SetPC(0);
 
 //	statusdisplay.Show(10, 1000, "CPUMode = %d", cpumode);
 }

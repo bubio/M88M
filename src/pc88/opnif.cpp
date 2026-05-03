@@ -218,6 +218,8 @@ void IOCALL OPNIF::Reset(uint, uint)
 
 	if (chip)
 		chip->Reset(opnamode);
+
+	prevtime = scheduler->GetTime();
 }
 
 // ---------------------------------------------------------------------------
