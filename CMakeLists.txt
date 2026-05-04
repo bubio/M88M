@@ -162,7 +162,10 @@ FetchContent_MakeAvailable(nfd)
 
 # --- raylib frontend executable ----------------------------------------
 file(GLOB RAYLIB_FRONT_SRC src/raylib/*.cpp)
-set(M88M_FONT_RESOURCES "${CMAKE_CURRENT_SOURCE_DIR}/assets/NotoSansJP-Regular.ttf")
+set(M88M_FONT_RESOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/NotoSansJP-Regular.ttf"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/ChicagoKare-Regular.ttf"
+)
 
 if(WIN32)
     list(APPEND RAYLIB_FRONT_SRC src/raylib/m88m.rc)
