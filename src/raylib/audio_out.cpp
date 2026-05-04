@@ -13,7 +13,8 @@ static void GlobalAudioCallback(void* buffer, unsigned int frames) {
 RaylibSound::RaylibSound() : outputSource(nullptr), sampleRate(48000) { stream = {0}; }
 RaylibSound::~RaylibSound() { Cleanup(); }
 
-void RaylibSound::Init() {
+void RaylibSound::Init(uint32 rate) {
+    sampleRate = rate;
     InitAudioDevice();
     if (!IsAudioDeviceReady()) return;
     SetAudioStreamBufferSizeDefault(1024);

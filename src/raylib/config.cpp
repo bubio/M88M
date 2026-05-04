@@ -37,7 +37,10 @@ void Load(PC8801::Config& cfg) {
     cfg.volbd = 0; cfg.volsd = 0; cfg.voltop = 0;
     cfg.volhh = 0; cfg.voltom = 0; cfg.volrim = 0;
     cfg.mastervol = 64; // 50%
-    cfg.soundbuffer = 4096;
+    cfg.soundbuffer = 100; // 100ms
+    cfg.sound = 48000; // 48kHz
+    cfg.mousesensibility = 10;
+    cfg.keytype = PC8801::Config::AT106;
 
     // Try to load from file
     std::string path = GetConfigFilePath();

@@ -16,6 +16,7 @@ public:
     void OpenNativeDialog(DiskManager* diskmgr, int drive);
     void OpenBothDrives(DiskManager* diskmgr);
     void SetJPFont(Font font) { fontJp = font; }
+    void SetENFont(Font font) { fontEn = font; }
 
     bool IsMenuOpen() const { return showMenu; }
     void ToggleMenu(class CoreRunner* coreRunner = nullptr);
@@ -31,6 +32,8 @@ private:
     std::string GetStateScreenshotPath(DiskManager* diskmgr, int slot) const;
     bool StateSlotExists(DiskManager* diskmgr, int slot) const;
     void LoadStatePreview(const std::string& path);
+    void DrawEnText(const char* text, int x, int y, Color color) const;
+    int MeasureEnText(const char* text) const;
 
     bool showMenu;
     bool showSettings;
@@ -44,11 +47,17 @@ private:
     bool isFullscreen;
     bool basicModeEdit;
     bool windowScaleEdit;
+    bool cpuModeEdit;
+    bool port44Edit;
+    bool portA8Edit;
+    bool samplingEdit;
+    bool keyboardEdit;
     
     std::string lastOpenedPath[2];
     std::string stateMessage;
     std::string statePreviewPath;
     Texture2D statePreviewTexture;
     Font fontJp;
+    Font fontEn;
     bool resetPending;
 };

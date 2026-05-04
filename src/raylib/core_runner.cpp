@@ -64,12 +64,12 @@ bool CoreRunner::Init(Draw* draw) {
 
     ApplyConfig(&Config::Get());
     Reset();
-    const uint outrate = 48000;
-    int bufsize = (int)Config::Get().soundbuffer;
+    const uint outrate = (uint)Config::Get().sound;
+    int bufsize = (int)(Config::Get().soundbuffer * outrate / 1000);
     if (bufsize < 1024) bufsize = 4096;
     if (!coreSound.Init(this, outrate, bufsize)) return false;
     coreSound.ApplyConfig(&Config::Get());
-    sound.Init();
+    sound.Init(outrate);
     sound.SetVolume(&Config::Get());
     sound.SetSource(coreSound.GetSoundSource());
 
@@ -288,6 +288,26 @@ void CoreRunner::Run() {
             std::lock_guard<std::mutex> lock(stateMutex);
 
             if (resetPending.exchange(false)) {
+                // Apply latest config before reset to ensure hardware changes are picked up
+                ApplyConfig(&Config::Get());
+                
+                // Re-initialize audio if sampling rate or buffer size changed
+                uint32 currentRate = (uint32)Config::Get().sound;
+                int currentBufMs = (int)Config::Get().soundbuffer;
+                static uint32 lastRate = 0;
+                static int lastBufMs = 0;
+                
+                if (currentRate != lastRate || currentBufMs != lastBufMs) {
+                    int samples = (int)(currentRate * currentBufMs / 1000);
+                    if (samples < 1024) samples = 4096;
+                    coreSound.Init(this, currentRate, samples);
+                    sound.Cleanup();
+                    sound.Init(currentRate);
+                    sound.Start();
+                    lastRate = currentRate;
+                    lastBufMs = currentBufMs;
+                }
+
                 Reset();
                 sound.ClearBuffer();
                 startTime = std::chrono::high_resolution_clock::now();

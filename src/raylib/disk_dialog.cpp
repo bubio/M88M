@@ -1,6 +1,8 @@
 #include "disk_dialog.h"
 #include "raylib.h"
+#define RAYGUI_MALLOC(sz) malloc(sz)
 #include "raygui.h"
+#include "style_cyber.h"
 #include "nfd.h"
 #include "config.h"
 #include "pc88.h"
@@ -59,12 +61,31 @@ UIManager::UIManager() :
     showMenu(false), showSettings(false), showStateDialog(false), selectingDiskForDrive(-1), activeTab(0),
     currentStateSlot(0),
     windowScale(0), isFullscreen(false),
-    basicModeEdit(false), windowScaleEdit(false), resetPending(false)
+    basicModeEdit(false), windowScaleEdit(false),
+    cpuModeEdit(false), port44Edit(false), portA8Edit(false), samplingEdit(false), keyboardEdit(false),
+    resetPending(false)
 {
     lastOpenedPath[0] = "";
     lastOpenedPath[1] = "";
     statePreviewTexture = {0};
+    fontJp = {0};
+    fontEn = {0};
     NFD_Init();
+}
+
+void UIManager::DrawEnText(const char* text, int x, int y, Color color) const {
+    if (IsFontValid(fontEn)) {
+        DrawTextEx(fontEn, text, { (float)x, (float)y - 1 }, 12, 1, color);
+    } else {
+        DrawText(text, x, y, 10, color);
+    }
+}
+
+int UIManager::MeasureEnText(const char* text) const {
+    if (IsFontValid(fontEn)) {
+        return (int)MeasureTextEx(fontEn, text, 12, 1).x;
+    }
+    return MeasureText(text, 10);
 }
 
 UIManager::~UIManager() {
@@ -72,7 +93,21 @@ UIManager::~UIManager() {
     NFD_Quit();
 }
 
-void UIManager::Init() {}
+void UIManager::Init() {
+    GuiLoadStyleCyber();
+
+    if (IsFontValid(fontEn)) {
+        GuiSetFont(fontEn);
+        GuiSetStyle(DEFAULT, TEXT_SIZE, 16);
+        GuiSetStyle(DEFAULT, TEXT_SPACING, 1);
+    }
+
+    // Determine current window scale based on screen height
+    int h = GetScreenHeight();
+    if (h >= 1224) windowScale = 2; // 3x
+    else if (h >= 824) windowScale = 1; // 2x
+    else windowScale = 0; // 1x
+}
 
 void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
     if (IsKeyPressed(KEY_F10)) ToggleMenu(coreRunner);
@@ -140,8 +175,8 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     }
     GuiGroupBox({ x + 10, btnY - 5, width - 20, 115 }, groupTitle.c_str());
     if (groupJp) {
-        GuiSetFont(GetFontDefault());
-        GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
+        if (IsFontValid(fontEn)) GuiSetFont(fontEn); else GuiSetFont(GetFontDefault());
+        GuiSetStyle(DEFAULT, TEXT_SIZE, IsFontValid(fontEn) ? 16 : 10);
     }
 
     // Drive 1&2 button
@@ -173,8 +208,8 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
         if (GuiButton({ x + 20, btnY + 10, width - 110, btnH }, label.c_str())) OpenNativeDialog(diskmgr, i);
 
         if (isJp) {
-            GuiSetFont(GetFontDefault());
-            GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
+            if (IsFontValid(fontEn)) GuiSetFont(fontEn); else GuiSetFont(GetFontDefault());
+            GuiSetStyle(DEFAULT, TEXT_SIZE, IsFontValid(fontEn) ? 16 : 10);
         }
 
         bool hasMultiple = diskmgr->GetNumDisks(i) > 1;
@@ -255,8 +290,8 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
         }
 
         if (isJp) {
-            GuiSetFont(GetFontDefault());
-            GuiSetStyle(DEFAULT, TEXT_SIZE, 10);
+            if (IsFontValid(fontEn)) GuiSetFont(fontEn); else GuiSetFont(GetFontDefault());
+            GuiSetStyle(DEFAULT, TEXT_SIZE, IsFontValid(fontEn) ? 16 : 10);
         }
         btnY += 30;
     }
@@ -408,15 +443,15 @@ void UIManager::DrawStateDialog(DiskManager* diskmgr, CoreRunner* coreRunner) {
 }
 
 void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRunner) {
-    float width = 520;
-    float height = 390;
+    float width = 540;
+    float height = 400;
     float x = (float)GetScreenWidth() / 2 - width / 2;
     float y = (float)GetScreenHeight() / 2 - height / 2;
 
     if (GuiWindowBox({ x, y, width, height }, "Settings")) ToggleMenu(coreRunner);
 
-    float tabW = (width - 20) / 5;
-    GuiToggleGroup({ x + 10, y + 35, tabW, 26 }, "System;Audio;Video;Input;About", &activeTab);
+    float tabW = (width - 20) / 6;
+    GuiToggleGroup({ x + 10, y + 35, tabW, 26 }, "System;Audio;Video;Mixer;Input;About", &activeTab);
 
     float pY = y + 75;
     float rowH = 32;
@@ -424,21 +459,25 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
 
     if (activeTab == 0) { // System
         GuiLabel({ x + 20, pY, 120, 20 }, "CPU Clock:");
-
         bool is4 = (cfg.clock < 60);
         bool is8 = (cfg.clock >= 60);
         bool new_is4 = is4, new_is8 = is8;
-
         GuiToggle({ x + 150, pY, 70, 24 }, "4MHz", &new_is4);
         GuiToggle({ x + 225, pY, 70, 24 }, "8MHz", &new_is8);
-
         if (new_is4 && !is4) {
-            cfg.clock = 40; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; changed = true;
-            resetPending = true;
+            cfg.clock = 40; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; changed = true; resetPending = true;
         } else if (new_is8 && !is8) {
-            cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; changed = true;
-            resetPending = true;
+            cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; changed = true; resetPending = true;
         }
+        
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Speed:");
+        float speedVal = (float)cfg.speed;
+        Rectangle speedRect = { x + 150, pY, 200, 16 };
+        GuiSliderBar(speedRect, "20%", "200%", &speedVal, 20, 200);
+        const char* speedTxt = TextFormat("%d%%", (int)speedVal);
+        DrawEnText(speedTxt, (int)(speedRect.x + speedRect.width/2 - MeasureEnText(speedTxt)/2), (int)speedRect.y + 3, WHITE);
+        if ((int)speedVal != cfg.speed) { cfg.speed = (int)speedVal; changed = true; }
 
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "BASIC Mode:");
@@ -447,7 +486,6 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         else if (cfg.basicmode == PC8801::Config::N88V2) modeIndex = 1;
         else if (cfg.basicmode == PC8801::Config::N80) modeIndex = 2;
         else if (cfg.basicmode == PC8801::Config::N80V2) modeIndex = 3;
-
         if (GuiDropdownBox({ x + 150, pY, 200, 24 }, "N88 V1;N88 V2;N80 V1;N80 V2", &modeIndex, basicModeEdit)) {
             basicModeEdit = !basicModeEdit;
             if (!basicModeEdit) {
@@ -455,54 +493,103 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
                 else if (modeIndex == 1) cfg.basicmode = PC8801::Config::N88V2;
                 else if (modeIndex == 2) cfg.basicmode = PC8801::Config::N80;
                 else if (modeIndex == 3) cfg.basicmode = PC8801::Config::N80V2;
-                changed = true;
-                resetPending = true;
+                changed = true; resetPending = true;
             }
         }
+
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "CPU Mode:");
+        int cpumode = cfg.cpumode;
+        if (GuiDropdownBox({ x + 150, pY, 200, 24 }, "ms11;ms21;auto", &cpumode, cpuModeEdit)) {
+            cpuModeEdit = !cpuModeEdit;
+            if (!cpuModeEdit) { cfg.cpumode = cpumode; changed = true; }
+        }
+
         pY += rowH + 4;
         bool wait = (cfg.flags & PC8801::Config::enablewait) != 0;
         bool oldWait = wait;
-        GuiCheckBox({ x + 150, pY, 20, 20 }, "Enable CPU Wait", &wait);
+        GuiCheckBox({ x + 150, pY, 20, 20 }, "CPU Wait", &wait);
         if (wait != oldWait) {
             if (wait) cfg.flags |= PC8801::Config::enablewait;
             else cfg.flags &= ~PC8801::Config::enablewait;
             changed = true;
         }
-    }
-    else if (activeTab == 1) { // Audio
-        // Master Volume at the top
-        GuiLabel({ x + 20, pY, 80, 20 }, "MASTER");
-        float mVal = (float)cfg.mastervol;
-        GuiSliderBar({ x + 100, pY, 240, 16 }, "0", "128", &mVal, 0, 128);
-        if ((int)mVal != cfg.mastervol) { cfg.mastervol = (int)mVal; changed = true; }
-        pY += 35;
-
-        // Individual sound sources group
-        GuiGroupBox({ x + 10, pY - 5, width - 20, 165 }, "Mixer (Internal Sound Sources)");
-
-        const char* names[] = { "FM", "SSG", "ADPCM", "Rhythm" };
-        int* vPtrs[] = { &cfg.volfm, &cfg.volssg, &cfg.voladpcm, &cfg.volrhythm };
-        for (int i = 0; i < 4; i++) {
-            GuiLabel({ x + 25, pY + 10, 80, 20 }, names[i]);
-            float val = (float)*vPtrs[i];
-            GuiSliderBar({ x + 100, pY + 10, 240, 16 }, "-100dB", "+40dB", &val, -100, 40);
-            if ((int)val != *vPtrs[i]) { *vPtrs[i] = (int)val; changed = true; }
-            pY += 28;
-        }
-
-        pY += 10;
-        if (GuiButton({ x + 100, pY + 10, 150, 24 }, "Reset to Defaults")) {
-            cfg.volfm = 0; cfg.volssg = 0; cfg.voladpcm = 0; cfg.volrhythm = 0;
-            cfg.volbd = 0; cfg.volsd = 0; cfg.voltop = 0;
-            cfg.volhh = 0; cfg.voltom = 0; cfg.volrim = 0;
+        
+        bool fddwait = !(cfg.flag2 & PC8801::Config::fddnowait);
+        bool oldFddWait = fddwait;
+        GuiCheckBox({ x + 280, pY, 20, 20 }, "FDD Wait", &fddwait);
+        if (fddwait != oldFddWait) {
+            if (fddwait) cfg.flag2 &= ~PC8801::Config::fddnowait;
+            else cfg.flag2 |= PC8801::Config::fddnowait;
             changed = true;
         }
 
-        pY += 50;
-        bool lpf = (cfg.lpforder > 0);
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "ERAM:");
+        float eramVal = (float)cfg.erambanks;
+        GuiSliderBar({ x + 150, pY, 200, 16 }, "0", "128", &eramVal, 0, 128);
+        if ((int)eramVal != cfg.erambanks) { cfg.erambanks = (int)eramVal; changed = true; resetPending = true; }
+        GuiLabel({ x + 360, pY, 80, 20 }, TextFormat("%d Banks", cfg.erambanks));
+    }
+    else if (activeTab == 1) { // Audio
+        GuiLabel({ x + 20, pY, 120, 20 }, "Port 44h:");
+        int p44 = (cfg.flag2 & PC8801::Config::disableopn44) ? 0 : ((cfg.flags & PC8801::Config::enableopna) ? 2 : 1);
+        if (GuiDropdownBox({ x + 150, pY, 120, 24 }, "None;OPN;OPNA", &p44, port44Edit)) {
+            port44Edit = !port44Edit;
+            if (!port44Edit) {
+                if (p44 == 0) { cfg.flag2 |= PC8801::Config::disableopn44; cfg.flags &= ~PC8801::Config::enableopna; }
+                else if (p44 == 1) { cfg.flag2 &= ~PC8801::Config::disableopn44; cfg.flags &= ~PC8801::Config::enableopna; }
+                else { cfg.flag2 &= ~PC8801::Config::disableopn44; cfg.flags |= PC8801::Config::enableopna; }
+                changed = true; resetPending = true;
+            }
+        }
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Port A8h:");
+        int pa8 = (cfg.flags & PC8801::Config::opnaona8) ? 2 : ((cfg.flags & PC8801::Config::opnona8) ? 1 : 0);
+        if (GuiDropdownBox({ x + 150, pY, 120, 24 }, "None;OPN;OPNA", &pa8, portA8Edit)) {
+            portA8Edit = !portA8Edit;
+            if (!portA8Edit) {
+                cfg.flags &= ~(PC8801::Config::opnona8 | PC8801::Config::opnaona8);
+                if (pa8 == 1) cfg.flags |= PC8801::Config::opnona8;
+                else if (pa8 == 2) cfg.flags |= PC8801::Config::opnaona8;
+                changed = true; resetPending = true;
+            }
+        }
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Sampling:");
+        int sIdx = 0;
+        if (cfg.sound == 44100) sIdx = 0; else if (cfg.sound == 48000) sIdx = 1; else if (cfg.sound == 55467) sIdx = 2; else if (cfg.sound == 96000) sIdx = 3;
+        if (GuiDropdownBox({ x + 150, pY, 120, 24 }, "44k;48k;55k;96k", &sIdx, samplingEdit)) {
+            samplingEdit = !samplingEdit;
+            if (!samplingEdit) {
+                if (sIdx == 0) cfg.sound = 44100; else if (sIdx == 1) cfg.sound = 48000; else if (sIdx == 2) cfg.sound = 55467; else if (sIdx == 3) cfg.sound = 96000;
+                changed = true; resetPending = true;
+            }
+        }
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Buffer (ms):");
+        float bufVal = (float)cfg.soundbuffer;
+        Rectangle bufRect = { x + 150, pY, 200, 16 };
+        GuiSliderBar(bufRect, "50", "500", &bufVal, 50, 500);
+        const char* bufTxt = TextFormat("%d ms", (int)bufVal);
+        DrawEnText(bufTxt, (int)(bufRect.x + bufRect.width/2 - MeasureEnText(bufTxt)/2), (int)bufRect.y + 3, WHITE);
+        if ((int)bufVal != cfg.soundbuffer) { cfg.soundbuffer = (int)bufVal; changed = true; resetPending = true; }
+
+        pY += rowH;
+        bool lpf = (cfg.flag2 & PC8801::Config::lpfenable) != 0;
         bool oldLpf = lpf;
-        GuiCheckBox({ x + 100, pY, 20, 20 }, "Enable LPF (Low Pass Filter)", &lpf);
-        if (lpf != oldLpf) { cfg.lpforder = lpf ? 8 : 0; changed = true; }
+        GuiCheckBox({ x + 150, pY, 20, 20 }, "LPF (Low Pass Filter)", &lpf);
+        if (lpf != oldLpf) {
+            if (lpf) cfg.flag2 |= PC8801::Config::lpfenable; else cfg.flag2 &= ~PC8801::Config::lpfenable;
+            changed = true;
+        }
+        bool prec = (cfg.flags & PC8801::Config::precisemixing) != 0;
+        bool oldPrec = prec;
+        GuiCheckBox({ x + 300, pY, 20, 20 }, "Precise Mixing", &prec);
+        if (prec != oldPrec) {
+            if (prec) cfg.flags |= PC8801::Config::precisemixing; else cfg.flags &= ~PC8801::Config::precisemixing;
+            changed = true;
+        }
     }
     else if (activeTab == 2) { // Video
         GuiLabel({ x + 20, pY, 120, 20 }, "Window Scale:");
@@ -523,37 +610,98 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         bool oldSl = sl;
         GuiCheckBox({ x + 150, pY, 20, 20 }, "Scanlines", &sl);
         if (sl != oldSl) {
-            if (sl) cfg.flag2 |= PC8801::Config::scanline;
-            else cfg.flag2 &= ~PC8801::Config::scanline;
+            if (sl) cfg.flag2 |= PC8801::Config::scanline; else cfg.flag2 &= ~PC8801::Config::scanline;
+            changed = true;
+        }
+
+        pY += rowH;
+        bool fv15 = (cfg.flags & PC8801::Config::fv15k) != 0;
+        bool oldFv15 = fv15;
+        GuiCheckBox({ x + 150, pY, 20, 20 }, "15KHz Monitor Mode", &fv15);
+        if (fv15 != oldFv15) {
+            if (fv15) cfg.flags |= PC8801::Config::fv15k; else cfg.flags &= ~PC8801::Config::fv15k;
             changed = true;
         }
 
         pY += rowH;
         bool isDigi = (cfg.flags & PC8801::Config::digitalpalette) != 0;
         bool oldDigi = isDigi;
-        GuiCheckBox({ x + 150, pY, 20, 20 }, "Digital Monitor (8 Colors)", &isDigi);
+        GuiCheckBox({ x + 150, pY, 20, 20 }, "Digital Palette (8 colors)", &isDigi);
         if (isDigi != oldDigi) {
-            if (isDigi) cfg.flags |= PC8801::Config::digitalpalette;
-            else cfg.flags &= ~PC8801::Config::digitalpalette;
+            if (isDigi) cfg.flags |= PC8801::Config::digitalpalette; else cfg.flags &= ~PC8801::Config::digitalpalette;
             changed = true;
         }
 
         pY += rowH;
-        GuiLabel({ x + 20, pY, 300, 20 }, "CRT Filter: Coming Soon!");
+        bool pcg = (cfg.flags & PC8801::Config::enablepcg) != 0;
+        bool oldPcg = pcg;
+        GuiCheckBox({ x + 150, pY, 20, 20 }, "Enable PCG-8100", &pcg);
+        if (pcg != oldPcg) {
+            if (pcg) cfg.flags |= PC8801::Config::enablepcg; else cfg.flags &= ~PC8801::Config::enablepcg;
+            changed = true; resetPending = true;
+        }
     }
-    else if (activeTab == 3) { // Input
-        bool useArrow = (cfg.flags & PC8801::Config::usearrowfor10) != 0;
-        bool oldUse = useArrow;
-        GuiCheckBox({ x + 20, pY, 20, 20 }, "Use Numpad as Arrow Keys", &useArrow);
-        if (useArrow != oldUse) {
-            if (useArrow) cfg.flags |= PC8801::Config::usearrowfor10;
-            else cfg.flags &= ~PC8801::Config::usearrowfor10;
+    else if (activeTab == 3) { // Mixer
+        GuiLabel({ x + 20, pY, 80, 20 }, "MASTER");
+        float mVal = (float)cfg.mastervol;
+        Rectangle mRect = { x + 100, pY, 240, 16 };
+        GuiSliderBar(mRect, "0", "128", &mVal, 0, 128);
+        const char* mTxt = TextFormat("%d", (int)mVal);
+        DrawEnText(mTxt, (int)(mRect.x + mRect.width/2 - MeasureEnText(mTxt)/2), (int)mRect.y + 3, WHITE);
+        if ((int)mVal != cfg.mastervol) { cfg.mastervol = (int)mVal; changed = true; }
+        pY += 35;
+
+        GuiGroupBox({ x + 10, pY - 5, width - 20, 130 }, "Sound Sources (FM / SSG / ADPCM / Rhythm)");
+        const char* names[] = { "FM", "SSG", "ADPCM", "Rhythm" };
+        int* vPtrs[] = { &cfg.volfm, &cfg.volssg, &cfg.voladpcm, &cfg.volrhythm };
+        for (int i = 0; i < 4; i++) {
+            GuiLabel({ x + 25, pY + 10, 80, 20 }, names[i]);
+            float val = (float)*vPtrs[i];
+            Rectangle vRect = { x + 100, pY + 10, 240, 16 };
+            GuiSliderBar(vRect, "-100", "+40", &val, -100, 40);
+            const char* vTxt = TextFormat("%+d dB", (int)val);
+            DrawEnText(vTxt, (int)(vRect.x + vRect.width/2 - MeasureEnText(vTxt)/2), (int)vRect.y + 3, WHITE);
+            if ((int)val != *vPtrs[i]) { *vPtrs[i] = (int)val; changed = true; }
+            pY += 28;
+        }
+        
+        pY += 15;
+        GuiGroupBox({ x + 10, pY - 5, width - 20, 80 }, "Rhythm Details (BD / SD / TOP / HH / TOM / RIM)");
+        int* rPtrs[] = { &cfg.volbd, &cfg.volsd, &cfg.voltop, &cfg.volhh, &cfg.voltom, &cfg.volrim };
+        for (int i = 0; i < 6; i++) {
+            float val = (float)*rPtrs[i];
+            Rectangle rRect = { x + 20 + i * 85, pY + 10, 60, 12 };
+            GuiSlider(rRect, "", "", &val, -100, 40);
+            const char* rTxt = TextFormat("%+d", (int)val);
+            DrawEnText(rTxt, (int)(rRect.x + rRect.width/2 - MeasureEnText(rTxt)/2), (int)pY + 25, WHITE);
+            if ((int)val != *rPtrs[i]) { *rPtrs[i] = (int)val; changed = true; }
+        }
+    }
+    else if (activeTab == 4) { // Input
+        GuiLabel({ x + 20, pY, 120, 20 }, "Keyboard:");
+        int kIdx = cfg.keytype;
+        if (GuiDropdownBox({ x + 150, pY, 200, 24 }, "AT-106 JP;PC-98;AT-101 US", &kIdx, keyboardEdit)) {
+            keyboardEdit = !keyboardEdit;
+            if (!keyboardEdit) { cfg.keytype = kIdx; changed = true; resetPending = true; }
+        }
+        pY += rowH + 4;
+        bool mouse = (cfg.flags & PC8801::Config::enablemouse) != 0;
+        bool oldMouse = mouse;
+        GuiCheckBox({ x + 150, pY, 20, 20 }, "Enable Mouse", &mouse);
+        if (mouse != oldMouse) {
+            if (mouse) cfg.flags |= PC8801::Config::enablemouse; else cfg.flags &= ~PC8801::Config::enablemouse;
             changed = true;
         }
         pY += rowH;
-        GuiLabel({ x + 20, pY, 350, 20 }, "Keyboard Layout: JIS (Standard)");
+        GuiLabel({ x + 20, pY, 120, 20 }, "Sensitivity:");
+        float mSens = (float)cfg.mousesensibility;
+        Rectangle sRect = { x + 150, pY, 200, 16 };
+        GuiSliderBar(sRect, "1", "20", &mSens, 1, 20);
+        const char* sTxt = TextFormat("%d", (int)mSens);
+        DrawEnText(sTxt, (int)(sRect.x + sRect.width/2 - MeasureEnText(sTxt)/2), (int)sRect.y + 3, WHITE);
+        if ((int)mSens != cfg.mousesensibility) { cfg.mousesensibility = (int)mSens; changed = true; }
     }
-    else if (activeTab == 4) { // About
+    else if (activeTab == 5) { // About
         GuiLabel({ x + 20, pY, 400, 20 }, "M88M - PC-8801 Emulator for Modern Platforms");
         pY += 25;
         GuiLabel({ x + 20, pY, 400, 20 }, "Version: 0.1.0-alpha");
@@ -571,7 +719,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         coreRunner->RequestConfigApply(cfg, false);
         Config::Save(cfg);
     }
-    if (GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back")) showSettings = false;
+    if (GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back")) ToggleMenu(coreRunner);
 }
 
 void UIManager::DrawStatusBar(DiskManager* diskmgr) {
@@ -593,11 +741,11 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     Color l1 = (statusdisplay.GetFDState(1) & 1) ? RED : Color{ 60, 20, 20, 255 };
     DrawCircle(15, (int)centerY, 4, l1);
 
-    DrawText("FDD2:", 25, (int)textY, 10, DARKGRAY);
+    DrawEnText("FDD2:", 25, (int)textY, DARKGRAY);
     if (ContainsJapanese(t1) && IsFontValid(fontJp)) {
         DrawTextEx(fontJp, t1.c_str(), { 60, sH - 18 }, 14, 1, DARKGRAY);
     } else {
-        DrawText(t1.c_str(), 60, (int)textY, 10, DARKGRAY);
+        DrawEnText(t1.c_str(), 60, (int)textY, DARKGRAY);
     }
 
     int d0 = diskmgr->GetCurrentDisk(0);
@@ -611,11 +759,11 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     Color l0 = (statusdisplay.GetFDState(0) & 1) ? RED : Color{ 60, 20, 20, 255 };
     DrawCircle(215, (int)centerY, 4, l0);
 
-    DrawText("FDD1:", 225, (int)textY, 10, DARKGRAY);
+    DrawEnText("FDD1:", 225, (int)textY, DARKGRAY);
     if (ContainsJapanese(t0) && IsFontValid(fontJp)) {
         DrawTextEx(fontJp, t0.c_str(), { 260, sH - 18 }, 14, 1, DARKGRAY);
     } else {
-        DrawText(t0.c_str(), 260, (int)textY, 10, DARKGRAY);
+        DrawEnText(t0.c_str(), 260, (int)textY, DARKGRAY);
     }
 
     const auto& cfg = Config::Get();
@@ -630,9 +778,9 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     }
 
     std::string infoStr = TextFormat("[%s] %dMHz", modeStr.c_str(), cfg.clock / 10);
-    DrawText(infoStr.c_str(), (int)sW - 200, (int)textY, 10, DARKGRAY);
+    DrawEnText(infoStr.c_str(), (int)sW - 200, (int)textY, DARKGRAY);
 
-    DrawText(TextFormat("%d FPS", GetFPS()), (int)sW - 80, (int)textY, 10, DARKGRAY);
+    DrawEnText(TextFormat("%d FPS", GetFPS()), (int)sW - 80, (int)textY, DARKGRAY);
 }
 
 void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
