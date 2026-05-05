@@ -52,6 +52,20 @@ private:
     bool portA8Edit;
     bool samplingEdit;
     bool keyboardEdit;
+    bool speedEdit;
+    bool eramEdit;
+    bool bufferEdit;
+    bool masterVolEdit;
+    bool volFmEdit;
+    bool volSsgEdit;
+    bool volAdpcmEdit;
+    bool volRhythmEdit;
+    bool volRhythmDetailEdit[6];
+    bool mouseSensEdit;
+    
+    // Persistent values for uint config members (GuiValueBox requires int*)
+    int bufferVal;
+    int mouseSensVal;
     
     std::string lastOpenedPath[2];
     std::string stateMessage;

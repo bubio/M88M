@@ -191,7 +191,11 @@ int main() {
                 float boxWidth = 500; float boxHeight = 360;
                 float x = (float)GetScreenWidth()/2 - boxWidth/2;
                 float y = (float)GetScreenHeight()/2 - boxHeight/2;
-                DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), Fade(BLACK, 0.8f));
+                {
+                    Color bg = GetColor((unsigned)GuiGetStyle(DEFAULT, BACKGROUND_COLOR));
+                    bg.a = (unsigned char)(0.8f * 255);
+                    DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), bg);
+                }
                 if (GuiWindowBox({ x, y, boxWidth, boxHeight }, "BIOS ROM Error")) shouldExit = true;
                 std::stringstream ss(core.GetRomError());
                 std::string line;
