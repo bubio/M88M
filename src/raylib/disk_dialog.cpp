@@ -195,7 +195,7 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     }
 
     // Drive 1&2 button
-    if (GuiButton({ x + 20, btnY + 10, width - 85, btnH }, "Drive 1&2 (Dual Mount)...")) OpenBothDrives(diskmgr);
+    if (GuiButton({ x + 20, btnY + 10, width - 85, btnH }, "Drive 1&2...")) OpenBothDrives(diskmgr);
     if (GuiButton({ x + width - 50, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
         diskmgr->Unmount(0); diskmgr->Unmount(1);
         lastOpenedPath[0] = lastOpenedPath[1] = "";
@@ -241,7 +241,7 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     }
 
     btnY += 35; // Space after group box
-    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset PC-8801")) {
+    if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset")) {
         if (coreRunner) coreRunner->RequestReset();
         else pc88->Reset();
         ToggleMenu(coreRunner);
@@ -254,7 +254,7 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     btnY += 34;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Settings")) showSettings = true;
 
-    if (GuiButton({ x + 10, y + height - 40, width - 20, btnH }, "Quit M88M")) shouldExit = true;
+    if (GuiButton({ x + 10, y + height - 40, width - 20, btnH }, "Quit")) shouldExit = true;
 }
 
 void UIManager::OpenBothDrives(DiskManager* diskmgr) {
@@ -487,7 +487,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         } else if (new_is8 && !is8) {
             cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; changed = true; resetPending = true;
         }
-        
+
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "Speed:");
         float speedValF = (float)cfg.speed;
@@ -506,31 +506,31 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "BASIC Mode:");
         Rectangle basicRect = { x + 150, pY, 200, 24 };
-        
+
         pY += rowH + 4;
         GuiLabel({ x + 20, pY, 120, 20 }, "CPU Mode:");
         Rectangle cpuRect = { x + 150, pY, 200, 24 };
 
         pY += rowH + 4;
-        bool wait = (cfg.flags & PC8801::Config::enablewait) != 0;
-        bool oldWait = wait;
-        GuiCheckBox({ x + 150, pY, 20, 20 }, "CPU Wait", &wait);
-        if (wait != oldWait) {
-            if (wait) cfg.flags |= PC8801::Config::enablewait;
+        GuiLabel({ x + 20, pY, 120, 20 }, "CPU Wait:");
+        int waitVal = (cfg.flags & PC8801::Config::enablewait) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &waitVal)) {
+            if (waitVal) cfg.flags |= PC8801::Config::enablewait;
             else cfg.flags &= ~PC8801::Config::enablewait;
             changed = true;
         }
-        
-        bool fddwait = !(cfg.flag2 & PC8801::Config::fddnowait);
-        bool oldFddWait = fddwait;
-        GuiCheckBox({ x + 280, pY, 20, 20 }, "FDD Wait", &fddwait);
-        if (fddwait != oldFddWait) {
-            if (fddwait) cfg.flag2 &= ~PC8801::Config::fddnowait;
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "FDD Wait:");
+        int fddwaitVal = (cfg.flag2 & PC8801::Config::fddnowait) ? 0 : 1;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fddwaitVal)) {
+            if (fddwaitVal) cfg.flag2 &= ~PC8801::Config::fddnowait;
             else cfg.flag2 |= PC8801::Config::fddnowait;
             changed = true;
         }
 
         pY += rowH;
+
         GuiLabel({ x + 20, pY, 120, 20 }, "ERAM:");
         float eramValF = (float)cfg.erambanks;
         if (eramEdit) GuiSetState(STATE_DISABLED);
@@ -575,7 +575,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         pY += rowH + 4;
         GuiLabel({ x + 20, pY, 120, 20 }, "Sampling:");
         Rectangle sIdxRect = { x + 150, pY, 120, 24 };
-        
+
         pY += rowH + 4;
         GuiLabel({ x + 20, pY, 120, 20 }, "Buffer (ms):");
         float bufValF = (float)cfg.soundbuffer;
@@ -591,18 +591,18 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         GuiLabel({ x + 395, pY, 60, 20 }, "ms");
 
         pY += rowH;
-        bool lpf = (cfg.flag2 & PC8801::Config::lpfenable) != 0;
-        bool oldLpf = lpf;
-        GuiCheckBox({ x + 150, pY, 20, 20 }, "LPF (Low Pass Filter)", &lpf);
-        if (lpf != oldLpf) {
-            if (lpf) cfg.flag2 |= PC8801::Config::lpfenable; else cfg.flag2 &= ~PC8801::Config::lpfenable;
+        GuiLabel({ x + 20, pY, 120, 20 }, "LPF:");
+        int lpfVal = (cfg.flag2 & PC8801::Config::lpfenable) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &lpfVal)) {
+            if (lpfVal) cfg.flag2 |= PC8801::Config::lpfenable; else cfg.flag2 &= ~PC8801::Config::lpfenable;
             changed = true;
         }
-        bool prec = (cfg.flags & PC8801::Config::precisemixing) != 0;
-        bool oldPrec = prec;
-        GuiCheckBox({ x + 300, pY, 20, 20 }, "Precise Mixing", &prec);
-        if (prec != oldPrec) {
-            if (prec) cfg.flags |= PC8801::Config::precisemixing; else cfg.flags &= ~PC8801::Config::precisemixing;
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Precise Mix:");
+        int precVal = (cfg.flags & PC8801::Config::precisemixing) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &precVal)) {
+            if (precVal) cfg.flags |= PC8801::Config::precisemixing; else cfg.flags &= ~PC8801::Config::precisemixing;
             changed = true;
         }
 
@@ -642,43 +642,41 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         Rectangle scaleRect = { x + 150, pY, 200, 24 };
 
         pY += rowH + 4;
-        bool fs = isFullscreen, oldFs = fs;
-        GuiCheckBox({ x + 150, pY, 20, 20 }, "Fullscreen", &fs);
-        if (fs != oldFs) { isFullscreen = fs; ToggleFullscreen(); }
+        GuiLabel({ x + 20, pY, 120, 20 }, "Fullscreen:");
+        int fsVal = isFullscreen ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fsVal)) {
+            isFullscreen = (fsVal == 1); ToggleFullscreen();
+        }
 
         pY += rowH;
-        bool sl = (cfg.flag2 & PC8801::Config::scanline) != 0;
-        bool oldSl = sl;
-        GuiCheckBox({ x + 150, pY, 20, 20 }, "Scanlines", &sl);
-        if (sl != oldSl) {
-            if (sl) cfg.flag2 |= PC8801::Config::scanline; else cfg.flag2 &= ~PC8801::Config::scanline;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Scanlines:");
+        int slVal = (cfg.flag2 & PC8801::Config::scanline) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &slVal)) {
+            if (slVal) cfg.flag2 |= PC8801::Config::scanline; else cfg.flag2 &= ~PC8801::Config::scanline;
             changed = true;
         }
 
         pY += rowH;
-        bool fv15 = (cfg.flags & PC8801::Config::fv15k) != 0;
-        bool oldFv15 = fv15;
-        GuiCheckBox({ x + 150, pY, 20, 20 }, "15KHz Monitor Mode", &fv15);
-        if (fv15 != oldFv15) {
-            if (fv15) cfg.flags |= PC8801::Config::fv15k; else cfg.flags &= ~PC8801::Config::fv15k;
+        GuiLabel({ x + 20, pY, 120, 20 }, "15KHz Mode:");
+        int fv15Val = (cfg.flags & PC8801::Config::fv15k) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fv15Val)) {
+            if (fv15Val) cfg.flags |= PC8801::Config::fv15k; else cfg.flags &= ~PC8801::Config::fv15k;
             changed = true;
         }
 
         pY += rowH;
-        bool isDigi = (cfg.flags & PC8801::Config::digitalpalette) != 0;
-        bool oldDigi = isDigi;
-        GuiCheckBox({ x + 150, pY, 20, 20 }, "Digital Palette (8 colors)", &isDigi);
-        if (isDigi != oldDigi) {
-            if (isDigi) cfg.flags |= PC8801::Config::digitalpalette; else cfg.flags &= ~PC8801::Config::digitalpalette;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Digital Pal:");
+        int digiVal = (cfg.flags & PC8801::Config::digitalpalette) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &digiVal)) {
+            if (digiVal) cfg.flags |= PC8801::Config::digitalpalette; else cfg.flags &= ~PC8801::Config::digitalpalette;
             changed = true;
         }
 
         pY += rowH;
-        bool pcg = (cfg.flags & PC8801::Config::enablepcg) != 0;
-        bool oldPcg = pcg;
-        GuiCheckBox({ x + 150, pY, 20, 20 }, "Enable PCG-8100", &pcg);
-        if (pcg != oldPcg) {
-            if (pcg) cfg.flags |= PC8801::Config::enablepcg; else cfg.flags &= ~PC8801::Config::enablepcg;
+        GuiLabel({ x + 20, pY, 120, 20 }, "PCG-8100:");
+        int pcgVal = (cfg.flags & PC8801::Config::enablepcg) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &pcgVal)) {
+            if (pcgVal) cfg.flags |= PC8801::Config::enablepcg; else cfg.flags &= ~PC8801::Config::enablepcg;
             changed = true; resetPending = true;
         }
 
@@ -724,22 +722,25 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             GuiLabel({ x + 405, pY + 10, 40, 20 }, "dB");
             pY += 28;
         }
-        
+
         pY += 15;
-        GuiGroupBox({ x + 10, pY - 5, width - 20, 80 }, "Rhythm Details (BD / SD / TOP / HH / TOM / RIM)");
+        GuiGroupBox({ x + 10, pY - 5, width - 20, 190 }, "Rhythm Details (BD / SD / TOP / HH / TOM / RIM)");
         int* rPtrs[] = { &cfg.volbd, &cfg.volsd, &cfg.voltop, &cfg.volhh, &cfg.voltom, &cfg.volrim };
+        const char* rNames[] = { "BD", "SD", "TOP", "HH", "TOM", "RIM" };
         for (int i = 0; i < 6; i++) {
+            GuiLabel({ x + 25, pY + 10, 40, 20 }, rNames[i]);
             float valF = (float)*rPtrs[i];
-            Rectangle rRect = { x + 20 + i * 85, pY + 10, 60, 12 };
             if (volRhythmDetailEdit[i]) GuiSetState(STATE_DISABLED);
-            if (GuiSlider(rRect, NULL, NULL, &valF, -100, 40)) {
+            if (GuiSlider({ x + 70, pY + 10, 270, 16 }, NULL, NULL, &valF, -100, 40)) {
                 *rPtrs[i] = (int)valF; changed = true;
             }
             GuiSetState(STATE_NORMAL);
-            if (GuiValueBox({ rRect.x, pY + 25, 60, 16 }, NULL, rPtrs[i], -100, 40, volRhythmDetailEdit[i])) {
+            if (GuiValueBox({ x + 350, pY + 10, 50, 16 }, NULL, rPtrs[i], -100, 40, volRhythmDetailEdit[i])) {
                 volRhythmDetailEdit[i] = !volRhythmDetailEdit[i];
                 if (!volRhythmDetailEdit[i]) changed = true;
             }
+            GuiLabel({ x + 405, pY + 10, 40, 20 }, "dB");
+            pY += 28;
         }
     }
     else if (activeTab == 4) { // Input
@@ -747,13 +748,13 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         Rectangle kRect = { x + 150, pY, 200, 24 };
 
         pY += rowH + 4;
-        bool mouse = (cfg.flags & PC8801::Config::enablemouse) != 0;
-        bool oldMouse = mouse;
-        GuiCheckBox({ x + 150, pY, 20, 20 }, "Enable Mouse", &mouse);
-        if (mouse != oldMouse) {
-            if (mouse) cfg.flags |= PC8801::Config::enablemouse; else cfg.flags &= ~PC8801::Config::enablemouse;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Enable Mouse:");
+        int mouseVal = (cfg.flags & PC8801::Config::enablemouse) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &mouseVal)) {
+            if (mouseVal) cfg.flags |= PC8801::Config::enablemouse; else cfg.flags &= ~PC8801::Config::enablemouse;
             changed = true;
         }
+        
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "Sensitivity:");
         float mSensF = (float)cfg.mousesensibility;
