@@ -67,6 +67,7 @@ UIManager::UIManager() :
     volFmEdit(false), volSsgEdit(false), volAdpcmEdit(false), volRhythmEdit(false),
     mouseSensEdit(false),
     bufferVal(100), mouseSensVal(10),
+    mixerScroll({ 0, 0 }),
     resetPending(false)
 {
     for (int i = 0; i < 6; i++) volRhythmDetailEdit[i] = false;
@@ -461,15 +462,50 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     if (!bufferEdit) bufferVal = (int)cfg.soundbuffer;
     if (!mouseSensEdit) mouseSensVal = (int)cfg.mousesensibility;
 
+    // 1. Identify which modal element is active
+    bool* activeEditPtr = nullptr;
+    if (basicModeEdit) activeEditPtr = &basicModeEdit;
+    else if (cpuModeEdit) activeEditPtr = &cpuModeEdit;
+    else if (port44Edit) activeEditPtr = &port44Edit;
+    else if (portA8Edit) activeEditPtr = &portA8Edit;
+    else if (samplingEdit) activeEditPtr = &samplingEdit;
+    else if (windowScaleEdit) activeEditPtr = &windowScaleEdit;
+    else if (keyboardEdit) activeEditPtr = &keyboardEdit;
+    else if (speedEdit) activeEditPtr = &speedEdit;
+    else if (eramEdit) activeEditPtr = &eramEdit;
+    else if (bufferEdit) activeEditPtr = &bufferEdit;
+    else if (masterVolEdit) activeEditPtr = &masterVolEdit;
+    else if (volFmEdit) activeEditPtr = &volFmEdit;
+    else if (volSsgEdit) activeEditPtr = &volSsgEdit;
+    else if (volAdpcmEdit) activeEditPtr = &volAdpcmEdit;
+    else if (volRhythmEdit) activeEditPtr = &volRhythmEdit;
+    else if (mouseSensEdit) activeEditPtr = &mouseSensEdit;
+    else {
+        for (int i = 0; i < 6; i++) if (volRhythmDetailEdit[i]) { activeEditPtr = &volRhythmDetailEdit[i]; break; }
+    }
+    bool anyEdit = (activeEditPtr != nullptr);
+
     float width = 540;
     float height = 400;
     float x = (float)GetScreenWidth() / 2 - width / 2;
     float y = (float)GetScreenHeight() / 2 - height / 2;
 
-    if (GuiWindowBox({ x, y, width, height }, "Settings")) ToggleMenu(coreRunner);
+    // 2. Draw Window Background
+    if (GuiWindowBox({ x, y, width, height }, "Settings")) {
+        if (!anyEdit) ToggleMenu(coreRunner);
+    }
 
-    float tabW = (width - 20) / 6;
-    GuiToggleGroup({ x + 10, y + 35, tabW, 26 }, "System;Audio;Video;Mixer;Input;About", &activeTab);
+    // 3. Tabs (Guarded by temporary variable)
+    int tempTab = activeTab;
+    float tabW = (width - 40) / 6;
+    if (GuiToggleGroup({ x + 20, y + 35, tabW, 26 }, "System;Audio;Video;Mixer;Input;About", &tempTab)) {
+        activeTab = tempTab;
+    }
+
+    // 4. Click-through prevention via GuiLock.
+    // raygui's GuiDropdownBox processes input when editMode==true even if locked,
+    // so locking suppresses every other control while the active dropdown stays usable.
+    if (anyEdit) GuiLock();
 
     float pY = y + 75;
     float rowH = 32;
@@ -482,10 +518,9 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         bool new_is4 = is4, new_is8 = is8;
         GuiToggle({ x + 150, pY, 70, 24 }, "4MHz", &new_is4);
         GuiToggle({ x + 225, pY, 70, 24 }, "8MHz", &new_is8);
-        if (new_is4 && !is4) {
-            cfg.clock = 40; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; changed = true; resetPending = true;
-        } else if (new_is8 && !is8) {
-            cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; changed = true; resetPending = true;
+        if (!anyEdit) {
+            if (new_is4 && !is4) { cfg.clock = 40; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; changed = true; resetPending = true; }
+            else if (new_is8 && !is8) { cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; changed = true; resetPending = true; }
         }
 
         pY += rowH;
@@ -493,15 +528,14 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         float speedValF = (float)cfg.speed;
         if (speedEdit) GuiSetState(STATE_DISABLED);
         if (GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &speedValF, 20, 200)) {
-            cfg.speed = (int)speedValF; changed = true;
+            if (!anyEdit) { cfg.speed = (int)speedValF; changed = true; }
         }
-        GuiSetState(STATE_NORMAL);
+        if (!anyEdit) GuiSetState(anyEdit ? STATE_DISABLED : STATE_NORMAL);
         if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &cfg.speed, 20, 200, speedEdit)) {
             speedEdit = !speedEdit;
             if (!speedEdit) changed = true;
         }
         GuiLabel({ x + 395, pY, 40, 20 }, "%");
-
         // Reserve positions for dropdowns to draw them later
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "BASIC Mode:");
@@ -515,18 +549,22 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         GuiLabel({ x + 20, pY, 120, 20 }, "CPU Wait:");
         int waitVal = (cfg.flags & PC8801::Config::enablewait) ? 1 : 0;
         if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &waitVal)) {
-            if (waitVal) cfg.flags |= PC8801::Config::enablewait;
-            else cfg.flags &= ~PC8801::Config::enablewait;
-            changed = true;
+            if (!anyEdit) {
+                if (waitVal) cfg.flags |= PC8801::Config::enablewait;
+                else cfg.flags &= ~PC8801::Config::enablewait;
+                changed = true;
+            }
         }
 
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "FDD Wait:");
         int fddwaitVal = (cfg.flag2 & PC8801::Config::fddnowait) ? 0 : 1;
         if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fddwaitVal)) {
-            if (fddwaitVal) cfg.flag2 &= ~PC8801::Config::fddnowait;
-            else cfg.flag2 |= PC8801::Config::fddnowait;
-            changed = true;
+            if (!anyEdit) {
+                if (fddwaitVal) cfg.flag2 &= ~PC8801::Config::fddnowait;
+                else cfg.flag2 |= PC8801::Config::fddnowait;
+                changed = true;
+            }
         }
 
         pY += rowH;
@@ -535,9 +573,9 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         float eramValF = (float)cfg.erambanks;
         if (eramEdit) GuiSetState(STATE_DISABLED);
         if (GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &eramValF, 0, 128)) {
-            cfg.erambanks = (int)eramValF; changed = true; resetPending = true;
+            if (!anyEdit) { cfg.erambanks = (int)eramValF; changed = true; resetPending = true; }
         }
-        GuiSetState(STATE_NORMAL);
+        if (!anyEdit) GuiSetState(anyEdit ? STATE_DISABLED : STATE_NORMAL);
         if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &cfg.erambanks, 0, 128, eramEdit)) {
             eramEdit = !eramEdit;
             if (!eramEdit) { changed = true; resetPending = true; }
@@ -546,6 +584,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
 
         // Now draw dropdowns in reverse order (bottom to top) to ensure they overlap correctly
         int cpumode = cfg.cpumode;
+
         if (GuiDropdownBox(cpuRect, "ms11;ms21;auto", &cpumode, cpuModeEdit)) {
             cpuModeEdit = !cpuModeEdit;
             if (!cpuModeEdit) { cfg.cpumode = cpumode; changed = true; }
@@ -581,9 +620,9 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         float bufValF = (float)cfg.soundbuffer;
         if (bufferEdit) GuiSetState(STATE_DISABLED);
         if (GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &bufValF, 50, 500)) {
-            cfg.soundbuffer = (uint)bufValF; changed = true; resetPending = true;
+            if (!anyEdit) { cfg.soundbuffer = (uint)bufValF; changed = true; resetPending = true; }
         }
-        GuiSetState(STATE_NORMAL);
+        if (!anyEdit) GuiSetState(anyEdit ? STATE_DISABLED : STATE_NORMAL);
         if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &bufferVal, 50, 500, bufferEdit)) {
             bufferEdit = !bufferEdit;
             if (!bufferEdit) { cfg.soundbuffer = (uint)bufferVal; changed = true; resetPending = true; }
@@ -594,16 +633,20 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         GuiLabel({ x + 20, pY, 120, 20 }, "LPF:");
         int lpfVal = (cfg.flag2 & PC8801::Config::lpfenable) ? 1 : 0;
         if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &lpfVal)) {
-            if (lpfVal) cfg.flag2 |= PC8801::Config::lpfenable; else cfg.flag2 &= ~PC8801::Config::lpfenable;
-            changed = true;
+            if (!anyEdit) {
+                if (lpfVal) cfg.flag2 |= PC8801::Config::lpfenable; else cfg.flag2 &= ~PC8801::Config::lpfenable;
+                changed = true;
+            }
         }
 
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "Precise Mix:");
         int precVal = (cfg.flags & PC8801::Config::precisemixing) ? 1 : 0;
         if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &precVal)) {
-            if (precVal) cfg.flags |= PC8801::Config::precisemixing; else cfg.flags &= ~PC8801::Config::precisemixing;
-            changed = true;
+            if (!anyEdit) {
+                if (precVal) cfg.flags |= PC8801::Config::precisemixing; else cfg.flags &= ~PC8801::Config::precisemixing;
+                changed = true;
+            }
         }
 
         // Draw dropdowns last, bottom to top
@@ -645,39 +688,47 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         GuiLabel({ x + 20, pY, 120, 20 }, "Fullscreen:");
         int fsVal = isFullscreen ? 1 : 0;
         if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fsVal)) {
-            isFullscreen = (fsVal == 1); ToggleFullscreen();
+            if (!anyEdit) { isFullscreen = (fsVal == 1); ToggleFullscreen(); }
         }
 
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "Scanlines:");
         int slVal = (cfg.flag2 & PC8801::Config::scanline) ? 1 : 0;
         if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &slVal)) {
-            if (slVal) cfg.flag2 |= PC8801::Config::scanline; else cfg.flag2 &= ~PC8801::Config::scanline;
-            changed = true;
+            if (!anyEdit) {
+                if (slVal) cfg.flag2 |= PC8801::Config::scanline; else cfg.flag2 &= ~PC8801::Config::scanline;
+                changed = true;
+            }
         }
 
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "15KHz Mode:");
         int fv15Val = (cfg.flags & PC8801::Config::fv15k) ? 1 : 0;
         if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fv15Val)) {
-            if (fv15Val) cfg.flags |= PC8801::Config::fv15k; else cfg.flags &= ~PC8801::Config::fv15k;
-            changed = true;
+            if (!anyEdit) {
+                if (fv15Val) cfg.flags |= PC8801::Config::fv15k; else cfg.flags &= ~PC8801::Config::fv15k;
+                changed = true;
+            }
         }
 
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "Digital Pal:");
         int digiVal = (cfg.flags & PC8801::Config::digitalpalette) ? 1 : 0;
         if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &digiVal)) {
-            if (digiVal) cfg.flags |= PC8801::Config::digitalpalette; else cfg.flags &= ~PC8801::Config::digitalpalette;
-            changed = true;
+            if (!anyEdit) {
+                if (digiVal) cfg.flags |= PC8801::Config::digitalpalette; else cfg.flags &= ~PC8801::Config::digitalpalette;
+                changed = true;
+            }
         }
 
         pY += rowH;
         GuiLabel({ x + 20, pY, 120, 20 }, "PCG-8100:");
         int pcgVal = (cfg.flags & PC8801::Config::enablepcg) ? 1 : 0;
         if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &pcgVal)) {
-            if (pcgVal) cfg.flags |= PC8801::Config::enablepcg; else cfg.flags &= ~PC8801::Config::enablepcg;
-            changed = true; resetPending = true;
+            if (!anyEdit) {
+                if (pcgVal) cfg.flags |= PC8801::Config::enablepcg; else cfg.flags &= ~PC8801::Config::enablepcg;
+                changed = true; resetPending = true;
+            }
         }
 
         // Draw scale dropdown last
@@ -690,58 +741,90 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         }
     }
     else if (activeTab == 3) { // Mixer
-        GuiLabel({ x + 20, pY, 80, 20 }, "MASTER");
-        float mValF = (float)cfg.mastervol;
-        if (masterVolEdit) GuiSetState(STATE_DISABLED);
-        if (GuiSlider({ x + 100, pY, 240, 16 }, NULL, NULL, &mValF, 0, 128)) {
-            cfg.mastervol = (int)mValF; changed = true;
-        }
-        GuiSetState(STATE_NORMAL);
-        if (GuiValueBox({ x + 350, pY, 50, 16 }, NULL, &cfg.mastervol, 0, 128, masterVolEdit)) {
-            masterVolEdit = !masterVolEdit;
-            if (!masterVolEdit) changed = true;
-        }
-        pY += 35;
+        Rectangle scrollBounds = { x + 10, y + 70, width - 20, height - 120 };
+        Rectangle content = { 0, 0, width - 60, 520 };
+        Rectangle view;
 
-        GuiGroupBox({ x + 10, pY - 5, width - 20, 130 }, "Sound Sources (FM / SSG / ADPCM / Rhythm)");
-        const char* names[] = { "FM", "SSG", "ADPCM", "Rhythm" };
-        int* vPtrs[] = { &cfg.volfm, &cfg.volssg, &cfg.voladpcm, &cfg.volrhythm };
-        bool* ePtrs[] = { &volFmEdit, &volSsgEdit, &volAdpcmEdit, &volRhythmEdit };
-        for (int i = 0; i < 4; i++) {
-            GuiLabel({ x + 25, pY + 10, 80, 20 }, names[i]);
-            float valF = (float)*vPtrs[i];
-            if (*ePtrs[i]) GuiSetState(STATE_DISABLED);
-            if (GuiSlider({ x + 100, pY + 10, 240, 16 }, NULL, NULL, &valF, -100, 40)) {
-                *vPtrs[i] = (int)valF; changed = true;
-            }
-            GuiSetState(STATE_NORMAL);
-            if (GuiValueBox({ x + 350, pY + 10, 50, 16 }, NULL, vPtrs[i], -100, 40, *ePtrs[i])) {
-                *ePtrs[i] = !*ePtrs[i];
-                if (!*ePtrs[i]) changed = true;
-            }
-            GuiLabel({ x + 405, pY + 10, 40, 20 }, "dB");
-            pY += 28;
+        // Handle mouse wheel for scrolling (only if no dropdown is open)
+        if (!anyEdit && CheckCollisionPointRec(GetMousePosition(), scrollBounds)) {
+            mixerScroll.y += GetMouseWheelMove() * 20;
         }
 
-        pY += 15;
-        GuiGroupBox({ x + 10, pY - 5, width - 20, 190 }, "Rhythm Details (BD / SD / TOP / HH / TOM / RIM)");
-        int* rPtrs[] = { &cfg.volbd, &cfg.volsd, &cfg.voltop, &cfg.volhh, &cfg.voltom, &cfg.volrim };
-        const char* rNames[] = { "BD", "SD", "TOP", "HH", "TOM", "RIM" };
-        for (int i = 0; i < 6; i++) {
-            GuiLabel({ x + 25, pY + 10, 40, 20 }, rNames[i]);
-            float valF = (float)*rPtrs[i];
-            if (volRhythmDetailEdit[i]) GuiSetState(STATE_DISABLED);
-            if (GuiSlider({ x + 70, pY + 10, 270, 16 }, NULL, NULL, &valF, -100, 40)) {
-                *rPtrs[i] = (int)valF; changed = true;
+        GuiScrollPanel(scrollBounds, NULL, content, &mixerScroll, &view);
+
+        // Clamp scroll position
+        if (mixerScroll.y > 0) mixerScroll.y = 0;
+        if (mixerScroll.y < (view.height - content.height)) mixerScroll.y = view.height - content.height;
+
+        BeginScissorMode((int)view.x, (int)view.y, (int)view.width, (int)view.height);
+            float sX = view.x + mixerScroll.x;
+            float sY = view.y + mixerScroll.y;
+            float curY = sY + 10;
+
+            GuiLabel({ sX + 10, curY, 80, 20 }, "MASTER");
+            float mValF = (float)cfg.mastervol;
+            if (masterVolEdit) GuiSetState(STATE_DISABLED);
+            if (GuiSlider({ sX + 90, curY, 240, 16 }, NULL, NULL, &mValF, 0, 128)) {
+                if (!anyEdit) { cfg.mastervol = (int)mValF; changed = true; }
             }
-            GuiSetState(STATE_NORMAL);
-            if (GuiValueBox({ x + 350, pY + 10, 50, 16 }, NULL, rPtrs[i], -100, 40, volRhythmDetailEdit[i])) {
-                volRhythmDetailEdit[i] = !volRhythmDetailEdit[i];
-                if (!volRhythmDetailEdit[i]) changed = true;
+            if (!anyEdit) GuiSetState(anyEdit ? STATE_DISABLED : STATE_NORMAL);
+            if (GuiValueBox({ sX + 340, curY, 50, 16 }, NULL, &cfg.mastervol, 0, 128, masterVolEdit)) {
+                masterVolEdit = !masterVolEdit;
+                if (!masterVolEdit) changed = true;
             }
-            GuiLabel({ x + 405, pY + 10, 40, 20 }, "dB");
-            pY += 28;
-        }
+            curY += 55;
+
+            float group1H = 170;
+            GuiGroupBox({ sX + 5, curY - 5, width - 65, group1H }, "Sound Sources (FM / SSG / ADPCM / Rhythm)");
+            float box1Y = curY;
+            const char* names[] = { "FM", "SSG", "ADPCM", "Rhythm" };
+            int* vPtrs[] = { &cfg.volfm, &cfg.volssg, &cfg.voladpcm, &cfg.volrhythm };
+            bool* ePtrs[] = { &volFmEdit, &volSsgEdit, &volAdpcmEdit, &volRhythmEdit };
+            for (int i = 0; i < 4; i++) {
+                GuiLabel({ sX + 20, box1Y + 10, 80, 20 }, names[i]);
+                float valF = (float)*vPtrs[i];
+                if (*ePtrs[i]) GuiSetState(STATE_DISABLED);
+                if (GuiSlider({ sX + 90, box1Y + 10, 240, 16 }, NULL, NULL, &valF, -100, 40)) {
+                    if (!anyEdit) { *vPtrs[i] = (int)valF; changed = true; }
+                }
+                if (!anyEdit) GuiSetState(anyEdit ? STATE_DISABLED : STATE_NORMAL);
+                if (GuiValueBox({ sX + 340, box1Y + 10, 50, 16 }, NULL, vPtrs[i], -100, 40, *ePtrs[i])) {
+                    *ePtrs[i] = !*ePtrs[i];
+                    if (!*ePtrs[i]) changed = true;
+                }
+                GuiLabel({ sX + 395, box1Y + 10, 40, 20 }, "dB");
+                box1Y += 28;
+            }
+            if (GuiButton({ sX + 20, box1Y + 15, 140, 22 }, "Default Sources")) {
+                if (!anyEdit) { cfg.volfm = 0; cfg.volssg = 0; cfg.voladpcm = 0; cfg.volrhythm = 0; changed = true; }
+            }
+
+            curY += group1H + 40;
+
+            float group2H = 230;
+            GuiGroupBox({ sX + 5, curY - 5, width - 65, group2H }, "Rhythm Details (BD / SD / TOP / HH / TOM / RIM)");
+            float box2Y = curY;
+            int* rPtrs[] = { &cfg.volbd, &cfg.volsd, &cfg.voltop, &cfg.volhh, &cfg.voltom, &cfg.volrim };
+            const char* rNames[] = { "BD", "SD", "TOP", "HH", "TOM", "RIM" };
+            for (int i = 0; i < 6; i++) {
+                GuiLabel({ sX + 20, box2Y + 10, 40, 20 }, rNames[i]);
+                float valF = (float)*rPtrs[i];
+                if (volRhythmDetailEdit[i]) GuiSetState(STATE_DISABLED);
+                if (GuiSlider({ sX + 65, box2Y + 10, 265, 16 }, NULL, NULL, &valF, -100, 40)) {
+                    if (!anyEdit) { *rPtrs[i] = (int)valF; changed = true; }
+                }
+                if (!anyEdit) GuiSetState(anyEdit ? STATE_DISABLED : STATE_NORMAL);
+                if (GuiValueBox({ sX + 340, box2Y + 10, 50, 16 }, NULL, rPtrs[i], -100, 40, volRhythmDetailEdit[i])) {
+                    volRhythmDetailEdit[i] = !volRhythmDetailEdit[i];
+                    if (!volRhythmDetailEdit[i]) changed = true;
+                }
+                GuiLabel({ sX + 395, box2Y + 10, 40, 20 }, "dB");
+                box2Y += 28;
+            }
+            if (GuiButton({ sX + 20, box2Y + 15, 140, 22 }, "Default Rhythm")) {
+                if (!anyEdit) { cfg.volbd = 0; cfg.volsd = 0; cfg.voltop = 0; cfg.volhh = 0; cfg.voltom = 0; cfg.volrim = 0; changed = true; }
+            }
+        EndScissorMode();
     }
     else if (activeTab == 4) { // Input
         GuiLabel({ x + 20, pY, 120, 20 }, "Keyboard:");
@@ -793,7 +876,10 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         coreRunner->RequestConfigApply(cfg, false);
         Config::Save(cfg);
     }
-    if (GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back")) ToggleMenu(coreRunner);
+    if (anyEdit) GuiUnlock();
+    if (GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back")) {
+        if (!anyEdit) ToggleMenu(coreRunner);
+    }
 }
 
 void UIManager::DrawStatusBar(DiskManager* diskmgr) {

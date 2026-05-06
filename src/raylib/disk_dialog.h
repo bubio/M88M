@@ -66,6 +66,7 @@ private:
     // Persistent values for uint config members (GuiValueBox requires int*)
     int bufferVal;
     int mouseSensVal;
+    Vector2 mixerScroll;
     
     std::string lastOpenedPath[2];
     std::string stateMessage;
