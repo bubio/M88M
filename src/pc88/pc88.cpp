@@ -698,10 +698,15 @@ void PC88::ApplyConfig(Config* cfg)
 	if ((cfg->flags & Config::subcpucontrol) != 0)
 		cpumode |= stopwhenidle;
 
-	// Device switching logic to prevent port conflicts
+	// Device switching logic
 	if (cfg->flags & PC8801::Config::enablemouse)
 	{
-		joypad->SetButtonMode(JoyPad::DISABLED);
+		// If mouse is enabled, disable pad unless in joystick mode
+		if (cfg->flags & PC8801::Config::mousejoymode) {
+			joypad->SetButtonMode(cfg->flags & Config::swappadbuttons ? JoyPad::SWAPPED : JoyPad::NORMAL);
+		} else {
+			joypad->SetButtonMode(JoyPad::DISABLED);
+		}
 		mouse->ApplyConfig(cfg);
 	}
 	else if (cfg->flags & PC8801::Config::enablepad)
