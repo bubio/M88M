@@ -60,6 +60,7 @@ namespace PC8801
 	class DiskIO;
 	class Beep;
 	class JoyPad;
+	class Mouse;
 }
 
 // ---------------------------------------------------------------------------
@@ -182,6 +183,7 @@ private:
 	PC8801::Calender* caln;
 	PC8801::Beep* beep;
 	PC8801::PD8257* dmac;
+	PC8801::Mouse* mouse;
 	
 protected:
 	Draw* draw;

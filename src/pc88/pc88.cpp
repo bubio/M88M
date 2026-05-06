@@ -26,6 +26,7 @@
 #include "pc88/tapemgr.h"
 #include "pc88/beep.h"
 #include "pc88/joypad.h"
+#include "pc88/mouse.h"
 #include "calender.h"
 #include "loadmon.h"
 
@@ -44,7 +45,7 @@ PC88::PC88()
   :	cpu1(DEV_ID('C', 'P', 'U', '1')), cpu2(DEV_ID('C', 'P', 'U', '2')),	
 	base(0), mem1(0), dmac(0), 	knj1(0), knj2(0), scrn(0), intc(0), crtc(0), 
 	fdc (0), subsys(0), siotape(0), opn1(0), opn2(0), caln(0), diskmgr(0),
-	beep(0), siomidi(0), joypad(0)
+	beep(0), siomidi(0), joypad(0), mouse(0)
 {
 	assert((1 << MemoryManager::pagebits) <= 0x400); 
 	clock = 100;
@@ -59,6 +60,7 @@ PC88::~PC88()
 	delete base;
 	delete mem1;
 	delete dmac;
+	delete mouse;
 	delete knj1;
 	delete knj2;
 	delete scrn;
@@ -609,6 +611,18 @@ bool PC88::ConnectDevices(const char* romDir)
 	if (!joypad) return false;
 	if (!bus1.Connect(joypad, c_joy)) return false;
 
+	static const IOBus::Connector c_mouse[] = 
+	{
+		{ popnio,	IOBus::portin,  Mouse::getmove },
+		{ popnio2,	IOBus::portin,  Mouse::getbutton },
+		{ popnio2,	IOBus::portout, Mouse::strobe },
+		{ vrtc,		IOBus::portout, Mouse::vsync },
+		{ 0, 0, 0 }
+	};
+	mouse = new PC8801::Mouse(DEV_ID('M', 'O', 'U', 'S'));
+	if (!mouse || !bus1.Connect(mouse, c_mouse)) return false;
+	if (!mouse->Init(this)) return false;
+
 	return true;
 }
 
@@ -691,6 +705,11 @@ void PC88::ApplyConfig(Config* cfg)
 	else
 	{
 		joypad->SetButtonMode(JoyPad::DISABLED);
+	}
+
+	if (cfg->flags & PC8801::Config::enablemouse)
+	{
+		mouse->ApplyConfig(cfg);
 	}
 }
 
