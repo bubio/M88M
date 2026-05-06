@@ -96,15 +96,6 @@ void RaylibDraw::Render() {
         float emuH = screenH - 24;
         Rectangle dest = { 0, 0, screenW, emuH };
         DrawTexturePro(texture, { 0, 0, (float)width, (float)height }, dest, { 0, 0 }, 0, WHITE);
-
-        // Apply scanlines if enabled
-        const auto& cfg = Config::Get();
-        if (cfg.flag2 & PC8801::Config::scanline) {
-            float scaleY = emuH / (float)height;
-            for (int i = 0; i < (int)height; i++) {
-                DrawRectangleRec({ 0, i * scaleY + scaleY/2.0f, screenW, scaleY/2.0f }, Fade(BLACK, 0.25f));
-            }
-        }
     }
 }
 

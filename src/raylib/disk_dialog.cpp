@@ -716,10 +716,10 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         }
 
         pY += rowH;
-        GuiLabel({ x + 20, pY, 120, 20 }, "Scanlines:");
-        int slVal = (cfg.flag2 & PC8801::Config::scanline) ? 1 : 0;
-        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &slVal)) {
-            if (slVal) cfg.flag2 |= PC8801::Config::scanline; else cfg.flag2 &= ~PC8801::Config::scanline; changed = true;
+        GuiLabel({ x + 20, pY, 120, 20 }, "FullLine:");
+        int flVal = (cfg.flags & PC8801::Config::fullline) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &flVal)) {
+            if (flVal) cfg.flags |= PC8801::Config::fullline; else cfg.flags &= ~PC8801::Config::fullline; changed = true;
         }
 
         pY += rowH;
