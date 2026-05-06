@@ -81,6 +81,7 @@ public:
 		usedsnotify		= 1 << 12,
 		saveposition	= 1 << 13,
 		scanline        = 1 << 14,
+		usenumrowfor10  = 1 << 15,
 	};
 
 	int flags;

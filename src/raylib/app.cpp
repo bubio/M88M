@@ -2,6 +2,7 @@
 #include "raygui.h"
 #include "screen_view.h"
 #include "core_runner.h"
+#include "config.h"
 #include "paths.h"
 #include <iostream>
 #include <vector>
@@ -169,8 +170,15 @@ int main() {
     bool shouldExit = false;
 
     // Main game loop
-    while (!WindowShouldClose() && !shouldExit)
+    while (!shouldExit)
     {
+                if (WindowShouldClose()) {
+            if (Config::Get().flags & PC8801::Config::askbeforereset) {
+                core.GetUIManager()->RequestQuitConfirm();
+            } else {
+                shouldExit = true;
+            }
+        }
         core.UpdateUI(shouldExit);
         core.UpdateInput();
 

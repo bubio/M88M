@@ -94,7 +94,7 @@ UIManager::~UIManager() {
 
 void UIManager::DrawEnText(const char* text, int x, int y, Color color) const {
     if (IsFontValid(fontEn)) {
-        DrawTextEx(fontEn, text, { (float)x, (float)y - 1 }, 12, 1, color);
+        DrawTextEx(fontEn, text, { (float)x, (float)y - 1 }, 16, 1, color);
     } else {
         DrawText(text, x, y, 10, color);
     }
@@ -112,7 +112,7 @@ static Color StyleFade(int control, int prop, float alpha) {
 
 int UIManager::MeasureEnText(const char* text) const {
     if (IsFontValid(fontEn)) {
-        return (int)MeasureTextEx(fontEn, text, 12, 1).x;
+        return (int)MeasureTextEx(fontEn, text, 16, 1).x;
     }
     return MeasureText(text, 10);
 }
@@ -200,7 +200,7 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
         GuiSetFont(fontJp);
         GuiSetStyle(DEFAULT, TEXT_SIZE, 15);
     }
-    GuiGroupBox({ x + 10, btnY - 5, width - 20, 115 }, groupTitle.c_str());
+    GuiGroupBox({ x + 10, btnY - 5, width - 20, 125 }, groupTitle.c_str());
     if (groupJp) {
         if (IsFontValid(fontEn)) GuiSetFont(fontEn); else GuiSetFont(GetFontDefault());
         GuiSetStyle(DEFAULT, TEXT_SIZE, IsFontValid(fontEn) ? 16 : 10);
@@ -261,12 +261,12 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
             ToggleMenu(coreRunner);
         }
     }
-    btnY += 44;
+    btnY += 54;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "State Save / Load")) {
         showStateDialog = true;
         stateMessage.clear();
     }
-    btnY += 34;
+    btnY += 44;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Settings")) showSettings = true;
 
     if (GuiButton({ x + 10, y + height - 40, width - 20, btnH }, "Quit")) {
@@ -281,7 +281,7 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
 void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     nfdchar_t *outPath = NULL;
     nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
-    
+
     std::string defaultPathStr;
     const nfdchar_t* defaultPath = NULL;
     if (Config::Get().flags & PC8801::Config::savedirectory) {
@@ -546,7 +546,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             else { cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; }
             changed = true; resetPending = true;
         }
-        
+
         pY += rowH;
         GuiLabel({ x + 20, pY, labelW, 20 }, "Speed:");
         float speedValF = (float)cfg.speed;
@@ -587,7 +587,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         if (GuiToggleSlider({ x + 180, pY, 60, 20 }, "OFF;ON", &waitVal)) {
             if (waitVal) cfg.flags |= PC8801::Config::enablewait; else cfg.flags &= ~PC8801::Config::enablewait; changed = true;
         }
-        
+
         pY += rowH;
         GuiLabel({ x + 20, pY, labelW, 20 }, "FDD Wait:");
         int fddwaitVal = (cfg.flag2 & PC8801::Config::fddnowait) ? 0 : 1;
@@ -810,7 +810,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &mouseVal)) {
             if (mouseVal) cfg.flags |= PC8801::Config::enablemouse; else cfg.flags &= ~PC8801::Config::enablemouse; changed = true;
         }
-        
+
         pY += rowH;
         GuiLabel({ x + 20, pY, labelW, 20 }, "Sensitivity:");
         float mSensF = (float)cfg.mousesensibility;
@@ -826,7 +826,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     else if (activeTab == 5) { // About
         GuiLabel({ x + 20, pY, 400, 20 }, "M88M - PC-8801 Emulator for Modern Platforms");
         pY += 25;
-        GuiLabel({ x + 20, pY, 400, 20 }, "Version: 0.1.0-alpha");
+        GuiLabel({ x + 20, pY, 400, 20 }, "Version: 0.2.0-beta");
         pY += 35;
         GuiLabel({ x + 20, pY, 400, 20 }, "Original M88: Copyright (C) cisc 1998-2003");
         pY += 20;
@@ -834,7 +834,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         pY += 35;
         GuiLabel({ x + 20, pY, 400, 20 }, "Ported with Raylib & Raygui");
         pY += 20;
-        GuiLabel({ x + 20, pY, 400, 20 }, "Contributor: Gemini / Claude Opus 4.7");
+        GuiLabel({ x + 20, pY, 400, 20 }, "Contributor: Gemini / Claude Code");
     }
 
     if (changed) { coreRunner->RequestConfigApply(cfg, false); Config::Save(cfg); }
@@ -855,7 +855,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     // 6. Deferred Dropdown Drawing
     if (isDropdownOpen && ddEditPtr) {
         DrawRectangleRec({ x, y + 30, width, height - 30 }, Fade(BLACK, 0.4f));
-        
+
         int itemCount = 1;
         for (const char* c = ddText; *c; c++) if (*c == ';') itemCount++;
         Rectangle expBounds = ddRect;
@@ -891,7 +891,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
                 int scale = (*ddIndexPtr) + 1;
                 SetWindowSize(640 * scale, (400 * scale) + 24);
             } else if (ddEditPtr == &keyboardEdit) { cfg.keytype = *ddIndexPtr; changed = true; resetPending = true; }
-            
+
             if (changed) { coreRunner->RequestConfigApply(cfg, false); Config::Save(cfg); }
         }
     }
@@ -902,8 +902,8 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     float sH = (float)GetScreenHeight();
     GuiStatusBar({ 0, sH - 24, sW, 24 }, "");
 
-    float centerY = sH - 12.0f;
-    float textY = sH - 17.0f;
+    float centerY = sH - 13.0f;
+    float textY = sH - 20.0f; // Adjusted for 16px font centering (24 - 16 = 8, so 4px padding)
 
     int d1 = diskmgr->GetCurrentDisk(1);
     const char* t1_raw = (d1 >= 0) ? diskmgr->GetImageTitle(1, d1) : nullptr;
@@ -922,9 +922,9 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
 
     DrawEnText("FDD2:", 25, (int)textY, statusText);
     if (ContainsJapanese(t1) && IsFontValid(fontJp)) {
-        DrawTextEx(fontJp, t1.c_str(), { 60, sH - 18 }, 14, 1, statusText);
+        DrawTextEx(fontJp, t1.c_str(), { 75, sH - 21 }, 16, 1, statusText);
     } else {
-        DrawEnText(t1.c_str(), 60, (int)textY, statusText);
+        DrawEnText(t1.c_str(), 75, (int)textY, statusText);
     }
 
     int d0 = diskmgr->GetCurrentDisk(0);
@@ -940,9 +940,9 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
 
     DrawEnText("FDD1:", 225, (int)textY, statusText);
     if (ContainsJapanese(t0) && IsFontValid(fontJp)) {
-        DrawTextEx(fontJp, t0.c_str(), { 260, sH - 18 }, 14, 1, statusText);
+        DrawTextEx(fontJp, t0.c_str(), { 275, sH - 21 }, 16, 1, statusText);
     } else {
-        DrawEnText(t0.c_str(), 260, (int)textY, statusText);
+        DrawEnText(t0.c_str(), 275, (int)textY, statusText);
     }
 
     const auto& cfg = Config::Get();
@@ -965,7 +965,7 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
 void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
     nfdchar_t *outPath = NULL;
     nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
-    
+
     std::string defaultPathStr;
     const nfdchar_t* defaultPath = NULL;
     if (Config::Get().flags & PC8801::Config::savedirectory) {
@@ -1011,7 +1011,7 @@ void UIManager::DrawConfirmDialog(bool& shouldExit, PC88* pc88, CoreRunner* core
         }
         modalState = MODAL_NONE;
     }
-    
+
     if (GuiButton({ x + 160, y + 90, 100, 30 }, "No")) {
         modalState = MODAL_NONE;
     }

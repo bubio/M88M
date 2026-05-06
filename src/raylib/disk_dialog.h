@@ -20,12 +20,20 @@ public:
 
     bool IsMenuOpen() const { return showMenu; }
     void ToggleMenu(class CoreRunner* coreRunner = nullptr);
+    void RequestQuitConfirm() { modalState = MODAL_CONFIRM_QUIT; showMenu = true; }
+
+    enum ModalState {
+        MODAL_NONE,
+        MODAL_CONFIRM_RESET,
+        MODAL_CONFIRM_QUIT
+    };
 
 private:
     void DrawMainMenu(DiskManager* diskmgr, class PC88* pc88, bool& shouldExit, class CoreRunner* coreRunner);
     void DrawSettings(PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner);
     void DrawDiskSelector(DiskManager* diskmgr);
     void DrawStateDialog(DiskManager* diskmgr, class CoreRunner* coreRunner);
+    void DrawConfirmDialog(bool& shouldExit, class PC88* pc88, class CoreRunner* coreRunner);
     void DrawStatusBar(DiskManager* diskmgr);
     void DrawDriveStatus(DiskManager* diskmgr, int drive, float x, float y);
     std::string GetStatePath(DiskManager* diskmgr, int slot) const;
@@ -36,6 +44,7 @@ private:
     int MeasureEnText(const char* text) const;
 
     bool showMenu;
+    ModalState modalState;
     bool showSettings;
     bool showStateDialog;
     int selectingDiskForDrive; // -1: none, 0: Drive 1, 1: Drive 2

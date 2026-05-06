@@ -8,7 +8,7 @@
 
 static const IDevice::ID KEY_ID = DEV_ID('K', 'E', 'Y', 'B');
 
-KeyInput::KeyInput() : Device(KEY_ID) {
+KeyInput::KeyInput() : Device(KEY_ID), capsLockState(false), kanaLockState(false) {
     memset(matrix, 0xff, sizeof(matrix));
 }
 
@@ -44,23 +44,29 @@ void KeyInput::Update() {
         if (down) matrix[row] &= ~(1 << bit);
     };
 
-    bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
     const auto& cfg = Config::Get();
     bool useArrowFor10 = (cfg.flags & PC8801::Config::usearrowfor10) != 0;
+    bool useNumRowFor10 = (cfg.flag2 & PC8801::Config::usenumrowfor10) != 0;
+    bool isUS = (cfg.keytype == PC8801::Config::AT101);
+
+    if (IsKeyPressed(KEY_CAPS_LOCK)) capsLockState = !capsLockState;
+    if (IsKeyPressed(KEY_SCROLL_LOCK)) kanaLockState = !kanaLockState;
+
+    bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
 
     // --- Row 0: Numpad 0-7 (and equivalents) ---
-    set_key(0, 0, IsKeyDown(KEY_KP_0) || IsKeyDown(KEY_INSERT));
-    set_key(0, 1, IsKeyDown(KEY_KP_1) || IsKeyDown(KEY_END));
-    set_key(0, 2, IsKeyDown(KEY_KP_2) || (useArrowFor10 && IsKeyDown(KEY_DOWN)));
-    set_key(0, 3, IsKeyDown(KEY_KP_3) || IsKeyDown(KEY_PAGE_DOWN));
-    set_key(0, 4, IsKeyDown(KEY_KP_4) || (useArrowFor10 && IsKeyDown(KEY_LEFT)));
-    set_key(0, 5, IsKeyDown(KEY_KP_5));
-    set_key(0, 6, IsKeyDown(KEY_KP_6) || (useArrowFor10 && IsKeyDown(KEY_RIGHT)));
-    set_key(0, 7, IsKeyDown(KEY_KP_7) || IsKeyDown(KEY_HOME));
+    set_key(0, 0, IsKeyDown(KEY_KP_0) || IsKeyDown(KEY_INSERT) || (useNumRowFor10 && IsKeyDown(KEY_ZERO)));
+    set_key(0, 1, IsKeyDown(KEY_KP_1) || IsKeyDown(KEY_END)    || (useNumRowFor10 && IsKeyDown(KEY_ONE)));
+    set_key(0, 2, IsKeyDown(KEY_KP_2) || (useArrowFor10 && IsKeyDown(KEY_DOWN))  || (useNumRowFor10 && IsKeyDown(KEY_TWO)));
+    set_key(0, 3, IsKeyDown(KEY_KP_3) || IsKeyDown(KEY_PAGE_DOWN) || (useNumRowFor10 && IsKeyDown(KEY_THREE)));
+    set_key(0, 4, IsKeyDown(KEY_KP_4) || (useArrowFor10 && IsKeyDown(KEY_LEFT))  || (useNumRowFor10 && IsKeyDown(KEY_FOUR)));
+    set_key(0, 5, IsKeyDown(KEY_KP_5) || (useNumRowFor10 && IsKeyDown(KEY_FIVE)));
+    set_key(0, 6, IsKeyDown(KEY_KP_6) || (useArrowFor10 && IsKeyDown(KEY_RIGHT)) || (useNumRowFor10 && IsKeyDown(KEY_SIX)));
+    set_key(0, 7, IsKeyDown(KEY_KP_7) || IsKeyDown(KEY_HOME) || (useNumRowFor10 && IsKeyDown(KEY_SEVEN)));
 
     // --- Row 1: Numpad 8, 9, *, +, =, ,, ., Return ---
-    set_key(1, 0, IsKeyDown(KEY_KP_8) || (useArrowFor10 && IsKeyDown(KEY_UP)));
-    set_key(1, 1, IsKeyDown(KEY_KP_9) || IsKeyDown(KEY_PAGE_UP));
+    set_key(1, 0, IsKeyDown(KEY_KP_8) || (useArrowFor10 && IsKeyDown(KEY_UP))    || (useNumRowFor10 && IsKeyDown(KEY_EIGHT)));
+    set_key(1, 1, IsKeyDown(KEY_KP_9) || IsKeyDown(KEY_PAGE_UP) || (useNumRowFor10 && IsKeyDown(KEY_NINE)));
     set_key(1, 2, IsKeyDown(KEY_KP_MULTIPLY));
     set_key(1, 3, IsKeyDown(KEY_KP_ADD));
     set_key(1, 4, IsKeyDown(KEY_EQUAL)); // num =
@@ -69,7 +75,11 @@ void KeyInput::Update() {
     set_key(1, 7, IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_KP_ENTER)); // Return
 
     // --- Row 2: @, A, B, C, D, E, F, G ---
-    set_key(2, 0, IsKeyDown(KEY_LEFT_BRACKET)); // @
+    if (isUS) {
+        set_key(2, 0, (!useNumRowFor10 && IsKeyDown(KEY_TWO) && shift)); // US Shift+2 = @
+    } else {
+        set_key(2, 0, IsKeyDown(KEY_LEFT_BRACKET)); // JIS @
+    }
     set_key(2, 1, IsKeyDown(KEY_A));
     set_key(2, 2, IsKeyDown(KEY_B));
     set_key(2, 3, IsKeyDown(KEY_C));
@@ -102,24 +112,41 @@ void KeyInput::Update() {
     set_key(5, 0, IsKeyDown(KEY_X));
     set_key(5, 1, IsKeyDown(KEY_Y));
     set_key(5, 2, IsKeyDown(KEY_Z));
-    set_key(5, 3, IsKeyDown(KEY_RIGHT_BRACKET)); // [
-    set_key(5, 4, IsKeyDown(KEY_BACKSLASH));
-    set_key(5, 5, IsKeyDown(KEY_APOSTROPHE));    // ]
-    set_key(5, 6, IsKeyDown(KEY_EQUAL));         // ^
-    set_key(5, 7, IsKeyDown(KEY_MINUS));
+    if (isUS) {
+        set_key(5, 3, IsKeyDown(KEY_LEFT_BRACKET)); // [
+        set_key(5, 4, IsKeyDown(KEY_BACKSLASH));    // \ 
+        set_key(5, 5, IsKeyDown(KEY_RIGHT_BRACKET)); // ]
+        set_key(5, 6, (!useNumRowFor10 && IsKeyDown(KEY_SIX) && shift)); // ^ (US Shift+6)
+        set_key(5, 7, IsKeyDown(KEY_MINUS));        // -
+    } else {
+        set_key(5, 3, IsKeyDown(KEY_RIGHT_BRACKET)); // [
+        set_key(5, 4, IsKeyDown(KEY_BACKSLASH));
+        set_key(5, 5, IsKeyDown(KEY_APOSTROPHE));    // ]
+        set_key(5, 6, IsKeyDown(KEY_EQUAL));         // ^
+        set_key(5, 7, IsKeyDown(KEY_MINUS));
+    }
 
     // --- Row 6: 0-7 ---
-    for (int i=0; i<=7; i++) set_key(6, i, IsKeyDown((KeyboardKey)(KEY_ZERO + i)));
+    for (int i=0; i<=7; i++) set_key(6, i, (!useNumRowFor10 && IsKeyDown((KeyboardKey)(KEY_ZERO + i))));
 
     // --- Row 7: 8, 9, :, ;, ,, ., /, _ ---
-    set_key(7, 0, IsKeyDown(KEY_EIGHT));
-    set_key(7, 1, IsKeyDown(KEY_NINE));
-    set_key(7, 2, IsKeyDown(KEY_SEMICOLON)); // :
-    set_key(7, 3, IsKeyDown(KEY_GRAVE));     // ;
-    set_key(7, 4, IsKeyDown(KEY_COMMA));
-    set_key(7, 5, IsKeyDown(KEY_PERIOD));
-    set_key(7, 6, IsKeyDown(KEY_SLASH));
-    set_key(7, 7, IsKeyDown(KEY_BACKSLASH)); // _ (approx)
+    set_key(7, 0, (!useNumRowFor10 && IsKeyDown(KEY_EIGHT)));
+    set_key(7, 1, (!useNumRowFor10 && IsKeyDown(KEY_NINE)));
+    if (isUS) {
+        set_key(7, 2, IsKeyDown(KEY_SEMICOLON) && shift); // : (US Shift+;)
+        set_key(7, 3, IsKeyDown(KEY_SEMICOLON) && !shift); // ; (US ;)
+        set_key(7, 4, IsKeyDown(KEY_COMMA));
+        set_key(7, 5, IsKeyDown(KEY_PERIOD));
+        set_key(7, 6, IsKeyDown(KEY_SLASH));
+        set_key(7, 7, IsKeyDown(KEY_MINUS) && shift); // _ (US Shift+-)
+    } else {
+        set_key(7, 2, IsKeyDown(KEY_SEMICOLON)); // :
+        set_key(7, 3, IsKeyDown(KEY_GRAVE));     // ;
+        set_key(7, 4, IsKeyDown(KEY_COMMA));
+        set_key(7, 5, IsKeyDown(KEY_PERIOD));
+        set_key(7, 6, IsKeyDown(KEY_SLASH));
+        set_key(7, 7, IsKeyDown(KEY_BACKSLASH)); // _ (approx)
+    }
 
     // --- Row 8: CLR, UP, RIGHT, BS, GRPH, KANA, SHIFT, CTRL ---
     set_key(8, 0, IsKeyDown(KEY_HOME));
@@ -127,7 +154,7 @@ void KeyInput::Update() {
     set_key(8, 2, !useArrowFor10 && IsKeyDown(KEY_RIGHT));
     set_key(8, 3, IsKeyDown(KEY_BACKSPACE));
     set_key(8, 4, IsKeyDown(KEY_LEFT_ALT) || IsKeyDown(KEY_RIGHT_ALT)); // GRPH
-    set_key(8, 5, IsKeyDown(KEY_SCROLL_LOCK)); // KANA
+    set_key(8, 5, kanaLockState); // KANA
     set_key(8, 6, shift);
     set_key(8, 7, IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL));
 
@@ -149,7 +176,7 @@ void KeyInput::Update() {
     set_key(0xa, 4, IsKeyDown(KEY_F12)); // COPY
     set_key(0xa, 5, IsKeyDown(KEY_KP_SUBTRACT));
     set_key(0xa, 6, IsKeyDown(KEY_KP_DIVIDE));
-    set_key(0xa, 7, IsKeyDown(KEY_CAPS_LOCK));
+    set_key(0xa, 7, capsLockState); // CAPS
 
     // --- Row 11: ROLL DOWN, ROLL UP ---
     set_key(0xb, 0, IsKeyDown(KEY_PAGE_DOWN));

@@ -1,0 +1,378 @@
+void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRunner) {
+    if (!bufferEdit) bufferVal = (int)cfg.soundbuffer;
+    if (!mouseSensEdit) mouseSensVal = (int)cfg.mousesensibility;
+
+    // 1. Identify active modal elements
+    bool isDropdownOpen = basicModeEdit || cpuModeEdit || port44Edit || portA8Edit || samplingEdit || windowScaleEdit || keyboardEdit;
+    bool isValueBoxActive = speedEdit || eramEdit || bufferEdit || masterVolEdit || volFmEdit || volSsgEdit || volAdpcmEdit || volRhythmEdit;
+    for (int i = 0; i < 6; i++) if (volRhythmDetailEdit[i]) isValueBoxActive = true;
+    bool anyEdit = isDropdownOpen || isValueBoxActive;
+
+    float width = 540;
+    float height = 400;
+    float x = (float)GetScreenWidth() / 2 - width / 2;
+    float y = (float)GetScreenHeight() / 2 - height / 2;
+
+    Rectangle ddRect = { 0 };
+    const char* ddText = nullptr;
+    int* ddIndexPtr = nullptr;
+    bool* ddEditPtr = nullptr;
+
+    // 2. Draw Window (Always reachable)
+    if (GuiWindowBox({ x, y, width, height }, "Settings")) {
+        ToggleMenu(coreRunner);
+    }
+
+    // 3. Tabs (Drawn BEFORE any locking to remain functional)
+    int prevTab = activeTab;
+    float tabW = (width - 40) / 6;
+    GuiToggleGroup({ x + 20, y + 35, tabW, 26 }, "System;Audio;Video;Mixer;Input;About", &activeTab);
+
+    if (activeTab != prevTab) {
+        // Reset all edit states if tab changes to prevent locking the UI
+        basicModeEdit = cpuModeEdit = port44Edit = portA8Edit = samplingEdit = windowScaleEdit = keyboardEdit = false;
+        speedEdit = eramEdit = bufferEdit = masterVolEdit = volFmEdit = volSsgEdit = volAdpcmEdit = volRhythmEdit = false;
+        mouseSensEdit = false;
+        for (int i = 0; i < 6; i++) volRhythmDetailEdit[i] = false;
+        anyEdit = false;
+    }
+
+    // 4. Content Area Locking
+    if (anyEdit) {
+        GuiLock();
+        DrawRectangleRec({ x + 2, y + 65, width - 4, height - 67 }, Fade(BLACK, 0.3f));
+    }
+
+    float pY = y + 75;
+    float rowH = 32;
+    bool changed = false;
+
+    if (activeTab == 0) { // System
+        GuiLabel({ x + 20, pY, 120, 20 }, "CPU Clock:");
+        int clockMode = (cfg.clock < 60) ? 0 : 1;
+        int newClock = clockMode;
+        GuiToggleGroup({ x + 150, pY, 150, 24 }, "4MHz;8MHz", &newClock);
+        if (newClock != clockMode) {
+            if (newClock == 0) { cfg.clock = 40; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; }
+            else { cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; }
+            changed = true; resetPending = true;
+        }
+        
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Speed:");
+        float speedValF = (float)cfg.speed;
+        if (speedEdit) GuiSetState(STATE_DISABLED);
+        GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &speedValF, 20, 200);
+        cfg.speed = (int)speedValF; 
+        GuiSetState(STATE_NORMAL);
+
+        if (speedEdit) GuiUnlock();
+        if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &cfg.speed, 20, 200, speedEdit)) {
+            speedEdit = !speedEdit; if (!speedEdit) changed = true;
+        }
+        if (anyEdit) GuiLock();
+        GuiLabel({ x + 395, pY, 40, 20 }, "%");
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "BASIC Mode:");
+        static int modeIndex;
+        if (!basicModeEdit) {
+            if (cfg.basicmode == PC8801::Config::N88V1) modeIndex = 0;
+            else if (cfg.basicmode == PC8801::Config::N88V2) modeIndex = 1;
+            else if (cfg.basicmode == PC8801::Config::N80) modeIndex = 2;
+            else if (cfg.basicmode == PC8801::Config::N80V2) modeIndex = 3;
+        }
+        Rectangle basicRect = { x + 150, pY, 200, 24 };
+        if (basicModeEdit) { ddRect = basicRect; ddText = "N88 V1;N88 V2;N80 V1;N80 V2"; ddIndexPtr = &modeIndex; ddEditPtr = &basicModeEdit; }
+        else if (GuiDropdownBox(basicRect, "N88 V1;N88 V2;N80 V1;N80 V2", &modeIndex, false)) basicModeEdit = true;
+
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "CPU Mode:");
+        static int cpumode;
+        if (!cpuModeEdit) cpumode = cfg.cpumode;
+        Rectangle cpuRect = { x + 150, pY, 200, 24 };
+        if (cpuModeEdit) { ddRect = cpuRect; ddText = "ms11;ms21;auto"; ddIndexPtr = &cpumode; ddEditPtr = &cpuModeEdit; }
+        else if (GuiDropdownBox(cpuRect, "ms11;ms21;auto", &cpumode, false)) cpuModeEdit = true;
+
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "CPU Wait:");
+        int waitVal = (cfg.flags & PC8801::Config::enablewait) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &waitVal)) {
+            if (waitVal) cfg.flags |= PC8801::Config::enablewait; else cfg.flags &= ~PC8801::Config::enablewait; changed = true;
+        }
+        
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "FDD Wait:");
+        int fddwaitVal = (cfg.flag2 & PC8801::Config::fddnowait) ? 0 : 1;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fddwaitVal)) {
+            if (fddwaitVal) cfg.flag2 &= ~PC8801::Config::fddnowait; else cfg.flag2 |= PC8801::Config::fddnowait; changed = true;
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "ERAM:");
+        float eramValF = (float)cfg.erambanks;
+        if (eramEdit) GuiSetState(STATE_DISABLED);
+        GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &eramValF, 0, 128);
+        cfg.erambanks = (int)eramValF;
+        GuiSetState(STATE_NORMAL);
+        if (eramEdit) GuiUnlock();
+        if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &cfg.erambanks, 0, 128, eramEdit)) {
+            eramEdit = !eramEdit; if (!eramEdit) { changed = true; resetPending = true; }
+        }
+        if (anyEdit) GuiLock();
+        GuiLabel({ x + 395, pY, 80, 20 }, "Banks");
+    }
+    else if (activeTab == 1) { // Audio
+        GuiLabel({ x + 20, pY, 120, 20 }, "Port 44h:");
+        Rectangle p44Rect = { x + 150, pY, 120, 24 };
+        static int p44;
+        if (!port44Edit) p44 = (cfg.flag2 & PC8801::Config::disableopn44) ? 0 : ((cfg.flags & PC8801::Config::enableopna) ? 2 : 1);
+        if (port44Edit) { ddRect = p44Rect; ddText = "None;OPN;OPNA"; ddIndexPtr = &p44; ddEditPtr = &port44Edit; }
+        else if (GuiDropdownBox(p44Rect, "None;OPN;OPNA", &p44, false)) port44Edit = true;
+
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Port A8h:");
+        Rectangle pa8Rect = { x + 150, pY, 120, 24 };
+        static int pa8;
+        if (!portA8Edit) pa8 = (cfg.flags & PC8801::Config::opnaona8) ? 2 : ((cfg.flags & PC8801::Config::opnona8) ? 1 : 0);
+        if (portA8Edit) { ddRect = pa8Rect; ddText = "None;OPN;OPNA"; ddIndexPtr = &pa8; ddEditPtr = &portA8Edit; }
+        else if (GuiDropdownBox(pa8Rect, "None;OPN;OPNA", &pa8, false)) portA8Edit = true;
+
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Sampling:");
+        Rectangle sIdxRect = { x + 150, pY, 120, 24 };
+        static int sIdx;
+        if (!samplingEdit) { if (cfg.sound == 44100) sIdx = 0; else if (cfg.sound == 48000) sIdx = 1; else if (cfg.sound == 55467) sIdx = 2; else if (cfg.sound == 96000) sIdx = 3; }
+        if (samplingEdit) { ddRect = sIdxRect; ddText = "44k;48k;55k;96k"; ddIndexPtr = &sIdx; ddEditPtr = &samplingEdit; }
+        else if (GuiDropdownBox(sIdxRect, "44k;48k;55k;96k", &sIdx, false)) samplingEdit = true;
+
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Buffer (ms):");
+        float bufValF = (float)cfg.soundbuffer;
+        if (bufferEdit) GuiSetState(STATE_DISABLED);
+        GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &bufValF, 50, 500);
+        cfg.soundbuffer = (uint)bufValF;
+        GuiSetState(STATE_NORMAL);
+        if (bufferEdit) GuiUnlock();
+        if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &bufferVal, 50, 500, bufferEdit)) {
+            bufferEdit = !bufferEdit; if (!bufferEdit) { cfg.soundbuffer = (uint)bufferVal; changed = true; resetPending = true; }
+        }
+        if (anyEdit) GuiLock();
+        GuiLabel({ x + 395, pY, 60, 20 }, "ms");
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "LPF:");
+        int lpfVal = (cfg.flag2 & PC8801::Config::lpfenable) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &lpfVal)) {
+            if (lpfVal) cfg.flag2 |= PC8801::Config::lpfenable; else cfg.flag2 &= ~PC8801::Config::lpfenable; changed = true;
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Precise Mix:");
+        int precVal = (cfg.flags & PC8801::Config::precisemixing) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &precVal)) {
+            if (precVal) cfg.flags |= PC8801::Config::precisemixing; else cfg.flags &= ~PC8801::Config::precisemixing; changed = true;
+        }
+    }
+    else if (activeTab == 2) { // Video
+        GuiLabel({ x + 20, pY, 120, 20 }, "Window Scale:");
+        Rectangle scaleRect = { x + 150, pY, 200, 24 };
+        if (windowScaleEdit) { ddRect = scaleRect; ddText = "1x (640x400);2x (1280x800);3x (1920x1200)"; ddIndexPtr = &windowScale; ddEditPtr = &windowScaleEdit; }
+        else if (GuiDropdownBox(scaleRect, "1x (640x400);2x (1280x800);3x (1920x1200)", &windowScale, false)) windowScaleEdit = true;
+
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Fullscreen:");
+        int fsVal = isFullscreen ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fsVal)) {
+            isFullscreen = (fsVal == 1); ToggleFullscreen();
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Scanlines:");
+        int slVal = (cfg.flag2 & PC8801::Config::scanline) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &slVal)) {
+            if (slVal) cfg.flag2 |= PC8801::Config::scanline; else cfg.flag2 &= ~PC8801::Config::scanline; changed = true;
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "15KHz Mode:");
+        int fv15Val = (cfg.flags & PC8801::Config::fv15k) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fv15Val)) {
+            if (fv15Val) cfg.flags |= PC8801::Config::fv15k; else cfg.flags &= ~PC8801::Config::fv15k; changed = true;
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Digital Pal:");
+        int digiVal = (cfg.flags & PC8801::Config::digitalpalette) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &digiVal)) {
+            if (digiVal) cfg.flags |= PC8801::Config::digitalpalette; else cfg.flags &= ~PC8801::Config::digitalpalette; changed = true;
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "PCG-8100:");
+        int pcgVal = (cfg.flags & PC8801::Config::enablepcg) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &pcgVal)) {
+            if (pcgVal) cfg.flags |= PC8801::Config::enablepcg; else cfg.flags &= ~PC8801::Config::enablepcg; changed = true; resetPending = true;
+        }
+    }
+    else if (activeTab == 3) { // Mixer
+        Rectangle scrollBounds = { x + 10, y + 70, width - 20, height - 120 };
+        Rectangle content = { 0, 0, width - 60, 520 };
+        Rectangle view;
+        if (!anyEdit && CheckCollisionPointRec(GetMousePosition(), scrollBounds)) mixerScroll.y += GetMouseWheelMove() * 20;
+        GuiScrollPanel(scrollBounds, NULL, content, &mixerScroll, &view);
+        if (mixerScroll.y > 0) mixerScroll.y = 0;
+        if (mixerScroll.y < (view.height - content.height)) mixerScroll.y = view.height - content.height;
+
+        BeginScissorMode((int)view.x, (int)view.y, (int)view.width, (int)view.height);
+            float sX = view.x + mixerScroll.x;
+            float sY = view.y + mixerScroll.y;
+            float curY = sY + 10;
+            GuiLabel({ sX + 10, curY, 80, 20 }, "MASTER");
+            float mValF = (float)cfg.mastervol;
+            if (masterVolEdit) GuiSetState(STATE_DISABLED);
+            GuiSlider({ sX + 90, curY, 240, 16 }, NULL, NULL, &mValF, 0, 128);
+            cfg.mastervol = (int)mValF;
+            GuiSetState(STATE_NORMAL);
+            if (masterVolEdit) GuiUnlock();
+            if (GuiValueBox({ sX + 340, curY, 50, 16 }, NULL, &cfg.mastervol, 0, 128, masterVolEdit)) {
+                masterVolEdit = !masterVolEdit; if (!masterVolEdit) changed = true;
+            }
+            if (anyEdit) GuiLock();
+            curY += 55;
+            float group1H = 170;
+            GuiGroupBox({ sX + 5, curY - 5, width - 65, group1H }, "Sound Sources (FM / SSG / ADPCM / Rhythm)");
+            float box1Y = curY;
+            const char* names[] = { "FM", "SSG", "ADPCM", "Rhythm" };
+            int* vPtrs[] = { &cfg.volfm, &cfg.volssg, &cfg.voladpcm, &cfg.volrhythm };
+            bool* ePtrs[] = { &volFmEdit, &volSsgEdit, &volAdpcmEdit, &volRhythmEdit };
+            for (int i = 0; i < 4; i++) {
+                GuiLabel({ sX + 20, box1Y + 10, 80, 20 }, names[i]);
+                float valF = (float)*vPtrs[i];
+                if (*ePtrs[i]) GuiSetState(STATE_DISABLED);
+                GuiSlider({ sX + 90, box1Y + 10, 240, 16 }, NULL, NULL, &valF, -100, 40);
+                *vPtrs[i] = (int)valF;
+                GuiSetState(STATE_NORMAL);
+                if (*ePtrs[i]) GuiUnlock();
+                if (GuiValueBox({ sX + 340, box1Y + 10, 50, 16 }, NULL, vPtrs[i], -100, 40, *ePtrs[i])) {
+                    *ePtrs[i] = !*ePtrs[i]; if (!*ePtrs[i]) changed = true;
+                }
+                if (anyEdit) GuiLock();
+                GuiLabel({ sX + 395, box1Y + 10, 40, 20 }, "dB");
+                box1Y += 28;
+            }
+            if (GuiButton({ sX + 20, box1Y + 15, 140, 22 }, "Default Sources")) { cfg.volfm = 0; cfg.volssg = 0; cfg.voladpcm = 0; cfg.volrhythm = 0; changed = true; }
+            curY += group1H + 40;
+            float group2H = 230;
+            GuiGroupBox({ sX + 5, curY - 5, width - 65, group2H }, "Rhythm Details (BD / SD / TOP / HH / TOM / RIM)");
+            float box2Y = curY;
+            int* rPtrs[] = { &cfg.volbd, &cfg.volsd, &cfg.voltop, &cfg.volhh, &cfg.voltom, &cfg.volrim };
+            const char* rNames[] = { "BD", "SD", "TOP", "HH", "TOM", "RIM" };
+            for (int i = 0; i < 6; i++) {
+                GuiLabel({ sX + 20, box2Y + 10, 40, 20 }, rNames[i]);
+                float valF = (float)*rPtrs[i];
+                if (volRhythmDetailEdit[i]) GuiSetState(STATE_DISABLED);
+                GuiSlider({ sX + 65, box2Y + 10, 265, 16 }, NULL, NULL, &valF, -100, 40);
+                *rPtrs[i] = (int)valF;
+                GuiSetState(STATE_NORMAL);
+                if (volRhythmDetailEdit[i]) GuiUnlock();
+                if (GuiValueBox({ sX + 340, box2Y + 10, 50, 16 }, NULL, rPtrs[i], -100, 40, volRhythmDetailEdit[i])) {
+                    volRhythmDetailEdit[i] = !volRhythmDetailEdit[i]; if (!volRhythmDetailEdit[i]) changed = true;
+                }
+                if (anyEdit) GuiLock();
+                GuiLabel({ sX + 395, box2Y + 10, 40, 20 }, "dB");
+                box2Y += 28;
+            }
+            if (GuiButton({ sX + 20, box2Y + 15, 140, 22 }, "Default Rhythm")) { cfg.volbd = 0; cfg.volsd = 0; cfg.voltop = 0; cfg.volhh = 0; cfg.voltom = 0; cfg.volrim = 0; changed = true; }
+        EndScissorMode();
+    }
+    else if (activeTab == 4) { // Input
+        GuiLabel({ x + 20, pY, 120, 20 }, "Keyboard:");
+        Rectangle kRect = { x + 150, pY, 200, 24 };
+        static int kIdx;
+        if (!keyboardEdit) kIdx = cfg.keytype;
+        if (keyboardEdit) { ddRect = kRect; ddText = "AT-106 JP;PC-98;AT-101 US"; ddIndexPtr = &kIdx; ddEditPtr = &keyboardEdit; }
+        else if (GuiDropdownBox(kRect, "AT-106 JP;PC-98;AT-101 US", &kIdx, false)) keyboardEdit = true;
+
+        pY += rowH + 4;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Enable Mouse:");
+        int mouseVal = (cfg.flags & PC8801::Config::enablemouse) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &mouseVal)) {
+            if (mouseVal) cfg.flags |= PC8801::Config::enablemouse; else cfg.flags &= ~PC8801::Config::enablemouse; changed = true;
+        }
+        
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Sensitivity:");
+        float mSensF = (float)cfg.mousesensibility;
+        if (mouseSensEdit) GuiSetState(STATE_DISABLED);
+        GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &mSensF, 1, 20);
+        cfg.mousesensibility = (uint)mSensF;
+        GuiSetState(STATE_NORMAL);
+        if (mouseSensEdit) GuiUnlock();
+        if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &mouseSensVal, 1, 20, mouseSensEdit)) {
+            mouseSensEdit = !mouseSensEdit; if (!mouseSensEdit) { cfg.mousesensibility = (uint)mouseSensVal; changed = true; }
+        }
+        if (anyEdit) GuiLock();
+    }
+    else if (activeTab == 5) { // About
+        GuiLabel({ x + 20, pY, 400, 20 }, "M88M - PC-8801 Emulator for Modern Platforms");
+        pY += 25;
+        GuiLabel({ x + 20, pY, 400, 20 }, "Version: 0.1.0-alpha");
+        pY += 35;
+        GuiLabel({ x + 20, pY, 400, 20 }, "Original M88: Copyright (C) cisc 1998-2003");
+        pY += 20;
+        GuiLabel({ x + 20, pY, 400, 20 }, "OPNA Emulation: fmgen by cisc");
+        pY += 35;
+        GuiLabel({ x + 20, pY, 400, 20 }, "Ported with Raylib & Raygui");
+        pY += 20;
+        GuiLabel({ x + 20, pY, 400, 20 }, "Contributor: Gemini / Claude Opus 4.7");
+    }
+
+    if (changed) { coreRunner->RequestConfigApply(cfg, false); Config::Save(cfg); }
+
+    // 5. Back Button (Always reachable)
+    GuiSetState(STATE_NORMAL);
+    if (GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back")) {
+        ToggleMenu(coreRunner);
+    }
+
+    if (anyEdit) GuiUnlock();
+
+    // 6. Deferred Dropdown Drawing (Input prioritized)
+    if (isDropdownOpen && ddEditPtr) {
+        DrawRectangleRec({ x, y + 30, width, height - 30 }, Fade(BLACK, 0.4f));
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+             if (!CheckCollisionPointRec(GetMousePosition(), ddRect)) *ddEditPtr = false;
+        }
+        // IMPORTANT: Use GuiUnlock to allow interaction with the open list
+        GuiUnlock();
+        if (GuiDropdownBox(ddRect, ddText, ddIndexPtr, true)) {
+            *ddEditPtr = false;
+            if (ddEditPtr == &basicModeEdit) {
+                if (*ddIndexPtr == 0) cfg.basicmode = PC8801::Config::N88V1;
+                else if (*ddIndexPtr == 1) cfg.basicmode = PC8801::Config::N88V2;
+                else if (*ddIndexPtr == 2) cfg.basicmode = PC8801::Config::N80;
+                else if (*ddIndexPtr == 3) cfg.basicmode = PC8801::Config::N80V2;
+                changed = true; resetPending = true;
+            } else if (ddEditPtr == &cpuModeEdit) { cfg.cpumode = *ddIndexPtr; changed = true; }
+            else if (ddEditPtr == &port44Edit) {
+                if (*ddIndexPtr == 0) { cfg.flag2 |= PC8801::Config::disableopn44; cfg.flags &= ~PC8801::Config::enableopna; }
+                else if (*ddIndexPtr == 1) { cfg.flag2 &= ~PC8801::Config::disableopn44; cfg.flags &= ~PC8801::Config::enableopna; }
+                else { cfg.flag2 &= ~PC8801::Config::disableopn44; cfg.flags |= PC8801::Config::enableopna; }
+                changed = true; resetPending = true;
+            } else if (ddEditPtr == &portA8Edit) {
+                cfg.flags &= ~(PC8801::Config::opnona8 | PC8801::Config::opnaona8);
+                if (*ddIndexPtr == 1) cfg.flags |= PC8801::Config::opnona8;
+                else if (*ddIndexPtr == 2) cfg.flags |= PC8801::Config::opnaona8;
+                changed = true; resetPending = true;
+            } else if (ddEditPtr == &samplingEdit) {
+                if (*ddIndexPtr == 0) cfg.sound = 44100; else if (*ddIndexPtr == 1) cfg.sound = 48000; else if (*ddIndexPtr == 2) cfg.sound = 55467; else if (*ddIndexPtr == 3) cfg.sound = 96000;
+                changed = true; resetPending = true;
+            } else if (ddEditPtr == &windowScaleEdit) {
+                int scale = (*ddIndexPtr) + 1;
+                SetWindowSize(640 * scale, (400 * scale) + 24);
+            } else if (ddEditPtr == &keyboardEdit) { cfg.keytype = *ddIndexPtr; changed = true; resetPending = true; }
+            if (changed) { coreRunner->RequestConfigApply(cfg, false); Config::Save(cfg); }
+        }
+    }
+}
