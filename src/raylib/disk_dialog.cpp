@@ -68,6 +68,7 @@ static std::string GetDirFromPath(const std::string& path) {
 UIManager::UIManager() :
     showMenu(false), modalState(MODAL_NONE), showSettings(false), showStateDialog(false), selectingDiskForDrive(-1), activeTab(0),
     currentStateSlot(0),
+    diskScrollOffset({ 0, 0 }),
     windowScale(0), isFullscreen(false),
     basicModeEdit(false), windowScaleEdit(false),
     cpuModeEdit(false), port44Edit(false), portA8Edit(false), samplingEdit(false), keyboardEdit(false),
@@ -337,8 +338,17 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
     int numDisks = diskmgr->GetNumDisks(selectingDiskForDrive);
     float btnY = y + 40;
     float btnH = 26;
+    
+    Rectangle view = { x + 10, btnY, width - 20, height - 90 };
+    Rectangle content = { 0, 0, width - 40, (float)numDisks * (btnH + 4) };
+    
+    GuiScrollPanel(view, NULL, { 0, 0, content.width, content.height }, &diskScrollOffset, &view);
+    
+    BeginScissorMode((int)view.x, (int)view.y, (int)view.width, (int)view.height);
+    for (int i = 0; i < numDisks; i++) {
+        float itemY = view.y + i * (btnH + 4) + diskScrollOffset.y;
+        if (itemY + btnH < view.y || itemY > view.y + view.height) continue;
 
-    for (int i = 0; i < numDisks && i < 8; i++) {
         const char* dTitle = diskmgr->GetImageTitle(selectingDiskForDrive, i);
         std::string dLabel = dTitle ? Paths::SJIStoUTF8(std::string(dTitle, 16)) : "(No Title)";
         size_t last = dLabel.find_last_not_of(" \0", dLabel.length());
@@ -352,17 +362,17 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
 
         std::string label = std::to_string(i + 1) + ": " + dLabel;
 
-        if (GuiButton({ x + 10, btnY, width - 20, btnH }, label.c_str())) {
-            diskmgr->Mount(selectingDiskForDrive, lastOpenedPath[selectingDiskForDrive].c_str(), false, i, false);
+        if (GuiButton({ view.x, itemY, content.width, btnH }, label.c_str())) {
+            diskmgr->Mount(selectingDiskForDrive, diskmgr->GetImageTitle(selectingDiskForDrive, i), true, i, true);
             selectingDiskForDrive = -1;
         }
 
-        if (isJp) {
-            if (IsFontValid(fontEn)) GuiSetFont(fontEn); else GuiSetFont(GetFontDefault());
-            GuiSetStyle(DEFAULT, TEXT_SIZE, IsFontValid(fontEn) ? 16 : 10);
+        if (isJp && IsFontValid(fontEn)) {
+            GuiSetFont(fontEn);
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 16);
         }
-        btnY += 30;
     }
+    EndScissorMode();
 
     if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) selectingDiskForDrive = -1;
 }

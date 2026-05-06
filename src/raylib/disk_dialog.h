@@ -50,6 +50,7 @@ private:
     int selectingDiskForDrive; // -1: none, 0: Drive 1, 1: Drive 2
     int activeTab;
     int currentStateSlot;
+    Vector2 diskScrollOffset;
     
     // UI state
     int windowScale;
