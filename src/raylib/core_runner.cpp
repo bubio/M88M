@@ -3,6 +3,8 @@
 #include "config.h"
 #include "opnif.h"
 #include "beep.h"
+#include "pc88/mouse.h"
+#include "raylib_mouse.cpp"
 #include "devices/Z80.h"
 #include "screen_view.h"
 #include "file.h"
@@ -81,7 +83,11 @@ bool CoreRunner::Init(Draw* draw) {
 
     GetOPN1()->Connect(&coreSound);
     GetOPN2()->Connect(&coreSound);
-    GetBEEP()->Connect(&coreSound);
+
+    // Connect mouse
+    RaylibMouseUI* mouseUI = new RaylibMouseUI();
+    this->mouse->Connect(mouseUI);
+    
     keyInput.Init(&bus1);
     uiManager.Init();
     return true;
