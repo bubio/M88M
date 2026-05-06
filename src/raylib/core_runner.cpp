@@ -93,13 +93,15 @@ void CoreRunner::StopAudio() {
 }
 
 void CoreRunner::RestartAudio() {
-    const uint outrate = (uint)Config::Get().sound;
-    int bufsize = (int)(Config::Get().soundbuffer * outrate / 1000);
+    const auto& cfg = Config::Get();
+    const uint outrate = (uint)cfg.sound;
+    int bufsize = (int)(cfg.soundbuffer * outrate / 1000);
     if (bufsize < 1024) bufsize = 4096;
+    
     if (coreSound.Init(this, outrate, bufsize)) {
-        coreSound.ApplyConfig(&Config::Get());
+        coreSound.ApplyConfig(&cfg);
         sound.Init(outrate);
-        sound.SetVolume(&Config::Get());
+        sound.SetVolume(&cfg);
         sound.SetSource(coreSound.GetSoundSource());
     }
 }
