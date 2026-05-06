@@ -343,7 +343,9 @@ void CoreRunner::Run() {
         // Synchronization
         auto currentTime = std::chrono::high_resolution_clock::now();
         auto elapsedUs = std::chrono::duration_cast<std::chrono::microseconds>(currentTime - startTime).count();
-        uint64_t targetUs = totalTicksEmulated * 10;
+        const auto& syncCfg = Config::Get();
+        float speedMultiplier = (syncCfg.speed > 0 ? syncCfg.speed : 100) / 100.0f;
+        uint64_t targetUs = (uint64_t)(totalTicksEmulated * 10 / speedMultiplier);
 
         if (elapsedUs < targetUs) {
             uint64_t waitUs = targetUs - elapsedUs;
