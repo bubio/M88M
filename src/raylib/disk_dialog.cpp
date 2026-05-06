@@ -120,6 +120,25 @@ int UIManager::MeasureEnText(const char* text) const {
 void UIManager::Init() {
     GuiLoadStyleCyber();
 
+    // "FD" DOS style theme overrides
+    GuiSetStyle(DEFAULT, BACKGROUND_COLOR, 0x000044f0); // Deep Navy Blue
+    GuiSetStyle(DEFAULT, LINE_COLOR, 0x00ffffff);       // Bright Cyan Lines
+    
+    // Normal state
+    GuiSetStyle(DEFAULT, BORDER_COLOR_NORMAL, 0x00afafff); 
+    GuiSetStyle(DEFAULT, BASE_COLOR_NORMAL, 0x000044ff);   // Navy base
+    GuiSetStyle(DEFAULT, TEXT_COLOR_NORMAL, 0xffffffff);   // White text
+    
+    // Focused (Hover) state - Magenta highlight like FD
+    GuiSetStyle(DEFAULT, BORDER_COLOR_FOCUSED, 0x00ffffff); 
+    GuiSetStyle(DEFAULT, BASE_COLOR_FOCUSED, 0xcc00ccff);   // Magenta background
+    GuiSetStyle(DEFAULT, TEXT_COLOR_FOCUSED, 0xffffffff);
+    
+    // Pressed state
+    GuiSetStyle(DEFAULT, BORDER_COLOR_PRESSED, 0xffffffff);
+    GuiSetStyle(DEFAULT, BASE_COLOR_PRESSED, 0x00aaaaff);   // Cyan-ish
+    GuiSetStyle(DEFAULT, TEXT_COLOR_PRESSED, 0x000000ff);   // Black text on cyan
+
     if (IsFontValid(fontEn)) {
         GuiSetFont(fontEn);
         GuiSetStyle(DEFAULT, TEXT_SIZE, 16);
