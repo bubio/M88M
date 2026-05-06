@@ -698,24 +698,28 @@ void PC88::ApplyConfig(Config* cfg)
 	if ((cfg->flags & Config::subcpucontrol) != 0)
 		cpumode |= stopwhenidle;
 
-	// Device switching logic
+	// Device switching logic (based on original M88 behavior)
 	if (cfg->flags & PC8801::Config::enablemouse)
 	{
-		// If mouse is enabled, disable pad unless in joystick mode
-		if (cfg->flags & PC8801::Config::mousejoymode) {
-			joypad->SetButtonMode(cfg->flags & Config::swappadbuttons ? JoyPad::SWAPPED : JoyPad::NORMAL);
-		} else {
-			joypad->SetButtonMode(JoyPad::DISABLED);
-		}
+		// Mouse is enabled. Disable Joypad physical input.
+		joypad->SetButtonMode(JoyPad::DISABLED);
+		
+		// If Mouse Joy Mode is ON, Mouse will emulate a Joystick.
+		// The Mouse device's ApplyConfig handles setting joymode internally.
 		mouse->ApplyConfig(cfg);
 	}
 	else if (cfg->flags & PC8801::Config::enablepad)
 	{
+		// Joypad is enabled. Disable Mouse.
+		// We need a way to disable Mouse device response on ports.
+		mouse->ApplyConfig(cfg); // joymode will be false, but device might still respond.
 		joypad->SetButtonMode(cfg->flags & Config::swappadbuttons ? JoyPad::SWAPPED : JoyPad::NORMAL);
 	}
 	else
 	{
+		// Both disabled.
 		joypad->SetButtonMode(JoyPad::DISABLED);
+		mouse->ApplyConfig(cfg);
 	}
 }
 

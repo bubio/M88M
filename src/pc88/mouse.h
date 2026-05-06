@@ -44,6 +44,7 @@ private:
 	PC88* pc;
 	POINT move;
 	uint8 port40;
+    bool enabled;
 	bool joymode;
 	int phase;
 	int32 triggertime;

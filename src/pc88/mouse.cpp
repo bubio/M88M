@@ -19,11 +19,19 @@
 using namespace PC8801;
 
 // ---------------------------------------------------------------------------
-//	\’z
+//	ï¿½\ï¿½z
 //
 Mouse::Mouse(const ID& id)
 : Device(id), ui(0)
 {
+    port40 = 0x40;
+    enabled = false;
+    joymode = false;
+    phase = 0;
+    triggertime = 0;
+    sensibility = 4;
+    data = -1;
+    move.x = move.y = 0;
 }
 
 Mouse::~Mouse()
@@ -32,7 +40,7 @@ Mouse::~Mouse()
 }
 
 // ---------------------------------------------------------------------------
-//	‰Šú‰»
+//	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //
 bool Mouse::Init(PC88* pc88)
 {
@@ -49,11 +57,11 @@ bool Mouse::Connect(IUnk* unk)
 }
 
 // ---------------------------------------------------------------------------
-//	“ü—Í
+//	ï¿½ï¿½ï¿½ï¿½
 //
 uint IOCALL Mouse::GetMove(uint)
 {
-	Log("%c", 'w' + phase);
+    if (!enabled) return 0xff;
 	if (joymode)
 	{
 		if (data == -1)
@@ -92,20 +100,22 @@ uint IOCALL Mouse::GetMove(uint)
 
 uint IOCALL Mouse::GetButton(uint)
 {
+    if (!enabled) return 0xff;
 	return ui ? (~ui->GetButton()) | 0xfc : 0xff;
 }
 
 
 // ---------------------------------------------------------------------------
-//	ƒXƒgƒ[ƒuM†
+//	Xg[uM
 //
 void IOCALL Mouse::Strobe(uint, uint data)
 {
+    if (!enabled) return;
 	data &= 0x40;
 	if (port40 ^ data)
 	{
 		port40 = data;
-		
+
 		if (phase <= 0 || int(pc->GetTime() - triggertime) > 18*4)
 		{
 			if (data)
@@ -116,11 +126,9 @@ void IOCALL Mouse::Strobe(uint, uint data)
 				else
 					move.x = move.y = 0;
 				phase = 1;
-				Log("\nStrobe (%4d, %4d, %d): ", move.x, move.y, triggertime);
 			}
 			return;
 		}
-		Log("[%d]", pc->GetTime() - triggertime);
 
 		phase = (phase + 1) & 3;
 	}
@@ -132,16 +140,18 @@ void IOCALL Mouse::Strobe(uint, uint data)
 //
 void IOCALL Mouse::VSync(uint, uint)
 {
+    if (!enabled) return;
 	data = -1;
 }
 
 // ---------------------------------------------------------------------------
-//	ƒRƒ“ƒtƒBƒMƒ…ƒŒ[ƒVƒ‡ƒ“XV
+//	RtBM[VXV
 //
 void Mouse::ApplyConfig(const Config* config)
 {
+    enabled = (config->flags & Config::enablemouse) != 0;
 	joymode = (config->flags & Config::mousejoymode) != 0;
-	sensibility = config->mousesensibility;
+	sensibility = (int)config->mousesensibility;
 }
 
 
