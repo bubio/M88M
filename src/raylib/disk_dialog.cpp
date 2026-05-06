@@ -345,7 +345,7 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
         btnY += 30;
     }
 
-    if (GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back")) selectingDiskForDrive = -1;
+    if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) selectingDiskForDrive = -1;
 }
 
 static std::string SanitizeStateName(const std::string& in) {
@@ -486,7 +486,7 @@ void UIManager::DrawStateDialog(DiskManager* diskmgr, CoreRunner* coreRunner) {
         GuiLabel({ x + 30, y + height - 72, width - 60, 24 }, stateMessage.c_str());
     }
 
-    if (GuiButton({ x + width / 2 - 50, y + height - 42, 100, 28 }, "Back")) {
+    if (GuiButton({ x + width - 120, y + height - 42, 100, 28 }, "Back")) {
         showStateDialog = false;
     }
 }
@@ -843,12 +843,12 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
 
     GuiSetState(STATE_NORMAL);
     if (!anyEdit) {
-        if (GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back")) {
+        if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) {
             ToggleMenu(coreRunner);
         }
     } else {
         GuiSetState(STATE_DISABLED);
-        GuiButton({ x + width / 2 - 50, y + height - 40, 100, 28 }, "Back");
+        GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back");
         GuiSetState(STATE_NORMAL);
     }
 
