@@ -82,6 +82,8 @@ private:
 
 	bool enabled;
 	
+	IIR_LPF lpf[2];
+	
 	SSNode* sslist;
 	CriticalSection cs_ss;
 

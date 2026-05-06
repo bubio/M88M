@@ -130,10 +130,17 @@ int Sound::Get(Sample* dest, int nsamples)
 		}
 
 		int32* src = mixingbuf;
+		bool lpfEnabled = (cfgflg & Config::lpfenable);
 		for (int n = mixsamples; n>0; n--)
 		{
-			*dest++ = Limit(*src++, 32767, -32768);
-			*dest++ = Limit(*src++, 32767, -32768);
+			int s0 = *src++;
+			int s1 = *src++;
+			if (lpfEnabled) {
+				s0 = lpf[0].Filter(0, s0);
+				s1 = lpf[1].Filter(1, s1);
+			}
+			*dest++ = Limit(s0, 32767, -32768);
+			*dest++ = Limit(s1, 32767, -32768);
 		}
 	}
 	return mixsamples;
@@ -159,6 +166,11 @@ int Sound::Get(SampleL* dest, int nsamples)
 void Sound::ApplyConfig(const Config* config)
 {
 	mixthreshold = (config->flags & Config::precisemixing) ? 100 : 2000;
+	cfgflg = config->flags;
+	if (config->flag2 & Config::lpfenable) {
+		lpf[0].MakeFilter(config->lpffc, mixrate, config->lpforder);
+		lpf[1].MakeFilter(config->lpffc, mixrate, config->lpforder);
+	}
 }
 
 // ---------------------------------------------------------------------------
