@@ -536,10 +536,11 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     bool changed = false;
 
     if (activeTab == 0) { // System
-        GuiLabel({ x + 20, pY, 120, 20 }, "CPU Clock:");
+        float labelW = 160;
+        GuiLabel({ x + 20, pY, labelW, 20 }, "CPU Clock:");
         int clockMode = (cfg.clock < 60) ? 0 : 1;
         int newClock = clockMode;
-        GuiToggleGroup({ x + 150, pY, 150, 24 }, "4MHz;8MHz", &newClock);
+        GuiToggleGroup({ x + 180, pY, 150, 24 }, "4MHz;8MHz", &newClock);
         if (newClock != clockMode) {
             if (newClock == 0) { cfg.clock = 40; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; }
             else { cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; }
@@ -547,20 +548,20 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         }
         
         pY += rowH;
-        GuiLabel({ x + 20, pY, 120, 20 }, "Speed:");
+        GuiLabel({ x + 20, pY, labelW, 20 }, "Speed:");
         float speedValF = (float)cfg.speed;
-        if (GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &speedValF, 20, 200)) {
+        if (GuiSlider({ x + 180, pY, 180, 16 }, NULL, NULL, &speedValF, 20, 200)) {
             cfg.speed = (int)speedValF; changed = true;
         }
         bool wasUnl = false; if (speedEdit) { GuiUnlock(); wasUnl = true; }
-        if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &cfg.speed, 20, 200, speedEdit)) {
+        if (GuiValueBox({ x + 370, pY, 50, 16 }, NULL, &cfg.speed, 20, 200, speedEdit)) {
             speedEdit = !speedEdit; if (!speedEdit) changed = true;
         }
         if (wasUnl) GuiLock();
-        GuiLabel({ x + 395, pY, 40, 20 }, "%");
+        GuiLabel({ x + 425, pY, 40, 20 }, "%");
 
         pY += rowH;
-        GuiLabel({ x + 20, pY, 120, 20 }, "BASIC Mode:");
+        GuiLabel({ x + 20, pY, labelW, 20 }, "BASIC Mode:");
         static int modeIndex;
         if (!basicModeEdit) {
             if (cfg.basicmode == PC8801::Config::N88V1) modeIndex = 0;
@@ -568,56 +569,56 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             else if (cfg.basicmode == PC8801::Config::N80) modeIndex = 2;
             else if (cfg.basicmode == PC8801::Config::N80V2) modeIndex = 3;
         }
-        Rectangle basicRect = { x + 150, pY, 200, 24 };
+        Rectangle basicRect = { x + 180, pY, 200, 24 };
         if (basicModeEdit) { ddRect = basicRect; ddText = "N88 V1;N88 V2;N80 V1;N80 V2"; ddIndexPtr = &modeIndex; ddEditPtr = &basicModeEdit; }
         else if (GuiDropdownBox(basicRect, "N88 V1;N88 V2;N80 V1;N80 V2", &modeIndex, false)) basicModeEdit = true;
 
         pY += rowH + 4;
-        GuiLabel({ x + 20, pY, 120, 20 }, "CPU Mode:");
+        GuiLabel({ x + 20, pY, labelW, 20 }, "CPU Mode:");
         static int cpumode;
         if (!cpuModeEdit) cpumode = cfg.cpumode;
-        Rectangle cpuRect = { x + 150, pY, 200, 24 };
+        Rectangle cpuRect = { x + 180, pY, 200, 24 };
         if (cpuModeEdit) { ddRect = cpuRect; ddText = "Main 1 : Sub 1;Main 2 : Sub 1;Auto"; ddIndexPtr = &cpumode; ddEditPtr = &cpuModeEdit; }
         else if (GuiDropdownBox(cpuRect, "Main 1 : Sub 1;Main 2 : Sub 1;Auto", &cpumode, false)) cpuModeEdit = true;
 
         pY += rowH + 4;
-        GuiLabel({ x + 20, pY, 120, 20 }, "CPU Wait:");
+        GuiLabel({ x + 20, pY, labelW, 20 }, "CPU Wait:");
         int waitVal = (cfg.flags & PC8801::Config::enablewait) ? 1 : 0;
-        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &waitVal)) {
+        if (GuiToggleSlider({ x + 180, pY, 60, 20 }, "OFF;ON", &waitVal)) {
             if (waitVal) cfg.flags |= PC8801::Config::enablewait; else cfg.flags &= ~PC8801::Config::enablewait; changed = true;
         }
         
         pY += rowH;
-        GuiLabel({ x + 20, pY, 120, 20 }, "FDD Wait:");
+        GuiLabel({ x + 20, pY, labelW, 20 }, "FDD Wait:");
         int fddwaitVal = (cfg.flag2 & PC8801::Config::fddnowait) ? 0 : 1;
-        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fddwaitVal)) {
+        if (GuiToggleSlider({ x + 180, pY, 60, 20 }, "OFF;ON", &fddwaitVal)) {
             if (fddwaitVal) cfg.flag2 &= ~PC8801::Config::fddnowait; else cfg.flag2 |= PC8801::Config::fddnowait; changed = true;
         }
 
         pY += rowH;
-        GuiLabel({ x + 20, pY, 120, 20 }, "ERAM:");
+        GuiLabel({ x + 20, pY, labelW, 20 }, "ERAM:");
         float eramValF = (float)cfg.erambanks;
-        if (GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &eramValF, 0, 128)) {
+        if (GuiSlider({ x + 180, pY, 180, 16 }, NULL, NULL, &eramValF, 0, 128)) {
             cfg.erambanks = (int)eramValF; changed = true; resetPending = true;
         }
         wasUnl = false; if (eramEdit) { GuiUnlock(); wasUnl = true; }
-        if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &cfg.erambanks, 0, 128, eramEdit)) {
+        if (GuiValueBox({ x + 370, pY, 50, 16 }, NULL, &cfg.erambanks, 0, 128, eramEdit)) {
             eramEdit = !eramEdit; if (!eramEdit) { changed = true; resetPending = true; }
         }
         if (wasUnl) GuiLock();
-        GuiLabel({ x + 395, pY, 80, 20 }, "x 32KB");
+        GuiLabel({ x + 425, pY, 80, 20 }, "x 32KB");
 
         pY += rowH;
-        GuiLabel({ x + 20, pY, 120, 20 }, "Ask Before Reset:");
+        GuiLabel({ x + 20, pY, labelW, 20 }, "Ask Before Reset:");
         int askVal = (cfg.flags & PC8801::Config::askbeforereset) ? 1 : 0;
-        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &askVal)) {
+        if (GuiToggleSlider({ x + 180, pY, 60, 20 }, "OFF;ON", &askVal)) {
             if (askVal) cfg.flags |= PC8801::Config::askbeforereset; else cfg.flags &= ~PC8801::Config::askbeforereset; changed = true;
         }
 
         pY += rowH;
-        GuiLabel({ x + 20, pY, 120, 20 }, "Save Last Dir:");
+        GuiLabel({ x + 20, pY, labelW, 20 }, "Save Last Dir:");
         int saveDirVal = (cfg.flags & PC8801::Config::savedirectory) ? 1 : 0;
-        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &saveDirVal)) {
+        if (GuiToggleSlider({ x + 180, pY, 60, 20 }, "OFF;ON", &saveDirVal)) {
             if (saveDirVal) cfg.flags |= PC8801::Config::savedirectory; else cfg.flags &= ~PC8801::Config::savedirectory; changed = true;
         }
     }
@@ -792,6 +793,13 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         int numpadVal = (cfg.flags & PC8801::Config::usearrowfor10) ? 1 : 0;
         if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &numpadVal)) {
             if (numpadVal) cfg.flags |= PC8801::Config::usearrowfor10; else cfg.flags &= ~PC8801::Config::usearrowfor10; changed = true;
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, labelW, 20 }, "Num row to Numpad:");
+        int numrowVal = (cfg.flag2 & PC8801::Config::usenumrowfor10) ? 1 : 0;
+        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &numrowVal)) {
+            if (numrowVal) cfg.flag2 |= PC8801::Config::usenumrowfor10; else cfg.flag2 &= ~PC8801::Config::usenumrowfor10; changed = true;
         }
 
         pY += rowH + 10;
