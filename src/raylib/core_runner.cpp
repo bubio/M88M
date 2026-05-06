@@ -87,6 +87,23 @@ bool CoreRunner::Init(Draw* draw) {
     return true;
 }
 
+void CoreRunner::StopAudio() {
+    sound.Cleanup();
+    coreSound.Cleanup();
+}
+
+void CoreRunner::RestartAudio() {
+    const uint outrate = (uint)Config::Get().sound;
+    int bufsize = (int)(Config::Get().soundbuffer * outrate / 1000);
+    if (bufsize < 1024) bufsize = 4096;
+    if (coreSound.Init(this, outrate, bufsize)) {
+        coreSound.ApplyConfig(&Config::Get());
+        sound.Init(outrate);
+        sound.SetVolume(&Config::Get());
+        sound.SetSource(coreSound.GetSoundSource());
+    }
+}
+
 void CoreRunner::RequestConfigApply(const PC8801::Config& cfg, bool requireReset) {
     std::lock_guard<std::mutex> lock(configMutex);
     pendingConfig = cfg;
@@ -315,7 +332,15 @@ void CoreRunner::Run() {
             }
 
             if (configPending) {
-                // Reset();
+                // Check if audio settings changed
+                const auto& oldCfg = Config::Get();
+                if (pendingConfig.sound != oldCfg.sound || pendingConfig.soundbuffer != oldCfg.soundbuffer) {
+                    StopAudio();
+                    // Update config before restart to ensure correct params
+                    Config::Get() = pendingConfig; 
+                    RestartAudio();
+                }
+
                 ApplyConfig(&pendingConfig);
                 coreSound.ApplyConfig(&pendingConfig);
                 sound.SetVolume(&pendingConfig);

@@ -30,6 +30,8 @@ public:
     
     // Thread-safe config update
     void RequestConfigApply(const PC8801::Config& cfg, bool requireReset = false);
+    void StopAudio();
+    void RestartAudio();
 
     PC88* GetPC88() { return this; }
     DiskManager* GetDiskManager() { return &diskmgr; }
