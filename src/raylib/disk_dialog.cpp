@@ -577,8 +577,8 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         static int cpumode;
         if (!cpuModeEdit) cpumode = cfg.cpumode;
         Rectangle cpuRect = { x + 150, pY, 200, 24 };
-        if (cpuModeEdit) { ddRect = cpuRect; ddText = "ms11;ms21;auto"; ddIndexPtr = &cpumode; ddEditPtr = &cpuModeEdit; }
-        else if (GuiDropdownBox(cpuRect, "ms11;ms21;auto", &cpumode, false)) cpuModeEdit = true;
+        if (cpuModeEdit) { ddRect = cpuRect; ddText = "Main 1 : Sub 1;Main 2 : Sub 1;Auto"; ddIndexPtr = &cpumode; ddEditPtr = &cpuModeEdit; }
+        else if (GuiDropdownBox(cpuRect, "Main 1 : Sub 1;Main 2 : Sub 1;Auto", &cpumode, false)) cpuModeEdit = true;
 
         pY += rowH + 4;
         GuiLabel({ x + 20, pY, 120, 20 }, "CPU Wait:");
@@ -605,7 +605,21 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             eramEdit = !eramEdit; if (!eramEdit) { changed = true; resetPending = true; }
         }
         if (wasUnl) GuiLock();
-        GuiLabel({ x + 395, pY, 80, 20 }, "Banks");
+        GuiLabel({ x + 395, pY, 80, 20 }, "x 32KB");
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Ask Before Reset:");
+        int askVal = (cfg.flags & PC8801::Config::askbeforereset) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &askVal)) {
+            if (askVal) cfg.flags |= PC8801::Config::askbeforereset; else cfg.flags &= ~PC8801::Config::askbeforereset; changed = true;
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, 120, 20 }, "Save Last Dir:");
+        int saveDirVal = (cfg.flags & PC8801::Config::savedirectory) ? 1 : 0;
+        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &saveDirVal)) {
+            if (saveDirVal) cfg.flags |= PC8801::Config::savedirectory; else cfg.flags &= ~PC8801::Config::savedirectory; changed = true;
+        }
     }
     else if (activeTab == 1) { // Audio
         GuiLabel({ x + 20, pY, 120, 20 }, "Port 44h:");
@@ -778,20 +792,6 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         int numpadVal = (cfg.flags & PC8801::Config::usearrowfor10) ? 1 : 0;
         if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &numpadVal)) {
             if (numpadVal) cfg.flags |= PC8801::Config::usearrowfor10; else cfg.flags &= ~PC8801::Config::usearrowfor10; changed = true;
-        }
-
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Ask Before Reset:");
-        int askVal = (cfg.flags & PC8801::Config::askbeforereset) ? 1 : 0;
-        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &askVal)) {
-            if (askVal) cfg.flags |= PC8801::Config::askbeforereset; else cfg.flags &= ~PC8801::Config::askbeforereset; changed = true;
-        }
-
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Save Last Dir:");
-        int saveDirVal = (cfg.flags & PC8801::Config::savedirectory) ? 1 : 0;
-        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &saveDirVal)) {
-            if (saveDirVal) cfg.flags |= PC8801::Config::savedirectory; else cfg.flags &= ~PC8801::Config::savedirectory; changed = true;
         }
 
         pY += rowH + 10;
