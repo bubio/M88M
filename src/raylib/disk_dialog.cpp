@@ -811,7 +811,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     else if (activeTab == 4) { // Input
         float labelW = 170;
         
-        GuiGroupBox({ x + 10, pY - 5, width - 20, rowH * 4 + 10 }, "Keyboard Settings");
+        GuiGroupBox({ x + 10, pY - 5, width - 20, rowH * 3 + 15 }, "Keyboard Settings");
         pY += 10;
         
         GuiLabel({ x + 20, pY, labelW, 20 }, "Keyboard:");
@@ -835,8 +835,8 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             if (numrowVal) cfg.flag2 |= PC8801::Config::usenumrowfor10; else cfg.flag2 &= ~PC8801::Config::usenumrowfor10; changed = true;
         }
 
-        pY += rowH * 3; // Shift pY to clear the keyboard section
-        GuiGroupBox({ x + 10, pY - 5, width - 20, rowH * 3 + 10 }, "Mouse Settings");
+        pY += rowH + 15;
+        GuiGroupBox({ x + 10, pY - 5, width - 20, rowH * 2 + 15 }, "Mouse Settings");
         pY += 10;
         GuiLabel({ x + 20, pY, labelW, 20 }, "Enable Mouse:");
         int mouseVal = (cfg.flags & PC8801::Config::enablemouse) ? 1 : 0;
