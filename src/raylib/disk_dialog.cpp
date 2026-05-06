@@ -57,8 +57,16 @@ static const char* GetFileNameOnly(const char* path) {
     return f ? f + 1 : path;
 }
 
+static std::string GetDirFromPath(const std::string& path) {
+    size_t last = path.find_last_of("/\\");
+    if (last != std::string::npos) {
+        return path.substr(0, last);
+    }
+    return "";
+}
+
 UIManager::UIManager() :
-    showMenu(false), showSettings(false), showStateDialog(false), selectingDiskForDrive(-1), activeTab(0),
+    showMenu(false), modalState(MODAL_NONE), showSettings(false), showStateDialog(false), selectingDiskForDrive(-1), activeTab(0),
     currentStateSlot(0),
     windowScale(0), isFullscreen(false),
     basicModeEdit(false), windowScaleEdit(false),
@@ -127,14 +135,20 @@ void UIManager::Init() {
 void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
     if (IsKeyPressed(KEY_F10)) ToggleMenu(coreRunner);
     if (IsKeyPressed(KEY_F12)) {
-        if (coreRunner) coreRunner->RequestReset();
-        else pc88->Reset();
+        if (Config::Get().flags & PC8801::Config::askbeforereset) {
+            modalState = MODAL_CONFIRM_RESET;
+            showMenu = true;
+        } else {
+            if (coreRunner) coreRunner->RequestReset();
+            else pc88->Reset();
+        }
     }
     if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) && !showMenu) {
         if (GetMouseY() < GetScreenHeight() - 24) ToggleMenu(coreRunner);
     }
     if (showMenu && IsKeyPressed(KEY_ESCAPE)) {
-        if (selectingDiskForDrive != -1) selectingDiskForDrive = -1;
+        if (modalState != MODAL_NONE) modalState = MODAL_NONE;
+        else if (selectingDiskForDrive != -1) selectingDiskForDrive = -1;
         else if (showStateDialog) showStateDialog = false;
         else if (showSettings) showSettings = false;
         else ToggleMenu(coreRunner);
@@ -146,7 +160,8 @@ void UIManager::Draw(DiskManager* diskmgr, PC8801::Config& cfg, PC88* pc88, Core
 
     if (showMenu) {
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), StyleFade(DEFAULT, BACKGROUND_COLOR, 0.4f));
-        if (selectingDiskForDrive != -1) DrawDiskSelector(diskmgr);
+        if (modalState != MODAL_NONE) DrawConfirmDialog(shouldExit, pc88, coreRunner);
+        else if (selectingDiskForDrive != -1) DrawDiskSelector(diskmgr);
         else if (showStateDialog) DrawStateDialog(diskmgr, coreRunner);
         else if (showSettings) DrawSettings(cfg, pc88, coreRunner);
         else DrawMainMenu(diskmgr, pc88, shouldExit, coreRunner);
@@ -238,9 +253,13 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
 
     btnY += 35;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Reset")) {
-        if (coreRunner) coreRunner->RequestReset();
-        else pc88->Reset();
-        ToggleMenu(coreRunner);
+        if (Config::Get().flags & PC8801::Config::askbeforereset) {
+            modalState = MODAL_CONFIRM_RESET;
+        } else {
+            if (coreRunner) coreRunner->RequestReset();
+            else pc88->Reset();
+            ToggleMenu(coreRunner);
+        }
     }
     btnY += 44;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "State Save / Load")) {
@@ -250,13 +269,32 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     btnY += 34;
     if (GuiButton({ x + 10, btnY, width - 20, btnH }, "Settings")) showSettings = true;
 
-    if (GuiButton({ x + 10, y + height - 40, width - 20, btnH }, "Quit")) shouldExit = true;
+    if (GuiButton({ x + 10, y + height - 40, width - 20, btnH }, "Quit")) {
+        if (Config::Get().flags & PC8801::Config::askbeforereset) {
+            modalState = MODAL_CONFIRM_QUIT;
+        } else {
+            shouldExit = true;
+        }
+    }
 }
 
 void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     nfdchar_t *outPath = NULL;
     nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
-    if (NFD_OpenDialog(&outPath, filterItem, 1, NULL) == NFD_OKAY) {
+    
+    std::string defaultPathStr;
+    const nfdchar_t* defaultPath = NULL;
+    if (Config::Get().flags & PC8801::Config::savedirectory) {
+        if (!lastOpenedPath[0].empty()) {
+            defaultPathStr = GetDirFromPath(lastOpenedPath[0]);
+            if (!defaultPathStr.empty()) defaultPath = defaultPathStr.c_str();
+        } else if (!lastOpenedPath[1].empty()) {
+            defaultPathStr = GetDirFromPath(lastOpenedPath[1]);
+            if (!defaultPathStr.empty()) defaultPath = defaultPathStr.c_str();
+        }
+    }
+
+    if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {
         lastOpenedPath[0] = outPath;
         lastOpenedPath[1] = outPath;
         if (diskmgr->Mount(0, outPath, false, 0, false)) {
@@ -727,27 +765,51 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         EndScissorMode();
     }
     else if (activeTab == 4) { // Input
-        GuiLabel({ x + 20, pY, 120, 20 }, "Keyboard:");
-        Rectangle kRect = { x + 150, pY, 200, 24 };
+        float labelW = 170;
+        GuiLabel({ x + 20, pY, labelW, 20 }, "Keyboard:");
+        Rectangle kRect = { x + 200, pY, 200, 24 };
         static int kIdx;
         if (!keyboardEdit) kIdx = cfg.keytype;
         if (keyboardEdit) { ddRect = kRect; ddText = "AT-106 JP;PC-98;AT-101 US"; ddIndexPtr = &kIdx; ddEditPtr = &keyboardEdit; }
         else if (GuiDropdownBox(kRect, "AT-106 JP;PC-98;AT-101 US", &kIdx, false)) keyboardEdit = true;
 
         pY += rowH + 4;
-        GuiLabel({ x + 20, pY, 120, 20 }, "Enable Mouse:");
+        GuiLabel({ x + 20, pY, labelW, 20 }, "Cursor to Numpad:");
+        int numpadVal = (cfg.flags & PC8801::Config::usearrowfor10) ? 1 : 0;
+        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &numpadVal)) {
+            if (numpadVal) cfg.flags |= PC8801::Config::usearrowfor10; else cfg.flags &= ~PC8801::Config::usearrowfor10; changed = true;
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, labelW, 20 }, "Ask Before Reset:");
+        int askVal = (cfg.flags & PC8801::Config::askbeforereset) ? 1 : 0;
+        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &askVal)) {
+            if (askVal) cfg.flags |= PC8801::Config::askbeforereset; else cfg.flags &= ~PC8801::Config::askbeforereset; changed = true;
+        }
+
+        pY += rowH;
+        GuiLabel({ x + 20, pY, labelW, 20 }, "Save Last Dir:");
+        int saveDirVal = (cfg.flags & PC8801::Config::savedirectory) ? 1 : 0;
+        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &saveDirVal)) {
+            if (saveDirVal) cfg.flags |= PC8801::Config::savedirectory; else cfg.flags &= ~PC8801::Config::savedirectory; changed = true;
+        }
+
+        pY += rowH + 10;
+        GuiGroupBox({ x + 10, pY - 5, width - 20, rowH * 2 + 10 }, "Mouse Settings");
+        pY += 10;
+        GuiLabel({ x + 20, pY, labelW, 20 }, "Enable Mouse:");
         int mouseVal = (cfg.flags & PC8801::Config::enablemouse) ? 1 : 0;
-        if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &mouseVal)) {
+        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &mouseVal)) {
             if (mouseVal) cfg.flags |= PC8801::Config::enablemouse; else cfg.flags &= ~PC8801::Config::enablemouse; changed = true;
         }
         
         pY += rowH;
-        GuiLabel({ x + 20, pY, 120, 20 }, "Sensitivity:");
+        GuiLabel({ x + 20, pY, labelW, 20 }, "Sensitivity:");
         float mSensF = (float)cfg.mousesensibility;
         if (mouseSensEdit) GuiSetState(STATE_DISABLED);
-        if (GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &mSensF, 1, 20)) { cfg.mousesensibility = (uint)mSensF; changed = true; }
+        if (GuiSlider({ x + 200, pY, 180, 16 }, NULL, NULL, &mSensF, 1, 20)) { cfg.mousesensibility = (uint)mSensF; changed = true; }
         bool wasUnl = false; if (mouseSensEdit) { GuiUnlock(); wasUnl = true; }
-        if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &mouseSensVal, 1, 20, mouseSensEdit)) {
+        if (GuiValueBox({ x + 390, pY, 50, 16 }, NULL, &mouseSensVal, 1, 20, mouseSensEdit)) {
             mouseSensEdit = !mouseSensEdit;
             if (!mouseSensEdit) { cfg.mousesensibility = (uint)mouseSensVal; changed = true; }
         }
@@ -895,7 +957,17 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
 void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
     nfdchar_t *outPath = NULL;
     nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
-    if (NFD_OpenDialog(&outPath, filterItem, 1, NULL) == NFD_OKAY) {
+    
+    std::string defaultPathStr;
+    const nfdchar_t* defaultPath = NULL;
+    if (Config::Get().flags & PC8801::Config::savedirectory) {
+        if (!lastOpenedPath[drive].empty()) {
+            defaultPathStr = GetDirFromPath(lastOpenedPath[drive]);
+            if (!defaultPathStr.empty()) defaultPath = defaultPathStr.c_str();
+        }
+    }
+
+    if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {
         lastOpenedPath[drive] = outPath;
         if (diskmgr->Mount(drive, outPath, false, 0, false)) {
             if (diskmgr->GetNumDisks(drive) > 1) {
@@ -903,5 +975,36 @@ void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
             }
         }
         NFD_FreePath(outPath);
+    }
+}
+
+void UIManager::DrawConfirmDialog(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
+    float width = 300;
+    float height = 150;
+    float x = (float)GetScreenWidth() / 2 - width / 2;
+    float y = (float)GetScreenHeight() / 2 - height / 2;
+
+    const char* title = (modalState == MODAL_CONFIRM_RESET) ? "Confirm Reset" : "Confirm Quit";
+    const char* msg = (modalState == MODAL_CONFIRM_RESET) ? "Are you sure you want to reset?" : "Are you sure you want to quit?";
+
+    if (GuiWindowBox({ x, y, width, height }, title)) {
+        modalState = MODAL_NONE;
+    }
+
+    GuiLabel({ x + 20, y + 40, width - 40, 20 }, msg);
+
+    if (GuiButton({ x + 40, y + 90, 100, 30 }, "Yes")) {
+        if (modalState == MODAL_CONFIRM_RESET) {
+            if (coreRunner) coreRunner->RequestReset();
+            else pc88->Reset();
+            ToggleMenu(coreRunner);
+        } else if (modalState == MODAL_CONFIRM_QUIT) {
+            shouldExit = true;
+        }
+        modalState = MODAL_NONE;
+    }
+    
+    if (GuiButton({ x + 160, y + 90, 100, 30 }, "No")) {
+        modalState = MODAL_NONE;
     }
 }
