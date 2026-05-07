@@ -939,17 +939,41 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         content.height = curY - sY + 15;
     }
     else if (activeTab == 5) { // About
-        GuiLabel({ x + 20, pY, 400, 20 }, "M88M - PC-8801 Emulator for Modern Platforms");
+        GuiLabel({ x + 20, pY, 500, 20 }, "M88M - PC-8801 Emulator for Modern Platforms");
         pY += 25;
-        GuiLabel({ x + 20, pY, 400, 20 }, "Version: 0.2.0-beta");
+        GuiLabel({ x + 20, pY, 500, 20 }, "Version: 0.2.0-beta");
         pY += 35;
-        GuiLabel({ x + 20, pY, 400, 20 }, "Original M88: Copyright (C) cisc 1998-2003");
-        pY += 20;
-        GuiLabel({ x + 20, pY, 400, 20 }, "OPNA Emulation: fmgen by cisc");
+
+        auto DrawLink = [&](float lx, float ly, const char* text, const char* url) {
+            float tw = MeasureTextEx(GuiGetFont(), text, (float)GuiGetStyle(DEFAULT, TEXT_SIZE), (float)GuiGetStyle(DEFAULT, TEXT_SPACING)).x;
+            Rectangle rect = { lx, ly, 480, 20 };
+            Rectangle clickRect = { lx, ly, tw + 5, 20 };
+            Vector2 mouse = GetMousePosition();
+            bool hover = CheckCollisionPointRec(mouse, clickRect);
+            if (hover) {
+                SetMouseCursor(MOUSE_CURSOR_POINTING_HAND);
+                if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) OpenURL(url);
+                GuiSetState(STATE_FOCUSED);
+            }
+            GuiLabel(rect, text);
+            if (hover) {
+                DrawRectangle(rect.x, rect.y + 16, tw, 1, GetColor(GuiGetStyle(LABEL, TEXT_COLOR_FOCUSED)));
+                GuiSetState(STATE_NORMAL);
+            }
+        };
+
+        DrawLink(x + 20, pY, "Original M88: Copyright (C) cisc 1998-2003", "http://retropc.net/cisc/m88/");
+        pY += 25;
+        DrawLink(x + 20, pY, "OPNA Emulation: fmgen by cisc", "http://retropc.net/cisc/m88/");
         pY += 35;
-        GuiLabel({ x + 20, pY, 400, 20 }, "Ported with Raylib & Raygui");
+
+        GuiLabel({ x + 20, pY, 500, 20 }, "Powered by:");
         pY += 20;
-        GuiLabel({ x + 20, pY, 400, 20 }, "Contributor: Gemini / Claude Code");
+        DrawLink(x + 40, pY, "Raylib", "https://www.raylib.com/"); pY += 20;
+        DrawLink(x + 40, pY, "Raygui", "https://github.com/raysan5/raygui"); pY += 20;
+        DrawLink(x + 40, pY, "Chicago-Kare Font", "https://github.com/KingDuane/Chicago-Kare"); pY += 35;
+
+        GuiLabel({ x + 20, pY, 500, 20 }, "Contributor: Gemini / Claude Code");
     }
 
     if (changed) { coreRunner->RequestConfigApply(cfg, false); Config::Save(cfg); }
