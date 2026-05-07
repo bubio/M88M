@@ -8,4 +8,5 @@ namespace Paths {
     std::string GetAppDir();
     
     std::string SJIStoUTF8(const std::string& sjis);
+    std::string NormalizeNFC(const std::string& input);
 }

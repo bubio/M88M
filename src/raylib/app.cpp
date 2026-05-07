@@ -43,9 +43,10 @@ static Font LoadJapaneseFont() {
     // Codepoints to load
     std::vector<int> cp;
     for (int i = 32; i < 127; i++) cp.push_back(i);
-    for (int i = 0x3000; i <= 0x30FF; i++) cp.push_back(i);
-    for (int i = 0xFF61; i <= 0xFF9F; i++) cp.push_back(i);
-    for (int i = 0x4E00; i <= 0x6000; i++) cp.push_back(i);
+    for (int i = 0x2000; i <= 0x206F; i++) cp.push_back(i); // General Punctuation
+    for (int i = 0x3000; i <= 0x30FF; i++) cp.push_back(i); // CJK Symbols, Hiragana, Katakana
+    for (int i = 0x4E00; i <= 0x9FFF; i++) cp.push_back(i); // CJK Unified Ideographs
+    for (int i = 0xFF00; i <= 0xFFEF; i++) cp.push_back(i); // Halfwidth and Fullwidth Forms
 
     Font font = { 0 };
 

@@ -199,4 +199,29 @@ std::string SJIStoUTF8(const std::string& strOrg) {
 #endif
 }
 
+std::string NormalizeNFC(const std::string& input) {
+    if (input.empty()) return "";
+
+#ifdef __APPLE__
+    CFStringRef cfInput = CFStringCreateWithCString(kCFAllocatorDefault, input.c_str(), kCFStringEncodingUTF8);
+    if (!cfInput) return input;
+    
+    CFMutableStringRef cfMutable = CFStringCreateMutableCopy(kCFAllocatorDefault, 0, cfInput);
+    CFRelease(cfInput);
+    
+    CFStringNormalize(cfMutable, kCFStringNormalizationFormC);
+    
+    CFIndex length = CFStringGetMaximumSizeForEncoding(CFStringGetLength(cfMutable), kCFStringEncodingUTF8) + 1;
+    std::vector<char> buffer(length);
+    if (CFStringGetCString(cfMutable, buffer.data(), length, kCFStringEncodingUTF8)) {
+        std::string result(buffer.data());
+        CFRelease(cfMutable);
+        return result;
+    }
+    
+    CFRelease(cfMutable);
+#endif
+    return input;
+}
+
 } // namespace Paths

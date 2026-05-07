@@ -220,8 +220,8 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     const char* path1 = diskmgr->GetImagePath(0);
     const char* path2 = diskmgr->GetImagePath(1);
     std::string groupTitle = "Disk Drives";
-    if (path1[0]) groupTitle = GetFileNameOnly(path1);
-    else if (path2[0]) groupTitle = GetFileNameOnly(path2);
+    if (path1[0]) groupTitle = Paths::NormalizeNFC(GetFileNameOnly(path1));
+    else if (path2[0]) groupTitle = Paths::NormalizeNFC(GetFileNameOnly(path2));
 
     bool groupJp = ContainsJapanese(groupTitle);
     if (groupJp && IsFontValid(fontJp)) {
@@ -346,7 +346,7 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
         if (itemY + btnH < view.y || itemY > view.y + view.height) continue;
 
         const char* dTitle = diskmgr->GetImageTitle(selectingDiskForDrive, i);
-        std::string dLabel = dTitle ? Paths::SJIStoUTF8(std::string(dTitle, 16)) : "(No Title)";
+        std::string dLabel = dTitle ? Paths::NormalizeNFC(Paths::SJIStoUTF8(std::string(dTitle, 16))) : "(No Title)";
         size_t last = dLabel.find_last_not_of(" \0", dLabel.length());
         if (last != std::string::npos) dLabel = dLabel.substr(0, last + 1);
 
@@ -435,11 +435,11 @@ void UIManager::LoadStatePreview(const std::string& path) {
 static std::string GetCurrentDiskDisplayName(DiskManager* diskmgr) {
     int diskIdx = diskmgr->GetCurrentDisk(0);
     if (diskIdx >= 0) {
-        return Paths::SJIStoUTF8(diskmgr->GetImageTitle(0, diskIdx));
+        return Paths::NormalizeNFC(Paths::SJIStoUTF8(diskmgr->GetImageTitle(0, diskIdx)));
     }
     const char* path = diskmgr->GetImagePath(0);
     if (path[0]) {
-        return GetFileNameOnly(path);
+        return Paths::NormalizeNFC(GetFileNameOnly(path));
     }
     return "snapshot";
 }
@@ -1012,7 +1012,7 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
 
     int d1 = diskmgr->GetCurrentDisk(1);
     const char* t1_raw = (d1 >= 0) ? diskmgr->GetImageTitle(1, d1) : nullptr;
-    std::string t1 = (t1_raw) ? Paths::SJIStoUTF8(std::string(t1_raw, 16)) : "Empty";
+    std::string t1 = (t1_raw) ? Paths::NormalizeNFC(Paths::SJIStoUTF8(std::string(t1_raw, 16))) : "Empty";
     if (t1_raw) {
         size_t last = t1.find_last_not_of(" \0", t1.length());
         if (last != std::string::npos) t1 = t1.substr(0, last + 1);
@@ -1034,7 +1034,7 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
 
     int d0 = diskmgr->GetCurrentDisk(0);
     const char* t0_raw = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : nullptr;
-    std::string t0 = (d0 >= 0) ? Paths::SJIStoUTF8(std::string(t0_raw, 16)) : "Empty";
+    std::string t0 = (d0 >= 0) ? Paths::NormalizeNFC(Paths::SJIStoUTF8(std::string(t0_raw, 16))) : "Empty";
     if (t0_raw) {
         size_t last = t0.find_last_not_of(" \0", t0.length());
         if (last != std::string::npos) t0 = t0.substr(0, last + 1);
@@ -1200,14 +1200,14 @@ void UIManager::DrawRecentDiskDialog(DiskManager* diskmgr) {
         float itemY = view.y + i * (btnH + 4) + recentScrollOffset.y;
         if (itemY + btnH < view.y || itemY > view.y + view.height) continue;
 
-        const char* fileName = GetFileNameOnly(recentDisks[i].c_str());
+        std::string fileName = Paths::NormalizeNFC(GetFileNameOnly(recentDisks[i].c_str()));
         bool isJp = ContainsJapanese(fileName);
         if (isJp && IsFontValid(fontJp)) {
             GuiSetFont(fontJp);
             GuiSetStyle(DEFAULT, TEXT_SIZE, 15);
         }
 
-        if (GuiButton({ view.x, itemY, content.width, btnH }, fileName)) {
+        if (GuiButton({ view.x, itemY, content.width, btnH }, fileName.c_str())) {
             std::string path = recentDisks[i]; // Make a copy, don't use a reference
             MountDisk(diskmgr, path.c_str(), 0, 1);
             showRecentDialog = false;
