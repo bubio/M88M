@@ -189,7 +189,11 @@ if(RAYLIB_FRONT_SRC)
             MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/src/raylib/Info.plist.in"
         )
     else()
-        add_executable(m88_raylib ${RAYLIB_FRONT_SRC})
+        if(WIN32)
+            add_executable(m88_raylib WIN32 ${RAYLIB_FRONT_SRC})
+        else()
+            add_executable(m88_raylib ${RAYLIB_FRONT_SRC})
+        endif()
         set_target_properties(m88_raylib PROPERTIES OUTPUT_NAME "m88m")
 
         # Copy assets to the output directory so the executable can find them

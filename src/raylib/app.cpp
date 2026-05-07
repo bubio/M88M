@@ -140,6 +140,15 @@ static Font LoadLatinFont() {
 }
 
 int main() {
+#ifdef _WIN32
+    // If not running from a console, redirect stderr to a log file
+    if (!GetConsoleWindow()) {
+        std::string logDir = Paths::GetConfigDir();
+        Paths::EnsureDirectory(logDir);
+        std::string logPath = logDir + "/m88m.log";
+        freopen(logPath.c_str(), "w", stderr);
+    }
+#endif
     const int screenWidth = 640;
     const int screenHeight = 424; // 400 (emulation) + 24 (status bar)
 
@@ -231,3 +240,9 @@ int main() {
     CloseWindow();
     return 0;
 }
+
+#ifdef _WIN32
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nShowCmd) {
+    return main();
+}
+#endif
