@@ -123,7 +123,7 @@ void UIManager::Init() {
     GuiLoadStyleCyber();
 
     // "FD" DOS style theme overrides
-    GuiSetStyle(DEFAULT, BACKGROUND_COLOR, 0x000044f0); // Deep Navy Blue
+    GuiSetStyle(DEFAULT, BACKGROUND_COLOR, 0x000044d0); // Deep Navy Blue
     GuiSetStyle(DEFAULT, LINE_COLOR, 0x00ffffff);       // Bright Cyan Lines
 
     // Normal state
@@ -139,7 +139,7 @@ void UIManager::Init() {
     // Pressed state
     GuiSetStyle(DEFAULT, BORDER_COLOR_PRESSED, 0xffffffff);
     GuiSetStyle(DEFAULT, BASE_COLOR_PRESSED, 0x00aaaaff);   // Cyan-ish
-    GuiSetStyle(DEFAULT, TEXT_COLOR_PRESSED, 0x000000ff);   // Black text on cyan
+    GuiSetStyle(DEFAULT, TEXT_COLOR_PRESSED, 0xcccc00ff);   // Black text on cyan
 
     if (IsFontValid(fontEn)) {
         GuiSetFont(fontEn);
