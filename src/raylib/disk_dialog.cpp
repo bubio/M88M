@@ -813,7 +813,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         float labelW = 170;
 
         Rectangle scrollBounds = { x + 10, y + 70, width - 20, height - 120 };
-        Rectangle content = { 0, 0, width - 60, 480 };
+        Rectangle content = { 0, 0, width - 60, 370 };
         Rectangle view;
         if (!anyEdit && CheckCollisionPointRec(GetMousePosition(), scrollBounds)) inputScroll.y += GetMouseWheelMove() * 20;
         GuiScrollPanel(scrollBounds, NULL, content, &inputScroll, &view);
