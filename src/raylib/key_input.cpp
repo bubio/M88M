@@ -69,8 +69,8 @@ void KeyInput::Update() {
     set_key(1, 1, IsKeyDown(KEY_KP_9) || IsKeyDown(KEY_PAGE_UP) || (useNumRowFor10 && IsKeyDown(KEY_NINE)));
     set_key(1, 2, IsKeyDown(KEY_KP_MULTIPLY));
     set_key(1, 3, IsKeyDown(KEY_KP_ADD));
-    set_key(1, 4, IsKeyDown(KEY_EQUAL)); // num =
-    set_key(1, 5, IsKeyDown(KEY_COMMA)); // num ,
+    set_key(1, 4, IsKeyDown(KEY_KP_EQUAL) || (isUS && IsKeyDown(KEY_EQUAL))); // num =
+    set_key(1, 5, (isUS && IsKeyDown(KEY_COMMA))); // num ,
     set_key(1, 6, IsKeyDown(KEY_KP_DECIMAL) || IsKeyDown(KEY_DELETE));
     set_key(1, 7, IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_KP_ENTER)); // Return
 
