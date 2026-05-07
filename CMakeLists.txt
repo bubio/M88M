@@ -100,6 +100,12 @@ elseif(WIN32)
     else()
         set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_win64_mingw-w64.zip")
     endif()
+elseif(UNIX AND NOT APPLE)
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64")
+        set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_linux_amd64.tar.gz")
+    elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+        set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_linux_arm64.tar.gz")
+    endif()
 endif()
 
 if(RAYLIB_BINARY_URL)
@@ -278,7 +284,22 @@ if(RAYLIB_FRONT_SRC)
             comdlg32
         )
     elseif(UNIX)
-        target_link_libraries(m88_raylib PRIVATE pthread dl m)
+        target_link_libraries(m88_raylib PRIVATE pthread dl m rt)
+        
+        find_package(X11 REQUIRED)
+        target_link_libraries(m88_raylib PRIVATE ${X11_LIBRARIES})
+        
+        # Also need these for raylib on most Linux distros
+        target_link_libraries(m88_raylib PRIVATE Xcursor Xinerama Xrandr Xi)
+
+        find_package(OpenGL REQUIRED)
+        target_link_libraries(m88_raylib PRIVATE OpenGL::GL)
+        
+        # ALSA for audio
+        find_package(ALSA)
+        if(ALSA_FOUND)
+            target_link_libraries(m88_raylib PRIVATE ALSA::ALSA)
+        endif()
     endif()
 
     # --- Installation and Packaging ------------------------------------
