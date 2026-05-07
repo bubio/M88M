@@ -4,6 +4,7 @@
 #include "diskmgr.h"
 #include "pc88/config.h"
 #include <string>
+#include <vector>
 
 class UIManager {
 public:
@@ -15,6 +16,9 @@ public:
     void Draw(DiskManager* diskmgr, PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner, bool& shouldExit);
     void OpenNativeDialog(DiskManager* diskmgr, int drive);
     void OpenBothDrives(DiskManager* diskmgr);
+    void AddRecent(const std::string& path);
+    void LoadRecent();
+    void SaveRecent();
     void SetJPFont(Font font) { fontJp = font; }
     void SetENFont(Font font) { fontEn = font; }
 
@@ -32,6 +36,7 @@ private:
     void DrawMainMenu(DiskManager* diskmgr, class PC88* pc88, bool& shouldExit, class CoreRunner* coreRunner);
     void DrawSettings(PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner);
     void DrawDiskSelector(DiskManager* diskmgr);
+    void DrawRecentDiskDialog(DiskManager* diskmgr);
     void DrawStateDialog(DiskManager* diskmgr, class CoreRunner* coreRunner);
     void DrawConfirmDialog(bool& shouldExit, class PC88* pc88, class CoreRunner* coreRunner);
     void DrawStatusBar(DiskManager* diskmgr);
@@ -47,10 +52,13 @@ private:
     ModalState modalState;
     bool showSettings;
     bool showStateDialog;
+    bool showRecentDialog;
     int selectingDiskForDrive; // -1: none, 0: Drive 1, 1: Drive 2
+    int recentDiskTargetDrive;
     int activeTab;
     int currentStateSlot;
     Vector2 diskScrollOffset;
+    Vector2 recentScrollOffset;
     
     // UI state
     int windowScale;
@@ -80,6 +88,7 @@ private:
     Vector2 inputScroll;
     
     std::string lastOpenedPath[2];
+    std::vector<std::string> recentDisks;
     std::string stateMessage;
     std::string statePreviewPath;
     Texture2D statePreviewTexture;

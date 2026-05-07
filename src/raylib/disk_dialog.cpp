@@ -66,9 +66,11 @@ static std::string GetDirFromPath(const std::string& path) {
 }
 
 UIManager::UIManager() :
-    showMenu(false), modalState(MODAL_NONE), showSettings(false), showStateDialog(false), selectingDiskForDrive(-1), activeTab(0),
+    showMenu(false), modalState(MODAL_NONE), showSettings(false), showStateDialog(false), showRecentDialog(false),
+    selectingDiskForDrive(-1), recentDiskTargetDrive(-1), activeTab(0),
     currentStateSlot(0),
     diskScrollOffset({ 0, 0 }),
+    recentScrollOffset({ 0, 0 }),
     windowScale(0), isFullscreen(false),
     basicModeEdit(false), windowScaleEdit(false),
     cpuModeEdit(false), port44Edit(false), portA8Edit(false), samplingEdit(false), keyboardEdit(false),
@@ -86,10 +88,12 @@ UIManager::UIManager() :
     statePreviewTexture = {0};
     fontJp = {0};
     fontEn = {0};
+    LoadRecent();
     NFD_Init();
 }
 
 UIManager::~UIManager() {
+    SaveRecent();
     if (IsTextureValid(statePreviewTexture)) UnloadTexture(statePreviewTexture);
     NFD_Quit();
 }
@@ -170,6 +174,7 @@ void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
     if (showMenu && IsKeyPressed(KEY_ESCAPE)) {
         if (modalState != MODAL_NONE) modalState = MODAL_NONE;
         else if (selectingDiskForDrive != -1) selectingDiskForDrive = -1;
+        else if (showRecentDialog) showRecentDialog = false;
         else if (showStateDialog) showStateDialog = false;
         else if (showSettings) showSettings = false;
         else ToggleMenu(coreRunner);
@@ -183,6 +188,7 @@ void UIManager::Draw(DiskManager* diskmgr, PC8801::Config& cfg, PC88* pc88, Core
         DrawRectangle(0, 0, GetScreenWidth(), GetScreenHeight(), StyleFade(DEFAULT, BACKGROUND_COLOR, 0.4f));
         if (modalState != MODAL_NONE) DrawConfirmDialog(shouldExit, pc88, coreRunner);
         else if (selectingDiskForDrive != -1) DrawDiskSelector(diskmgr);
+        else if (showRecentDialog) DrawRecentDiskDialog(diskmgr);
         else if (showStateDialog) DrawStateDialog(diskmgr, coreRunner);
         else if (showSettings) DrawSettings(cfg, pc88, coreRunner);
         else DrawMainMenu(diskmgr, pc88, shouldExit, coreRunner);
@@ -227,7 +233,10 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
         GuiSetStyle(DEFAULT, TEXT_SIZE, IsFontValid(fontEn) ? 16 : 10);
     }
 
-    if (GuiButton({ x + 20, btnY + 10, width - 85, btnH }, "Drive 1&2...")) OpenBothDrives(diskmgr);
+    if (GuiButton({ x + 20, btnY + 10, width - 110, btnH }, "Drive 1&2...")) OpenBothDrives(diskmgr);
+    if (GuiButton({ x + width - 85, btnY + 10, 30, btnH }, GuiIconText(ICON_CLOCK, NULL))) {
+        showRecentDialog = true;
+    }
     if (GuiButton({ x + width - 50, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
         diskmgr->Unmount(0); diskmgr->Unmount(1);
         lastOpenedPath[0] = lastOpenedPath[1] = "";
@@ -319,6 +328,7 @@ void UIManager::OpenBothDrives(DiskManager* diskmgr) {
         lastOpenedPath[0] = outPath;
         lastOpenedPath[1] = outPath;
         if (diskmgr->Mount(0, outPath, false, 0, false)) {
+            AddRecent(outPath);
             if (diskmgr->GetNumDisks(0) > 1) {
                 diskmgr->Mount(1, outPath, false, 1, false);
             }
@@ -1083,12 +1093,108 @@ void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
     if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {
         lastOpenedPath[drive] = outPath;
         if (diskmgr->Mount(drive, outPath, false, 0, false)) {
+            AddRecent(outPath);
             if (diskmgr->GetNumDisks(drive) > 1) {
                 selectingDiskForDrive = drive;
             }
         }
         NFD_FreePath(outPath);
     }
+}
+
+void UIManager::AddRecent(const std::string& path) {
+    if (path.empty()) return;
+    for (auto it = recentDisks.begin(); it != recentDisks.end(); ++it) {
+        if (*it == path) {
+            recentDisks.erase(it);
+            break;
+        }
+    }
+    recentDisks.insert(recentDisks.begin(), path);
+    if (recentDisks.size() > 20) recentDisks.resize(20);
+    SaveRecent();
+}
+
+void UIManager::LoadRecent() {
+    recentDisks.clear();
+    std::string path = Paths::GetConfigDir() + "/recent.txt";
+    FILE* fp = fopen(path.c_str(), "r");
+    if (fp) {
+        char buf[1024];
+        while (fgets(buf, sizeof(buf), fp)) {
+            size_t len = strlen(buf);
+            while (len > 0 && (buf[len-1] == '\r' || buf[len-1] == '\n')) {
+                buf[--len] = '\0';
+            }
+            if (len > 0) recentDisks.push_back(buf);
+        }
+        fclose(fp);
+    }
+}
+
+void UIManager::SaveRecent() {
+    std::string path = Paths::GetConfigDir() + "/recent.txt";
+    FILE* fp = fopen(path.c_str(), "w");
+    if (fp) {
+        for (const auto& s : recentDisks) {
+            fprintf(fp, "%s\n", s.c_str());
+        }
+        fclose(fp);
+    }
+}
+
+void UIManager::DrawRecentDiskDialog(DiskManager* diskmgr) {
+    float width = 400;
+    float height = 340;
+    float x = (float)GetScreenWidth() / 2 - width / 2;
+    float y = (float)GetScreenHeight() / 2 - height / 2;
+
+    std::string title = "Recent Disks";
+    if (recentDiskTargetDrive >= 0) title += " (Drive " + std::to_string(recentDiskTargetDrive + 1) + ")";
+    if (GuiWindowBox({ x, y, width, height }, title.c_str())) showRecentDialog = false;
+
+    float btnY = y + 40;
+    float btnH = 26;
+
+    Rectangle view = { x + 10, btnY, width - 20, height - 90 };
+    Rectangle content = { 0, 0, width - 40, (float)recentDisks.size() * (btnH + 4) };
+
+    GuiScrollPanel(view, NULL, { 0, 0, content.width, content.height }, &recentScrollOffset, &view);
+
+    BeginScissorMode((int)view.x, (int)view.y, (int)view.width, (int)view.height);
+    for (size_t i = 0; i < recentDisks.size(); i++) {
+        float itemY = view.y + i * (btnH + 4) + recentScrollOffset.y;
+        if (itemY + btnH < view.y || itemY > view.y + view.height) continue;
+
+        const char* fileName = GetFileNameOnly(recentDisks[i].c_str());
+        bool isJp = ContainsJapanese(fileName);
+        if (isJp && IsFontValid(fontJp)) {
+            GuiSetFont(fontJp);
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 15);
+        }
+
+        if (GuiButton({ view.x, itemY, content.width, btnH }, fileName)) {
+            std::string path = recentDisks[i]; // Make a copy, don't use a reference
+            if (diskmgr->Mount(0, path.c_str(), false, 0, false)) {
+                lastOpenedPath[0] = path;
+                lastOpenedPath[1] = path;
+                AddRecent(path);
+                if (diskmgr->GetNumDisks(0) > 1) {
+                    diskmgr->Mount(1, path.c_str(), false, 1, false);
+                }
+            }
+            showRecentDialog = false;
+            break; // Exit loop after modifying vector
+        }
+
+        if (isJp && IsFontValid(fontEn)) {
+            GuiSetFont(fontEn);
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 16);
+        }
+    }
+    EndScissorMode();
+
+    if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) showRecentDialog = false;
 }
 
 void UIManager::DrawConfirmDialog(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
