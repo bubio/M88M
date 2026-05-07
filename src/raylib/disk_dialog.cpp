@@ -376,6 +376,16 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
     if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) selectingDiskForDrive = -1;
 }
 
+static std::string GetPathHash(const std::string& path) {
+    unsigned long long hash = 5381;
+    for (char c : path) {
+        hash = ((hash << 5) + hash) + (unsigned char)c;
+    }
+    char buf[32];
+    snprintf(buf, sizeof(buf), "%016llx", hash);
+    return std::string(buf);
+}
+
 static std::string SanitizeStateName(const std::string& in) {
     std::string out;
     for (unsigned char c : in) {
@@ -389,17 +399,18 @@ static std::string SanitizeStateName(const std::string& in) {
 
 std::string UIManager::GetStatePath(DiskManager* diskmgr, int slot) const {
     std::string dir = Paths::GetConfigDir() + "/states";
-    struct stat st;
-    if (stat(dir.c_str(), &st) != 0) mkdir(dir.c_str(), 0755);
+    Paths::EnsureDirectory(dir);
 
+    const char* diskPath = diskmgr->GetImagePath(0);
     std::string title = "snapshot";
-    int diskIdx = diskmgr->GetCurrentDisk(0);
-    if (diskIdx >= 0) {
-        title = Paths::SJIStoUTF8(diskmgr->GetImageTitle(0, diskIdx));
-    } else {
-        const char* path = diskmgr->GetImagePath(0);
-        if (path[0]) title = GetFileNameOnly(path);
+
+    if (diskPath && diskPath[0]) {
+        std::string hash = GetPathHash(diskPath);
+        dir += "/" + hash;
+        Paths::EnsureDirectory(dir);
+        title = GetFileNameOnly(diskPath);
     }
+
     return dir + "/" + SanitizeStateName(title) + "_" + std::to_string(slot) + ".s88";
 }
 

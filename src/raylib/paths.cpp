@@ -22,13 +22,13 @@
 
 namespace Paths {
 
-static bool DirectoryExists(const std::string& path) {
+bool DirectoryExists(const std::string& path) {
     struct stat info;
     if (stat(path.c_str(), &info) != 0) return false;
     return (info.st_mode & S_IFDIR) != 0;
 }
 
-static void EnsureDirectory(const std::string& path) {
+void EnsureDirectory(const std::string& path) {
     if (path.empty() || DirectoryExists(path)) return;
 
     size_t pos = 0;
