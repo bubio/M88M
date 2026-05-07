@@ -526,7 +526,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     if (!mouseSensEdit) mouseSensVal = (int)cfg.mousesensibility;
 
     bool isDropdownOpen = basicModeEdit || cpuModeEdit || port44Edit || portA8Edit || samplingEdit || windowScaleEdit || keyboardEdit;
-    bool isValueBoxActive = speedEdit || eramEdit || bufferEdit || masterVolEdit || volFmEdit || volSsgEdit || volAdpcmEdit || volRhythmEdit;
+    bool isValueBoxActive = speedEdit || eramEdit || bufferEdit || masterVolEdit || volFmEdit || volSsgEdit || volAdpcmEdit || volRhythmEdit || mouseSensEdit;
     for (int i = 0; i < 6; i++) if (volRhythmDetailEdit[i]) isValueBoxActive = true;
     bool anyEdit = isDropdownOpen || isValueBoxActive;
 
