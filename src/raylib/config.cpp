@@ -10,10 +10,7 @@ static PC8801::Config g_config;
 
 static std::string GetConfigFilePath() {
     std::string dir = Paths::GetConfigDir();
-    struct stat st;
-    if (stat(dir.c_str(), &st) != 0) {
-        mkdir(dir.c_str(), 0755);
-    }
+    Paths::EnsureDirectory(dir);
     return dir + "/config.bin";
 }
 

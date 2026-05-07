@@ -22,10 +22,37 @@
 
 namespace Paths {
 
+#ifdef _WIN32
+std::wstring UTF8ToWide(const std::string& utf8) {
+    if (utf8.empty()) return L"";
+    int nw = MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, nullptr, 0);
+    if (nw <= 0) return L"";
+    std::vector<wchar_t> wbuf(nw);
+    MultiByteToWideChar(CP_UTF8, 0, utf8.c_str(), -1, wbuf.data(), nw);
+    return std::wstring(wbuf.data());
+}
+#endif
+
 bool DirectoryExists(const std::string& path) {
+#ifdef _WIN32
+    struct _stat64i32 info;
+    if (_wstat(UTF8ToWide(path).c_str(), &info) != 0) return false;
+#else
     struct stat info;
     if (stat(path.c_str(), &info) != 0) return false;
+#endif
     return (info.st_mode & S_IFDIR) != 0;
+}
+
+bool FileExists(const std::string& path) {
+#ifdef _WIN32
+    struct _stat64i32 info;
+    if (_wstat(UTF8ToWide(path).c_str(), &info) != 0) return false;
+#else
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) return false;
+#endif
+    return (info.st_mode & S_IFREG) != 0;
 }
 
 void EnsureDirectory(const std::string& path) {
@@ -34,13 +61,34 @@ void EnsureDirectory(const std::string& path) {
     size_t pos = 0;
     while ((pos = path.find_first_of("/\\", pos + 1)) != std::string::npos) {
         std::string subdir = path.substr(0, pos);
-        if (!subdir.empty() && subdir != "/" && subdir.find(':') == std::string::npos && !DirectoryExists(subdir)) {
+#ifdef _WIN32
+        if (!subdir.empty() && subdir.back() != ':' && !DirectoryExists(subdir)) {
+            _wmkdir(UTF8ToWide(subdir).c_str());
+        }
+#else
+        if (!subdir.empty() && subdir != "/" && !DirectoryExists(subdir)) {
             mkdir(subdir.c_str(), 0755);
         }
+#endif
     }
     if (!DirectoryExists(path)) {
+#ifdef _WIN32
+        _wmkdir(UTF8ToWide(path).c_str());
+#else
         mkdir(path.c_str(), 0755);
+#endif
     }
+}
+
+long long GetFileModTime(const std::string& path) {
+#ifdef _WIN32
+    struct _stat64i32 info;
+    if (_wstat(UTF8ToWide(path).c_str(), &info) != 0) return 0;
+#else
+    struct stat info;
+    if (stat(path.c_str(), &info) != 0) return 0;
+#endif
+    return (long long)info.st_mtime;
 }
 
 std::string GetAppDir() {

@@ -1,6 +1,7 @@
 #include "screen_view.h"
 #include "pc88/config.h"
 #include "config.h"
+#include "common/file.h"
 #include <cstring>
 #include <algorithm>
 
@@ -120,7 +121,20 @@ bool RaylibDraw::SavePNG(const char* path) {
         1,
         PIXELFORMAT_UNCOMPRESSED_R8G8B8A8
     };
-    bool ok = ExportImage(out, path);
+
+    int dataSize = 0;
+    unsigned char* fileData = ExportImageToMemory(out, ".png", &dataSize);
+    bool ok = false;
+    if (fileData) {
+        FileIO fio;
+        if (fio.CreateNew(path)) {
+            if (fio.Write(fileData, dataSize) == dataSize) {
+                ok = true;
+            }
+        }
+        MemFree(fileData);
+    }
+
     UnloadImageColors(pixels);
     UnloadImage(img);
     return ok;

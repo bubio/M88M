@@ -9,6 +9,7 @@
 #include "paths.h"
 #include "status.h"
 #include "core_runner.h"
+#include "common/file.h"
 #include <string>
 #include <vector>
 #include <sys/stat.h>
@@ -33,11 +34,11 @@ static std::string FormatTime(time_t t) {
 
 static StateSlotInfo ReadStateSlotInfo(const std::string& path) {
     StateSlotInfo info;
-    struct stat st;
-    if (stat(path.c_str(), &st) != 0) return info;
+    long long mtime = Paths::GetFileModTime(path);
+    if (mtime == 0) return info;
 
     info.exists = true;
-    info.modified = FormatTime(st.st_mtime);
+    info.modified = FormatTime((time_t)mtime);
     return info;
 }
 }
@@ -423,8 +424,7 @@ std::string UIManager::GetStateScreenshotPath(DiskManager* diskmgr, int slot) co
 
 bool UIManager::StateSlotExists(DiskManager* diskmgr, int slot) const {
     std::string path = GetStatePath(diskmgr, slot);
-    struct stat st;
-    return stat(path.c_str(), &st) == 0;
+    return Paths::FileExists(path);
 }
 
 void UIManager::LoadStatePreview(const std::string& path) {
@@ -434,11 +434,23 @@ void UIManager::LoadStatePreview(const std::string& path) {
         statePreviewTexture = {0};
     }
     statePreviewPath = path;
-    struct stat st;
-    if (stat(path.c_str(), &st) == 0) {
-        statePreviewTexture = LoadTexture(path.c_str());
-        if (IsTextureValid(statePreviewTexture)) {
-            SetTextureFilter(statePreviewTexture, TEXTURE_FILTER_POINT);
+    if (Paths::FileExists(path)) {
+        FileIO fio;
+        if (fio.Open(path.c_str(), FileIO::readonly)) {
+            fio.Seek(0, FileIO::end);
+            int32 size = fio.Tellp();
+            fio.Seek(0, FileIO::begin);
+            std::vector<unsigned char> data(size);
+            if (fio.Read(data.data(), size) == size) {
+                Image img = LoadImageFromMemory(".png", data.data(), size);
+                if (IsImageValid(img)) {
+                    statePreviewTexture = LoadTextureFromImage(img);
+                    UnloadImage(img);
+                    if (IsTextureValid(statePreviewTexture)) {
+                        SetTextureFilter(statePreviewTexture, TEXTURE_FILTER_POINT);
+                    }
+                }
+            }
         }
     }
 }
@@ -1187,28 +1199,41 @@ void UIManager::AddRecent(const std::string& path) {
 void UIManager::LoadRecent() {
     recentDisks.clear();
     std::string path = Paths::GetConfigDir() + "/recent.txt";
-    FILE* fp = fopen(path.c_str(), "r");
-    if (fp) {
-        char buf[1024];
-        while (fgets(buf, sizeof(buf), fp)) {
-            size_t len = strlen(buf);
-            while (len > 0 && (buf[len-1] == '\r' || buf[len-1] == '\n')) {
-                buf[--len] = '\0';
+    FileIO fio;
+    if (fio.Open(path.c_str(), FileIO::readonly)) {
+        std::vector<char> buf(fio.Tellp() + 1024); // Size of file if we knew it
+        // Since FileIO doesn't have a GetSize, but we can Seek to end
+        fio.Seek(0, FileIO::end);
+        int32 size = fio.Tellp();
+        fio.Seek(0, FileIO::begin);
+        
+        std::string content;
+        content.resize(size);
+        fio.Read(&content[0], size);
+        
+        std::string line;
+        for (char c : content) {
+            if (c == '\r' || c == '\n') {
+                if (!line.empty()) {
+                    recentDisks.push_back(line);
+                    line.clear();
+                }
+            } else {
+                line.push_back(c);
             }
-            if (len > 0) recentDisks.push_back(buf);
         }
-        fclose(fp);
+        if (!line.empty()) recentDisks.push_back(line);
     }
 }
 
 void UIManager::SaveRecent() {
     std::string path = Paths::GetConfigDir() + "/recent.txt";
-    FILE* fp = fopen(path.c_str(), "w");
-    if (fp) {
+    FileIO fio;
+    if (fio.CreateNew(path.c_str())) {
         for (const auto& s : recentDisks) {
-            fprintf(fp, "%s\n", s.c_str());
+            std::string line = s + "\n";
+            fio.Write(line.c_str(), (int32)line.length());
         }
-        fclose(fp);
     }
 }
 
