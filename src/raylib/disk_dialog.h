@@ -16,6 +16,7 @@ public:
     void Draw(DiskManager* diskmgr, PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner, bool& shouldExit);
     void OpenNativeDialog(DiskManager* diskmgr, int drive);
     void OpenBothDrives(DiskManager* diskmgr);
+    void MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2);
     void AddRecent(const std::string& path);
     void LoadRecent();
     void SaveRecent();

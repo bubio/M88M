@@ -186,7 +186,7 @@ int main() {
         if (IsFileDropped()) {
             FilePathList droppedFiles = LoadDroppedFiles();
             if (droppedFiles.count > 0) {
-                core.GetDiskManager()->Mount(0, droppedFiles.paths[0], false, 0, false);
+                core.GetUIManager()->MountDisk(core.GetDiskManager(), droppedFiles.paths[0], 0, 1);
             }
             UnloadDroppedFiles(droppedFiles);
         }

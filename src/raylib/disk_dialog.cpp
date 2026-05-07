@@ -325,14 +325,7 @@ void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     }
 
     if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {
-        lastOpenedPath[0] = outPath;
-        lastOpenedPath[1] = outPath;
-        if (diskmgr->Mount(0, outPath, false, 0, false)) {
-            AddRecent(outPath);
-            if (diskmgr->GetNumDisks(0) > 1) {
-                diskmgr->Mount(1, outPath, false, 1, false);
-            }
-        }
+        MountDisk(diskmgr, outPath, 0, 1);
         NFD_FreePath(outPath);
     }
 }
@@ -374,7 +367,7 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
         std::string label = std::to_string(i + 1) + ": " + dLabel;
 
         if (GuiButton({ view.x, itemY, content.width, btnH }, label.c_str())) {
-            diskmgr->Mount(selectingDiskForDrive, diskmgr->GetImageTitle(selectingDiskForDrive, i), true, i, true);
+            diskmgr->Mount(selectingDiskForDrive, lastOpenedPath[selectingDiskForDrive].c_str(), false, i, false);
             selectingDiskForDrive = -1;
         }
 
@@ -1077,6 +1070,67 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     DrawEnText(TextFormat("%d FPS", GetFPS()), (int)sW - 80, (int)textY, statusText);
 }
 
+void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2) {
+    if (!path) return;
+    bool success = false;
+    int availableImages = 0;
+
+    // Mount Drive 1
+    if (img1 >= 0) {
+        if (diskmgr->Mount(0, path, false, img1, false)) {
+            lastOpenedPath[0] = path;
+            success = true;
+            availableImages = (int)diskmgr->GetNumDisks(0);
+        }
+    }
+
+    // Mount Drive 2
+    if (img2 >= 0) {
+        if (img1 < 0) {
+            // Mounting ONLY to Drive 2
+            if (diskmgr->Mount(1, path, false, img2, false)) {
+                lastOpenedPath[1] = path;
+                success = true;
+                availableImages = (int)diskmgr->GetNumDisks(1);
+            }
+        } else {
+            // Both drives specified (Drive 1&2 auto-mount behavior)
+            if (img2 < availableImages) {
+                if (diskmgr->Mount(1, path, false, img2, false)) {
+                    lastOpenedPath[1] = path;
+                    success = true;
+                }
+            } else {
+                // No second image available, explicitly eject Drive 2
+                diskmgr->Unmount(1);
+                lastOpenedPath[1] = "";
+            }
+        }
+    }
+
+    if (success) {
+        AddRecent(path);
+        // If mounting to only one drive, show selector if multiple images exist
+        if (img1 >= 0 && img2 < 0) {
+            if (availableImages > 1) selectingDiskForDrive = 0;
+            else selectingDiskForDrive = -1;
+        } else if (img1 < 0 && img2 >= 0) {
+            if (availableImages > 1) selectingDiskForDrive = 1;
+            else selectingDiskForDrive = -1;
+        } else {
+            // Auto mount both (Drive 1&2, Recent, D&D) - don't show selector
+            selectingDiskForDrive = -1;
+        }
+    }
+
+    // Synchronize lastOpenedPath with actual state (handles auto-eject/swapping)
+    for (int i = 0; i < 2; i++) {
+        if (diskmgr->GetCurrentDisk(i) < 0) {
+            lastOpenedPath[i] = "";
+        }
+    }
+}
+
 void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
     nfdchar_t *outPath = NULL;
     nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
@@ -1091,13 +1145,7 @@ void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
     }
 
     if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {
-        lastOpenedPath[drive] = outPath;
-        if (diskmgr->Mount(drive, outPath, false, 0, false)) {
-            AddRecent(outPath);
-            if (diskmgr->GetNumDisks(drive) > 1) {
-                selectingDiskForDrive = drive;
-            }
-        }
+        MountDisk(diskmgr, outPath, (drive == 0) ? 0 : -1, (drive == 1) ? 0 : -1);
         NFD_FreePath(outPath);
     }
 }
@@ -1175,14 +1223,7 @@ void UIManager::DrawRecentDiskDialog(DiskManager* diskmgr) {
 
         if (GuiButton({ view.x, itemY, content.width, btnH }, fileName)) {
             std::string path = recentDisks[i]; // Make a copy, don't use a reference
-            if (diskmgr->Mount(0, path.c_str(), false, 0, false)) {
-                lastOpenedPath[0] = path;
-                lastOpenedPath[1] = path;
-                AddRecent(path);
-                if (diskmgr->GetNumDisks(0) > 1) {
-                    diskmgr->Mount(1, path.c_str(), false, 1, false);
-                }
-            }
+            MountDisk(diskmgr, path.c_str(), 0, 1);
             showRecentDialog = false;
             break; // Exit loop after modifying vector
         }

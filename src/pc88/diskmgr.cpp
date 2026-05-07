@@ -380,8 +380,7 @@ bool DiskManager::Mount
 				{
 					if ((d != dr) && (drive[d].holder == h) && (drive[d].index == index))
 					{
-						index = -1;		// no disk
-						statusdisplay.Show(90, 3000, "���̃f�B�X�N�͎g�p���ł�");
+						Unmount(d);
 						break;
 					}
 				}
