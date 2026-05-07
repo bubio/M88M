@@ -582,9 +582,11 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         pY += rowH;
         GuiLabel({ x + 20, pY, labelW, 20 }, "Speed:");
         float speedValF = (float)cfg.speed;
+        if (speedEdit) GuiSetState(STATE_DISABLED);
         if (GuiSlider({ x + 180, pY, 180, 16 }, NULL, NULL, &speedValF, 20, 200)) {
             cfg.speed = (int)speedValF; changed = true;
         }
+        GuiSetState(STATE_NORMAL);
         bool wasUnl = false; if (speedEdit) { GuiUnlock(); wasUnl = true; }
         if (GuiValueBox({ x + 370, pY, 50, 16 }, NULL, &cfg.speed, 20, 200, speedEdit)) {
             speedEdit = !speedEdit; if (!speedEdit) changed = true;
@@ -630,9 +632,11 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         pY += rowH;
         GuiLabel({ x + 20, pY, labelW, 20 }, "ERAM:");
         float eramValF = (float)cfg.erambanks;
+        if (eramEdit) GuiSetState(STATE_DISABLED);
         if (GuiSlider({ x + 180, pY, 180, 16 }, NULL, NULL, &eramValF, 0, 128)) {
             cfg.erambanks = (int)eramValF; changed = true; resetPending = true;
         }
+        GuiSetState(STATE_NORMAL);
         wasUnl = false; if (eramEdit) { GuiUnlock(); wasUnl = true; }
         if (GuiValueBox({ x + 370, pY, 50, 16 }, NULL, &cfg.erambanks, 0, 128, eramEdit)) {
             eramEdit = !eramEdit; if (!eramEdit) { changed = true; resetPending = true; }
@@ -681,9 +685,11 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         pY += rowH + 4;
         GuiLabel({ x + 20, pY, 120, 20 }, "Buffer (ms):");
         float bufValF = (float)cfg.soundbuffer;
+        if (bufferEdit) GuiSetState(STATE_DISABLED);
         if (GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &bufValF, 50, 500)) {
             cfg.soundbuffer = (uint)bufValF; changed = true; resetPending = true;
         }
+        GuiSetState(STATE_NORMAL);
         bool wasUnl = false; if (bufferEdit) { GuiUnlock(); wasUnl = true; }
         if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &bufferVal, 50, 500, bufferEdit)) {
             bufferEdit = !bufferEdit; if (!bufferEdit) { cfg.soundbuffer = (uint)bufferVal; changed = true; resetPending = true; }
@@ -763,6 +769,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             float mValF = (float)cfg.mastervol;
             if (masterVolEdit) GuiSetState(STATE_DISABLED);
             if (GuiSlider({ sX + 90, curY, 240, 16 }, NULL, NULL, &mValF, 0, 128)) { cfg.mastervol = (int)mValF; changed = true; }
+            GuiSetState(STATE_NORMAL);
             bool wasUnl = false; if (masterVolEdit) { GuiUnlock(); wasUnl = true; }
             if (GuiValueBox({ sX + 340, curY, 50, 16 }, NULL, &cfg.mastervol, 0, 128, masterVolEdit)) {
                 masterVolEdit = !masterVolEdit; if (!masterVolEdit) changed = true;
@@ -780,6 +787,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
                 float valF = (float)*vPtrs[i];
                 if (*ePtrs[i]) GuiSetState(STATE_DISABLED);
                 if (GuiSlider({ sX + 90, box1Y + 10, 240, 16 }, NULL, NULL, &valF, -100, 40)) { *vPtrs[i] = (int)valF; changed = true; }
+                GuiSetState(STATE_NORMAL);
                 wasUnl = false; if (*ePtrs[i]) { GuiUnlock(); wasUnl = true; }
                 if (GuiValueBox({ sX + 340, box1Y + 10, 50, 16 }, NULL, vPtrs[i], -100, 40, *ePtrs[i])) {
                     *ePtrs[i] = !*ePtrs[i]; if (!*ePtrs[i]) changed = true;
@@ -800,6 +808,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
                 float valF = (float)*rPtrs[i];
                 if (volRhythmDetailEdit[i]) GuiSetState(STATE_DISABLED);
                 if (GuiSlider({ sX + 65, box2Y + 10, 265, 16 }, NULL, NULL, &valF, -100, 40)) { *rPtrs[i] = (int)valF; changed = true; }
+                GuiSetState(STATE_NORMAL);
                 wasUnl = false; if (volRhythmDetailEdit[i]) { GuiUnlock(); wasUnl = true; }
                 if (GuiValueBox({ sX + 340, box2Y + 10, 50, 16 }, NULL, rPtrs[i], -100, 40, volRhythmDetailEdit[i])) {
                     volRhythmDetailEdit[i] = !volRhythmDetailEdit[i]; if (!volRhythmDetailEdit[i]) changed = true;
@@ -901,6 +910,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             float mSensF = (float)cfg.mousesensibility;
             if (mouseSensEdit) GuiSetState(STATE_DISABLED);
             if (GuiSlider({ sX + 190, curY, 130, 16 }, NULL, NULL, &mSensF, 1, 10)) { cfg.mousesensibility = (uint)mSensF; changed = true; }
+            GuiSetState(STATE_NORMAL);
             bool wasUnl = false; if (mouseSensEdit) { GuiUnlock(); wasUnl = true; }
             if (GuiValueBox({ sX + 330, curY, 50, 16 }, NULL, &mouseSensVal, 1, 10, mouseSensEdit)) {
                 mouseSensEdit = !mouseSensEdit;
