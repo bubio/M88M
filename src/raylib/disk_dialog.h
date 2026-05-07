@@ -77,6 +77,7 @@ private:
     int bufferVal;
     int mouseSensVal;
     Vector2 mixerScroll;
+    Vector2 inputScroll;
     
     std::string lastOpenedPath[2];
     std::string stateMessage;

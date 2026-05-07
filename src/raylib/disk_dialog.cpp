@@ -77,6 +77,7 @@ UIManager::UIManager() :
     mouseSensEdit(false),
     bufferVal(100), mouseSensVal(10),
     mixerScroll({ 0, 0 }),
+    inputScroll({ 0, 0 }),
     resetPending(false)
 {
     for (int i = 0; i < 6; i++) volRhythmDetailEdit[i] = false;
@@ -811,88 +812,102 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     else if (activeTab == 4) { // Input
         float labelW = 170;
 
-        pY += 10;
-        GuiGroupBox({ x + 10, pY - 5, width - 20, rowH * 3 + 15 }, "Keyboard Settings");
-        pY += 10;
+        Rectangle scrollBounds = { x + 10, y + 70, width - 20, height - 120 };
+        Rectangle content = { 0, 0, width - 60, 480 };
+        Rectangle view;
+        if (!anyEdit && CheckCollisionPointRec(GetMousePosition(), scrollBounds)) inputScroll.y += GetMouseWheelMove() * 20;
+        GuiScrollPanel(scrollBounds, NULL, content, &inputScroll, &view);
+        if (inputScroll.y > 0) inputScroll.y = 0;
+        if (inputScroll.y < (view.height - content.height)) inputScroll.y = view.height - content.height;
 
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Keyboard:");
-        Rectangle kRect = { x + 200, pY, 200, 24 };
-        static int kIdx;
-        if (!keyboardEdit) kIdx = cfg.keytype;
-        if (keyboardEdit) { ddRect = kRect; ddText = "AT-106 JP;PC-98;AT-101 US"; ddIndexPtr = &kIdx; ddEditPtr = &keyboardEdit; }
-        else if (GuiDropdownBox(kRect, "AT-106 JP;PC-98;AT-101 US", &kIdx, false)) keyboardEdit = true;
+        BeginScissorMode((int)view.x, (int)view.y, (int)view.width, (int)view.height);
+            float sX = view.x + inputScroll.x;
+            float sY = view.y + inputScroll.y;
+            float curY = sY + 10;
 
-        pY += rowH + 4;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Cursor to Numpad:");
-        int numpadVal = (cfg.flags & PC8801::Config::usearrowfor10) ? 1 : 0;
-        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &numpadVal)) {
-            if (numpadVal) cfg.flags |= PC8801::Config::usearrowfor10; else cfg.flags &= ~PC8801::Config::usearrowfor10; changed = true;
-        }
+            // 1. Keyboard Settings
+            GuiGroupBox({ sX + 5, curY - 5, width - 65, rowH * 3 + 15 }, "Keyboard Settings");
+            curY += 10;
 
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Num row to Numpad:");
-        int numrowVal = (cfg.flag2 & PC8801::Config::usenumrowfor10) ? 1 : 0;
-        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &numrowVal)) {
-            if (numrowVal) cfg.flag2 |= PC8801::Config::usenumrowfor10; else cfg.flag2 &= ~PC8801::Config::usenumrowfor10; changed = true;
-        }
+            GuiLabel({ sX + 15, curY, labelW, 20 }, "Keyboard:");
+            Rectangle kRect = { sX + 190, curY, 200, 24 };
+            static int kIdx;
+            if (!keyboardEdit) kIdx = cfg.keytype;
+            if (keyboardEdit) { ddRect = kRect; ddText = "AT-106 JP;PC-98;AT-101 US"; ddIndexPtr = &kIdx; ddEditPtr = &keyboardEdit; }
+            else if (GuiDropdownBox(kRect, "AT-106 JP;PC-98;AT-101 US", &kIdx, false)) keyboardEdit = true;
 
-        // 2. Joypad Settings
-        pY += rowH + 25;
-        GuiGroupBox({ x + 10, pY - 5, width - 20, rowH * 2 + 15 }, "Joypad Settings");
-        pY += 10;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Enable Joypad:");
-        int padVal = (cfg.flags & PC8801::Config::enablepad) ? 1 : 0;
-        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &padVal)) {
-            if (padVal) {
-                cfg.flags |= PC8801::Config::enablepad;
-                cfg.flags &= ~PC8801::Config::enablemouse; // Mutually exclusive in original M88
-            } else cfg.flags &= ~PC8801::Config::enablepad;
-            changed = true;
-        }
+            curY += rowH + 4;
+            GuiLabel({ sX + 15, curY, labelW, 20 }, "Cursor to Numpad:");
+            int numpadVal = (cfg.flags & PC8801::Config::usearrowfor10) ? 1 : 0;
+            if (GuiToggleSlider({ sX + 190, curY, 60, 20 }, "OFF;ON", &numpadVal)) {
+                if (numpadVal) cfg.flags |= PC8801::Config::usearrowfor10; else cfg.flags &= ~PC8801::Config::usearrowfor10; changed = true;
+            }
 
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Swap Buttons:");
-        if (!(cfg.flags & PC8801::Config::enablepad)) GuiSetState(STATE_DISABLED);
-        int swapVal = (cfg.flags & PC8801::Config::swappadbuttons) ? 1 : 0;
-        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &swapVal)) {
-            if (swapVal) cfg.flags |= PC8801::Config::swappadbuttons; else cfg.flags &= ~PC8801::Config::swappadbuttons; changed = true;
-        }
-        GuiSetState(STATE_NORMAL);
+            curY += rowH;
+            GuiLabel({ sX + 15, curY, labelW, 20 }, "Num row to Numpad:");
+            int numrowVal = (cfg.flag2 & PC8801::Config::usenumrowfor10) ? 1 : 0;
+            if (GuiToggleSlider({ sX + 190, curY, 60, 20 }, "OFF;ON", &numrowVal)) {
+                if (numrowVal) cfg.flag2 |= PC8801::Config::usenumrowfor10; else cfg.flag2 &= ~PC8801::Config::usenumrowfor10; changed = true;
+            }
 
-        // 3. Mouse Settings
-        pY += rowH + 25;
-        GuiGroupBox({ x + 10, pY - 5, width - 20, rowH * 3 + 15 }, "Mouse Settings");
-        pY += 10;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Enable Mouse:");
-        int mouseVal = (cfg.flags & PC8801::Config::enablemouse) ? 1 : 0;
-        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &mouseVal)) {
-            if (mouseVal) {
-                cfg.flags |= PC8801::Config::enablemouse;
-                cfg.flags &= ~PC8801::Config::enablepad; // Mutually exclusive
-            } else cfg.flags &= ~PC8801::Config::enablemouse;
-            changed = true;
-        }
+            // 2. Joypad Settings
+            curY += rowH + 25;
+            GuiGroupBox({ sX + 5, curY - 5, width - 65, rowH * 2 + 15 }, "Joypad Settings");
+            curY += 10;
+            GuiLabel({ sX + 15, curY, labelW, 20 }, "Enable Joypad:");
+            int padVal = (cfg.flags & PC8801::Config::enablepad) ? 1 : 0;
+            if (GuiToggleSlider({ sX + 190, curY, 60, 20 }, "OFF;ON", &padVal)) {
+                if (padVal) {
+                    cfg.flags |= PC8801::Config::enablepad;
+                    cfg.flags &= ~PC8801::Config::enablemouse; // Mutually exclusive in original M88
+                } else cfg.flags &= ~PC8801::Config::enablepad;
+                changed = true;
+            }
 
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Mouse as Joystick:");
-        if (!(cfg.flags & PC8801::Config::enablemouse)) GuiSetState(STATE_DISABLED);
-        int mJoyVal = (cfg.flags & PC8801::Config::mousejoymode) ? 1 : 0;
-        if (GuiToggleSlider({ x + 200, pY, 60, 20 }, "OFF;ON", &mJoyVal)) {
-            if (mJoyVal) cfg.flags |= PC8801::Config::mousejoymode; else cfg.flags &= ~PC8801::Config::mousejoymode; changed = true;
-        }
+            curY += rowH;
+            GuiLabel({ sX + 15, curY, labelW, 20 }, "Swap Buttons:");
+            if (!(cfg.flags & PC8801::Config::enablepad)) GuiSetState(STATE_DISABLED);
+            int swapVal = (cfg.flags & PC8801::Config::swappadbuttons) ? 1 : 0;
+            if (GuiToggleSlider({ sX + 190, curY, 60, 20 }, "OFF;ON", &swapVal)) {
+                if (swapVal) cfg.flags |= PC8801::Config::swappadbuttons; else cfg.flags &= ~PC8801::Config::swappadbuttons; changed = true;
+            }
+            GuiSetState(STATE_NORMAL);
 
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Sensitivity:");
-        float mSensF = (float)cfg.mousesensibility;
-        if (mouseSensEdit) GuiSetState(STATE_DISABLED);
-        if (GuiSlider({ x + 200, pY, 180, 16 }, NULL, NULL, &mSensF, 1, 10)) { cfg.mousesensibility = (uint)mSensF; changed = true; }
-        bool wasUnl = false; if (mouseSensEdit) { GuiUnlock(); wasUnl = true; }
-        if (GuiValueBox({ x + 390, pY, 50, 16 }, NULL, &mouseSensVal, 1, 10, mouseSensEdit)) {
-            mouseSensEdit = !mouseSensEdit;
-            if (!mouseSensEdit) { cfg.mousesensibility = (uint)mouseSensVal; changed = true; }
-        }
-        if (wasUnl) GuiLock();
-        GuiSetState(STATE_NORMAL);
+            // 3. Mouse Settings
+            curY += rowH + 25;
+            GuiGroupBox({ sX + 5, curY - 5, width - 65, rowH * 3 + 15 }, "Mouse Settings");
+            curY += 10;
+            GuiLabel({ sX + 15, curY, labelW, 20 }, "Enable Mouse:");
+            int mouseVal = (cfg.flags & PC8801::Config::enablemouse) ? 1 : 0;
+            if (GuiToggleSlider({ sX + 190, curY, 60, 20 }, "OFF;ON", &mouseVal)) {
+                if (mouseVal) {
+                    cfg.flags |= PC8801::Config::enablemouse;
+                    cfg.flags &= ~PC8801::Config::enablepad; // Mutually exclusive
+                } else cfg.flags &= ~PC8801::Config::enablemouse;
+                changed = true;
+            }
+
+            curY += rowH;
+            GuiLabel({ sX + 15, curY, labelW, 20 }, "Mouse as Joystick:");
+            if (!(cfg.flags & PC8801::Config::enablemouse)) GuiSetState(STATE_DISABLED);
+            int mJoyVal = (cfg.flags & PC8801::Config::mousejoymode) ? 1 : 0;
+            if (GuiToggleSlider({ sX + 190, curY, 60, 20 }, "OFF;ON", &mJoyVal)) {
+                if (mJoyVal) cfg.flags |= PC8801::Config::mousejoymode; else cfg.flags &= ~PC8801::Config::mousejoymode; changed = true;
+            }
+
+            curY += rowH;
+            GuiLabel({ sX + 15, curY, labelW, 20 }, "Sensitivity:");
+            float mSensF = (float)cfg.mousesensibility;
+            if (mouseSensEdit) GuiSetState(STATE_DISABLED);
+            if (GuiSlider({ sX + 190, curY, 130, 16 }, NULL, NULL, &mSensF, 1, 10)) { cfg.mousesensibility = (uint)mSensF; changed = true; }
+            bool wasUnl = false; if (mouseSensEdit) { GuiUnlock(); wasUnl = true; }
+            if (GuiValueBox({ sX + 330, curY, 50, 16 }, NULL, &mouseSensVal, 1, 10, mouseSensEdit)) {
+                mouseSensEdit = !mouseSensEdit;
+                if (!mouseSensEdit) { cfg.mousesensibility = (uint)mouseSensVal; changed = true; }
+            }
+            if (wasUnl) GuiLock();
+            GuiSetState(STATE_NORMAL);
+        EndScissorMode();
     }
     else if (activeTab == 5) { // About
         GuiLabel({ x + 20, pY, 400, 20 }, "M88M - PC-8801 Emulator for Modern Platforms");
