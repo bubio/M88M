@@ -139,7 +139,7 @@ void UIManager::Init() {
     // Pressed state
     GuiSetStyle(DEFAULT, BORDER_COLOR_PRESSED, 0xffffffff);
     GuiSetStyle(DEFAULT, BASE_COLOR_PRESSED, 0x00aaaaff);   // Cyan-ish
-    GuiSetStyle(DEFAULT, TEXT_COLOR_PRESSED, 0xcccc00ff);   // Black text on cyan
+    GuiSetStyle(DEFAULT, TEXT_COLOR_PRESSED, 0xcccc00ff);   // Yellow text on cyan
 
     if (IsFontValid(fontEn)) {
         GuiSetFont(fontEn);
