@@ -906,11 +906,16 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             }
 
             curY += rowH;
+            bool mouseEnabled = (cfg.flags & PC8801::Config::enablemouse) != 0;
+            bool mJoyEnabled = (cfg.flags & PC8801::Config::mousejoymode) != 0;
+            bool sensActive = mouseEnabled && mJoyEnabled;
+            
+            if (!sensActive) GuiSetState(STATE_DISABLED);
             GuiLabel({ sX + 15, curY, labelW, 20 }, "Sensitivity:");
             float mSensF = (float)cfg.mousesensibility;
             if (mouseSensEdit) GuiSetState(STATE_DISABLED);
             if (GuiSlider({ sX + 190, curY, 130, 16 }, NULL, NULL, &mSensF, 1, 10)) { cfg.mousesensibility = (uint)mSensF; changed = true; }
-            GuiSetState(STATE_NORMAL);
+            if (sensActive) GuiSetState(STATE_NORMAL); else GuiSetState(STATE_DISABLED);
             bool wasUnl = false; if (mouseSensEdit) { GuiUnlock(); wasUnl = true; }
             if (GuiValueBox({ sX + 330, curY, 50, 16 }, NULL, &mouseSensVal, 1, 10, mouseSensEdit)) {
                 mouseSensEdit = !mouseSensEdit;
