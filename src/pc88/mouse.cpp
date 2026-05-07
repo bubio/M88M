@@ -121,8 +121,12 @@ void IOCALL Mouse::Strobe(uint, uint data)
 			if (data)
 			{
 				triggertime = pc->GetTime();
-				if (ui)
+				if (ui) {
 					ui->GetMovement(&move);
+                    // Invert movement to match PC-88 hardware expectations
+                    move.x = -move.x;
+                    move.y = -move.y;
+                }
 				else
 					move.x = move.y = 0;
 				phase = 1;
