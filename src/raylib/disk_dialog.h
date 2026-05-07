@@ -88,7 +88,7 @@ private:
     Vector2 mixerScroll;
     Vector2 inputScroll;
     
-    std::string lastOpenedPath[2];
+    std::string lastAccessedDir;
     std::vector<std::string> recentDisks;
     std::string stateMessage;
     std::string statePreviewPath;

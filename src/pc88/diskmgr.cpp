@@ -863,6 +863,18 @@ uint DiskManager::GetNumDisks(uint dr)
 }
 
 // ---------------------------------------------------------------------------
+//	イメージのファイルパスを取得
+//
+const char* DiskManager::GetImagePath(uint dr) const
+{
+	if (dr < max_drives && drive[dr].holder)
+	{
+		return drive[dr].holder->GetFileName();
+	}
+	return "";
+}
+
+// ---------------------------------------------------------------------------
 //	ݑIĂfBXN̔ԍ擾
 //
 int DiskManager::GetCurrentDisk(uint dr)

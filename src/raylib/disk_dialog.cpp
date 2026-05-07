@@ -80,11 +80,10 @@ UIManager::UIManager() :
     bufferVal(100), mouseSensVal(10),
     mixerScroll({ 0, 0 }),
     inputScroll({ 0, 0 }),
-    resetPending(false)
+    resetPending(false),
+    lastAccessedDir("")
 {
     for (int i = 0; i < 6; i++) volRhythmDetailEdit[i] = false;
-    lastOpenedPath[0] = "";
-    lastOpenedPath[1] = "";
     statePreviewTexture = {0};
     fontJp = {0};
     fontEn = {0};
@@ -218,9 +217,11 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     float btnY = y + 45;
     float btnH = 26;
 
+    const char* path1 = diskmgr->GetImagePath(0);
+    const char* path2 = diskmgr->GetImagePath(1);
     std::string groupTitle = "Disk Drives";
-    if (!lastOpenedPath[0].empty()) groupTitle = GetFileNameOnly(lastOpenedPath[0].c_str());
-    else if (!lastOpenedPath[1].empty()) groupTitle = GetFileNameOnly(lastOpenedPath[1].c_str());
+    if (path1[0]) groupTitle = GetFileNameOnly(path1);
+    else if (path2[0]) groupTitle = GetFileNameOnly(path2);
 
     bool groupJp = ContainsJapanese(groupTitle);
     if (groupJp && IsFontValid(fontJp)) {
@@ -239,7 +240,6 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     }
     if (GuiButton({ x + width - 50, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
         diskmgr->Unmount(0); diskmgr->Unmount(1);
-        lastOpenedPath[0] = lastOpenedPath[1] = "";
     }
     btnY += 36;
 
@@ -276,7 +276,6 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
 
         if (GuiButton({ x + width - 50, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
             diskmgr->Unmount(i);
-            lastOpenedPath[i] = "";
         }
         btnY += 34;
     }
@@ -312,16 +311,9 @@ void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     nfdchar_t *outPath = NULL;
     nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
 
-    std::string defaultPathStr;
     const nfdchar_t* defaultPath = NULL;
     if (Config::Get().flags & PC8801::Config::savedirectory) {
-        if (!lastOpenedPath[0].empty()) {
-            defaultPathStr = GetDirFromPath(lastOpenedPath[0]);
-            if (!defaultPathStr.empty()) defaultPath = defaultPathStr.c_str();
-        } else if (!lastOpenedPath[1].empty()) {
-            defaultPathStr = GetDirFromPath(lastOpenedPath[1]);
-            if (!defaultPathStr.empty()) defaultPath = defaultPathStr.c_str();
-        }
+        if (!lastAccessedDir.empty()) defaultPath = lastAccessedDir.c_str();
     }
 
     if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {
@@ -367,7 +359,10 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
         std::string label = std::to_string(i + 1) + ": " + dLabel;
 
         if (GuiButton({ view.x, itemY, content.width, btnH }, label.c_str())) {
-            diskmgr->Mount(selectingDiskForDrive, lastOpenedPath[selectingDiskForDrive].c_str(), false, i, false);
+            std::string currentPath = diskmgr->GetImagePath(selectingDiskForDrive);
+            if (!currentPath.empty()) {
+                diskmgr->Mount(selectingDiskForDrive, currentPath.c_str(), false, i, false);
+            }
             selectingDiskForDrive = -1;
         }
 
@@ -401,8 +396,9 @@ std::string UIManager::GetStatePath(DiskManager* diskmgr, int slot) const {
     int diskIdx = diskmgr->GetCurrentDisk(0);
     if (diskIdx >= 0) {
         title = Paths::SJIStoUTF8(diskmgr->GetImageTitle(0, diskIdx));
-    } else if (!lastOpenedPath[0].empty()) {
-        title = GetFileNameOnly(lastOpenedPath[0].c_str());
+    } else {
+        const char* path = diskmgr->GetImagePath(0);
+        if (path[0]) title = GetFileNameOnly(path);
     }
     return dir + "/" + SanitizeStateName(title) + "_" + std::to_string(slot) + ".s88";
 }
@@ -436,13 +432,14 @@ void UIManager::LoadStatePreview(const std::string& path) {
     }
 }
 
-static std::string GetCurrentDiskDisplayName(DiskManager* diskmgr, const std::string& fallbackPath) {
+static std::string GetCurrentDiskDisplayName(DiskManager* diskmgr) {
     int diskIdx = diskmgr->GetCurrentDisk(0);
     if (diskIdx >= 0) {
         return Paths::SJIStoUTF8(diskmgr->GetImageTitle(0, diskIdx));
     }
-    if (!fallbackPath.empty()) {
-        return GetFileNameOnly(fallbackPath.c_str());
+    const char* path = diskmgr->GetImagePath(0);
+    if (path[0]) {
+        return GetFileNameOnly(path);
     }
     return "snapshot";
 }
@@ -477,7 +474,7 @@ void UIManager::DrawStateDialog(DiskManager* diskmgr, CoreRunner* coreRunner) {
     std::string screenshotPath = GetStateScreenshotPath(diskmgr, currentStateSlot);
     StateSlotInfo info = ReadStateSlotInfo(path);
     bool exists = info.exists;
-    std::string diskName = GetCurrentDiskDisplayName(diskmgr, lastOpenedPath[0]);
+    std::string diskName = GetCurrentDiskDisplayName(diskmgr);
     std::string fileLabel = "Slot " + std::to_string(currentStateSlot) + ": " + (exists ? info.modified : "Empty");
     GuiLabel({ x + 20, y + 85, width - 40, 22 }, fileLabel.c_str());
 
@@ -1071,14 +1068,16 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
 }
 
 void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2) {
-    if (!path) return;
+    if (!path || !path[0]) return;
     bool success = false;
     int availableImages = 0;
+
+    // Update last accessed directory
+    lastAccessedDir = GetDirFromPath(path);
 
     // Mount Drive 1
     if (img1 >= 0) {
         if (diskmgr->Mount(0, path, false, img1, false)) {
-            lastOpenedPath[0] = path;
             success = true;
             availableImages = (int)diskmgr->GetNumDisks(0);
         }
@@ -1089,21 +1088,19 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
         if (img1 < 0) {
             // Mounting ONLY to Drive 2
             if (diskmgr->Mount(1, path, false, img2, false)) {
-                lastOpenedPath[1] = path;
                 success = true;
                 availableImages = (int)diskmgr->GetNumDisks(1);
             }
         } else {
             // Both drives specified (Drive 1&2 auto-mount behavior)
+            //availableImages should be set from Drive 1 mount above
             if (img2 < availableImages) {
                 if (diskmgr->Mount(1, path, false, img2, false)) {
-                    lastOpenedPath[1] = path;
                     success = true;
                 }
             } else {
                 // No second image available, explicitly eject Drive 2
                 diskmgr->Unmount(1);
-                lastOpenedPath[1] = "";
             }
         }
     }
@@ -1122,26 +1119,15 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
             selectingDiskForDrive = -1;
         }
     }
-
-    // Synchronize lastOpenedPath with actual state (handles auto-eject/swapping)
-    for (int i = 0; i < 2; i++) {
-        if (diskmgr->GetCurrentDisk(i) < 0) {
-            lastOpenedPath[i] = "";
-        }
-    }
 }
 
 void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
     nfdchar_t *outPath = NULL;
     nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
 
-    std::string defaultPathStr;
     const nfdchar_t* defaultPath = NULL;
     if (Config::Get().flags & PC8801::Config::savedirectory) {
-        if (!lastOpenedPath[drive].empty()) {
-            defaultPathStr = GetDirFromPath(lastOpenedPath[drive]);
-            if (!defaultPathStr.empty()) defaultPath = defaultPathStr.c_str();
-        }
+        if (!lastAccessedDir.empty()) defaultPath = lastAccessedDir.c_str();
     }
 
     if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {

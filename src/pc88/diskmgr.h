@@ -55,6 +55,7 @@ public:
 
 	const char* GetTitle(int index);
 	FileIO* GetDisk(int index);
+	const char* GetFileName() const { return diskname; }
 	uint GetNumDisks() { return ndisks; }
 	bool SetDiskSize(int index, int newsize);
 	bool IsReadOnly() { return readonly; }
@@ -100,6 +101,7 @@ public:
 	const char* GetImageTitle(uint dr, uint index);
 	uint GetNumDisks(uint dr);
 	int GetCurrentDisk(uint dr); 
+	const char* GetImagePath(uint dr) const;
 	bool AddDisk(uint dr, const char* title, uint type);
 	bool IsImageOpen(const char* filename);
 	bool FormatDisk(uint dr);
@@ -137,4 +139,5 @@ private:
 
 	CriticalSection cs;
 };
+
 
