@@ -615,7 +615,7 @@ bool PC88::ConnectDevices(const char* romDir)
 	{
 		{ popnio,	IOBus::portin,  Mouse::getmove },
 		{ popnio2,	IOBus::portin,  Mouse::getbutton },
-		{ popnio2,	IOBus::portout, Mouse::strobe },
+		{ 0x40,	    IOBus::portout, Mouse::strobe },
 		{ vrtc,		IOBus::portout, Mouse::vsync },
 		{ 0, 0, 0 }
 	};

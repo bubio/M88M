@@ -4,6 +4,7 @@
 #include "core_runner.h"
 #include "config.h"
 #include "paths.h"
+#include "raylib_mouse.cpp"
 #include <iostream>
 #include <vector>
 #include <string>
