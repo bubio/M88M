@@ -542,6 +542,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
 
     if (GuiWindowBox({ x, y, width, height }, "Settings")) {
         ToggleMenu(coreRunner);
+        return;
     }
 
     int prevTab = activeTab;
@@ -554,6 +555,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         mouseSensEdit = false;
         for (int i = 0; i < 6; i++) volRhythmDetailEdit[i] = false;
         anyEdit = false;
+        return; // Prevent click-through to new tab items in the same frame
     }
 
     if (anyEdit) {
@@ -746,7 +748,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     }
     else if (activeTab == 3) { // Mixer
         Rectangle scrollBounds = { x + 10, y + 70, width - 20, height - 120 };
-        Rectangle content = { 0, 0, width - 60, 520 };
+        Rectangle content = { 0, 0, width - 40, 520 };
         Rectangle view;
         if (!anyEdit && CheckCollisionPointRec(GetMousePosition(), scrollBounds)) mixerScroll.y += GetMouseWheelMove() * 20;
         GuiScrollPanel(scrollBounds, NULL, content, &mixerScroll, &view);
@@ -813,7 +815,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         float labelW = 170;
 
         Rectangle scrollBounds = { x + 10, y + 70, width - 20, height - 120 };
-        Rectangle content = { 0, 0, width - 60, 370 };
+        Rectangle content = { 0, 0, width - 40, 360 };
         Rectangle view;
         if (!anyEdit && CheckCollisionPointRec(GetMousePosition(), scrollBounds)) inputScroll.y += GetMouseWheelMove() * 20;
         GuiScrollPanel(scrollBounds, NULL, content, &inputScroll, &view);
@@ -823,7 +825,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         BeginScissorMode((int)view.x, (int)view.y, (int)view.width, (int)view.height);
             float sX = view.x + inputScroll.x;
             float sY = view.y + inputScroll.y;
-            float curY = sY + 10;
+            float curY = sY + 20;
 
             // 1. Keyboard Settings
             GuiGroupBox({ sX + 5, curY - 5, width - 65, rowH * 3 + 15 }, "Keyboard Settings");
@@ -833,9 +835,8 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             Rectangle kRect = { sX + 190, curY, 200, 24 };
             static int kIdx;
             if (!keyboardEdit) kIdx = cfg.keytype;
-            if (keyboardEdit) { ddRect = kRect; ddText = "AT-106 JP;PC-98;AT-101 US"; ddIndexPtr = &kIdx; ddEditPtr = &keyboardEdit; }
-            else if (GuiDropdownBox(kRect, "AT-106 JP;PC-98;AT-101 US", &kIdx, false)) keyboardEdit = true;
-
+            if (keyboardEdit) { ddRect = kRect; ddText = "AT-106 JP;AT-101 US (US)"; ddIndexPtr = &kIdx; ddEditPtr = &keyboardEdit; }
+            else if (GuiDropdownBox(kRect, "AT-106 JP;AT-101 US (US)", &kIdx, false)) keyboardEdit = true;
             curY += rowH + 4;
             GuiLabel({ sX + 15, curY, labelW, 20 }, "Cursor to Numpad:");
             int numpadVal = (cfg.flags & PC8801::Config::usearrowfor10) ? 1 : 0;
@@ -888,7 +889,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             }
 
             curY += rowH;
-            GuiLabel({ sX + 15, curY, labelW, 20 }, "Mouse as Joystick:");
+            GuiLabel({ sX + 15, curY, labelW, 20 }, "Mouse Joy Mode:");
             if (!(cfg.flags & PC8801::Config::enablemouse)) GuiSetState(STATE_DISABLED);
             int mJoyVal = (cfg.flags & PC8801::Config::mousejoymode) ? 1 : 0;
             if (GuiToggleSlider({ sX + 190, curY, 60, 20 }, "OFF;ON", &mJoyVal)) {
@@ -908,6 +909,8 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             if (wasUnl) GuiLock();
             GuiSetState(STATE_NORMAL);
         EndScissorMode();
+
+        content.height = curY - sY + 15;
     }
     else if (activeTab == 5) { // About
         GuiLabel({ x + 20, pY, 400, 20 }, "M88M - PC-8801 Emulator for Modern Platforms");
@@ -931,6 +934,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     if (!anyEdit) {
         if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) {
             ToggleMenu(coreRunner);
+            return;
         }
     } else {
         GuiSetState(STATE_DISABLED);

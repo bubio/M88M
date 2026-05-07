@@ -109,6 +109,7 @@ public:
 	Z80*			GetCPU2() { return &cpu2; }
 	PC8801::PD8257*	GetDMAC() { return dmac; }
 	PC8801::Beep*	GetBEEP() { return beep; }
+    PC8801::JoyPad* GetJoyPad() { return joypad; }
 
 	bool SaveShapshot(const char* filename);
 	bool LoadShapshot(const char* filename);
@@ -183,6 +184,8 @@ private:
 	PC8801::Calender* caln;
 	PC8801::Beep* beep;
 	PC8801::PD8257* dmac;
+	
+public:
 	PC8801::Mouse* mouse;
 	
 protected:
