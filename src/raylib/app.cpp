@@ -33,6 +33,9 @@
 #ifndef IDR_FONT_NOTOSANS
 #define IDR_FONT_NOTOSANS 101
 #endif
+#ifndef IDR_FONT_LATIN
+#define IDR_FONT_LATIN 102
+#endif
 #endif
 
 #ifdef M88_EMBED_FONT
@@ -51,13 +54,12 @@ static Font LoadJapaneseFont() {
     Font font = { 0 };
 
 #ifdef M88_EMBED_FONT
-    font = LoadFontFromMemory(".ttf", embedded_font_data, (int)embedded_font_size, 24, cp.data(), (int)cp.size());
+    font = LoadFontFromMemory(".ttf", embedded_font_jp_data, (int)embedded_font_jp_size, 24, cp.data(), (int)cp.size());
     if (IsFontValid(font) && font.glyphCount > 300) return font;
 #endif
 
 #ifdef _WIN32
     // Try loading from Windows Resource first (embedded in exe)
-    // Use RT_RCDATA or a custom string if "FONT" fails, but .rc uses "FONT"
     HRSRC hRes = FindResourceA(NULL, (LPCSTR)IDR_FONT_NOTOSANS, "FONT");
     if (hRes) {
         HGLOBAL hData = LoadResource(NULL, hRes);
@@ -113,6 +115,29 @@ static Font LoadLatinFont() {
     for (int i = 32; i < 127; i++) cp.push_back(i);
 
     Font font = { 0 };
+
+#ifdef M88_EMBED_FONT
+    font = LoadFontFromMemory(".ttf", embedded_font_latin_data, (int)embedded_font_latin_size, 16, cp.data(), (int)cp.size());
+    if (IsFontValid(font) && font.glyphCount > 50) return font;
+#endif
+
+#ifdef _WIN32
+    // Try loading from Windows Resource first (embedded in exe)
+    HRSRC hRes = FindResourceA(NULL, (LPCSTR)IDR_FONT_LATIN, "FONT");
+    if (hRes) {
+        HGLOBAL hData = LoadResource(NULL, hRes);
+        if (hData) {
+            void* pData = LockResource(hData);
+            unsigned int size = SizeofResource(NULL, hRes);
+            if (pData && size > 0) {
+                font = LoadFontFromMemory(".ttf", (const unsigned char*)pData, (int)size, 16, cp.data(), (int)cp.size());
+                if (IsFontValid(font) && font.glyphCount > 50) {
+                    return font;
+                }
+            }
+        }
+    }
+#endif
 
     std::vector<std::string> candidates;
 #ifdef __APPLE__
