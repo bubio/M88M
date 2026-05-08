@@ -60,7 +60,8 @@ static Font LoadJapaneseFont() {
 
 #ifdef _WIN32
     // Try loading from Windows Resource first (embedded in exe)
-    HRSRC hRes = FindResourceA(NULL, (LPCSTR)IDR_FONT_NOTOSANS, "FONT");
+    // RT_RCDATA is (LPCSTR)10, MAKEINTRESOURCEA(id) is (LPCSTR)id
+    HRSRC hRes = FindResourceA(NULL, (LPCSTR)IDR_FONT_NOTOSANS, (LPCSTR)10);
     if (hRes) {
         HGLOBAL hData = LoadResource(NULL, hRes);
         if (hData) {
@@ -123,7 +124,8 @@ static Font LoadLatinFont() {
 
 #ifdef _WIN32
     // Try loading from Windows Resource first (embedded in exe)
-    HRSRC hRes = FindResourceA(NULL, (LPCSTR)IDR_FONT_LATIN, "FONT");
+    // RT_RCDATA is (LPCSTR)10, MAKEINTRESOURCEA(id) is (LPCSTR)id
+    HRSRC hRes = FindResourceA(NULL, (LPCSTR)IDR_FONT_LATIN, (LPCSTR)10);
     if (hRes) {
         HGLOBAL hData = LoadResource(NULL, hRes);
         if (hData) {
