@@ -983,7 +983,8 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         pY += 20;
         DrawLink(x + 40, pY, "Raylib", "https://www.raylib.com/"); pY += 20;
         DrawLink(x + 40, pY, "Raygui", "https://github.com/raysan5/raygui"); pY += 20;
-        DrawLink(x + 40, pY, "Chicago-Kare Font", "https://github.com/KingDuane/Chicago-Kare"); pY += 35;
+        DrawLink(x + 40, pY, "Chicago-Kare Font", "https://github.com/KingDuane/Chicago-Kare"); pY += 20;
+        DrawLink(x + 40, pY, "Noto Sans JP Font", "https://fonts.google.com/specimen/Noto+Sans+JP"); pY += 35;
 
         GuiLabel({ x + 20, pY, 500, 20 }, "Contributor: Gemini / Claude Code");
     }
