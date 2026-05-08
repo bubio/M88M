@@ -3,8 +3,16 @@ name: Build macOS (Universal)
 on:
   push:
     branches: [ main, master ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   pull_request:
     branches: [ main, master ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -24,8 +32,30 @@ jobs:
         MACOS_UNIVERSAL: 1
       run: chmod +x scripts/build_macos.sh && ./scripts/build_macos.sh
 
-    - name: Upload Artifact
+    - name: Upload .app Artifact
+      if: github.event_name != 'release'
       uses: actions/upload-artifact@v4
       with:
-        name: M88M-macos
+        name: M88M-macos-app
         path: build/M88M.app
+
+    - name: Package DMG (Release only)
+      if: github.event_name == 'release'
+      run: |
+        cd build
+        cpack -G DragNDrop -C Release
+        mv M88M*.dmg M88M-macos-universal.dmg
+
+    - name: Upload DMG Artifact
+      if: github.event_name == 'release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: M88M-macos-universal.dmg
+        path: build/M88M-macos-universal.dmg
+
+    - name: Update Release
+      if: github.event_name == 'release'
+      uses: svenstaro/upload-release-action@v2
+      with:
+        file: build/M88M-macos-universal.dmg
+        overwrite: true

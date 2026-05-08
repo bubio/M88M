@@ -3,8 +3,16 @@ name: Build Windows (x86_64)
 on:
   push:
     branches: [ main, master ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
   pull_request:
     branches: [ main, master ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  release:
+    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -32,7 +40,26 @@ jobs:
         copy build\RelWithDebInfo\m88m.exe package\
 
     - name: Upload Artifact
+      if: github.event_name != 'release'
       uses: actions/upload-artifact@v4
       with:
         name: m88m-windows
         path: package/
+
+    - name: Compress for Release
+      if: github.event_name == 'release'
+      run: powershell Compress-Archive -Path package\* -DestinationPath build\m88m-windows.zip
+
+    - name: Upload Release Artifact
+      if: github.event_name == 'release'
+      uses: actions/upload-artifact@v4
+      with:
+        name: m88m-windows.zip
+        path: build/m88m-windows.zip
+
+    - name: Update Release
+      if: github.event_name == 'release'
+      uses: svenstaro/upload-release-action@v2
+      with:
+        file: build/m88m-windows.zip
+        overwrite: true
