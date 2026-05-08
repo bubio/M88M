@@ -20,8 +20,8 @@ M88M is a modern, cross-platform port of the classic PC-8801 emulator **M88**, o
 
 While the original M88 was tightly coupled with the Win32 API and DirectX, M88M leverages **raylib** and **raygui** for its frontend, making it natively compatible with **macOS (Intel/Apple Silicon)**, **Linux**, and **Windows** via a single CMake-based build system.
 
-<p align="center"><img src="assets/Screenshot1.png" alt="Dragon Slayer on M88M"></p>
-<p align="center"><img src="assets/Screenshot2.png" alt="Phantasie on M88M"></p>
+<p align="center"><img src="docs/Screenshot1.png" alt="Dragon Slayer on M88M"></p>
+<p align="center"><img src="docs/Screenshot2.png" alt="Phantasie on M88M"></p>
 
 ## Key Features
 
@@ -100,10 +100,7 @@ cmake --build build --config Release
 
 - **F11 / Right Click:** Toggle the Main Menu / Settings overlay.
 - **ESC:** Close sub-menus or the main overlay.
-- **Drag & Drop:** Drop a `.d88` file onto the window to mount it to Drive 1.
-- **PC-88 Keys:** Most keys are mapped naturally. F1-F5 on your keyboard map to the PC-88 function keys.
-
-*Note: Resetting the emulator can be performed from the Main Menu (F11).*
+- **Drag & Drop:** Drop a `.d88` file onto the window to mount it to Drive 1&2.
 
 ## License
 
