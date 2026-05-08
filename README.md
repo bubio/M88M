@@ -1,11 +1,27 @@
 # M88M - PC-8801 Series Emulator
 
-> [!WARNING]
-> **Work In Progress**: This project is currently under active development. Features and stability may vary.
+<p align="center">
+  <img src="assets/AppIcon.png" alt="M88M" width="128" height="128">
+</p>
 
-M88M is a modern, cross-platform port of the classic PC-8801 emulator **M88**, originally developed by **cisc**. 
+M88M is a modern, cross-platform port of the classic PC-8801 emulator **M88**, originally developed by **cisc**.
+
+<p align="center">
+  <a href="https://github.com/bubio/M88M/releases/latest">
+    <img src="https://img.shields.io/github/v/release/bubio/M88M" alt="Latest Release">
+  </a>
+  <a href="https://github.com/bubio/M88M/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/bubio/M88M" alt="License">
+  </a>
+  <a href="https://github.com/bubio/M88M/releases/latest">
+    <img src="https://img.shields.io/github/downloads/bubio/M88M/total.svg" alt="Downloads">
+  </a>
+</p>
 
 While the original M88 was tightly coupled with the Win32 API and DirectX, M88M leverages **raylib** and **raygui** for its frontend, making it natively compatible with **macOS (Intel/Apple Silicon)**, **Linux**, and **Windows** via a single CMake-based build system.
+
+<p align="center"><img src="assets/Screenshot1.png" alt="Dragon Slayer on M88M"></p>
+<p align="center"><img src="assets/Screenshot2.png" alt="Phantasie on M88M"></p>
 
 ## Key Features
 
@@ -13,54 +29,68 @@ While the original M88 was tightly coupled with the Win32 API and DirectX, M88M 
 - **Raylib Frontend:** Modern, lightweight hardware-accelerated rendering and audio.
 - **Core Integrity:** Retains the highly accurate emulation core of the original M88 while replacing the platform-dependent layers.
 - **Modern Build System:** Uses CMake for easy compilation with modern compilers (Clang, GCC, MSVC).
-- **Dual-Threaded Architecture:** Maintains the original high-performance design with separate threads for emulation and UI/rendering.
-- **Enhanced UI:** Includes a built-in overlay for disk management and system configuration.
+- **Dual-Threaded Architecture:** Separate threads for emulation and UI/rendering ensure smooth performance.
+- **Enhanced UI:** Includes a built-in overlay for disk management, state management, and system configuration.
 
 ## Status
 
-M88M is currently in a "Playable Prototype" stage. The core emulation (Z80, OPNA/PSG, CRTC, FDC) is fully functional. 
+M88M is fully functional and supports a wide range of PC-8801 software.
 
 **Working Features:**
-- N88-BASIC (V1/V2) and compatible modes.
-- Soundboard II (OPNA) emulation (FM, PSG, Rhythm, ADPCM).
-- D88 disk image support (Mount/Unmount).
-- Keyboard matrix emulation.
-- Modern window scaling and aspect ratio maintenance.
+
+- **N88-BASIC (V1/V2)** and compatible modes.
+- **Soundboard II (OPNA)** emulation (FM, PSG, Rhythm, ADPCM) with a built-in volume mixer.
+- **D88 Disk Support:** Mount/Unmount disks, disk image management, and "Recent Disks" history.
+- **State Management:** 10 save state slots with visual previews.
+- **High-DPI Scaling:** Adjustable window scaling (1x, 2x, 3x) and fullscreen support.
+- **Input:** Keyboard matrix emulation, Mouse, and Gamepad support.
 
 ## Prerequisites
 
-To run the emulator, you must provide the necessary PC-8801 ROM files. Place the following files in the same directory as the executable or in a folder named `roms`:
+To run the emulator, you must provide the necessary PC-8801 ROM files. Place the following files in the `roms` directory:
 
 - `N88.ROM` (or `N88.ROM` + `N88_0.ROM`, etc.)
 - `DISK.ROM`
 - `FONT.ROM`
 - (Optional) `KANJI1.ROM`, `KANJI2.ROM`
 
+### ROM Directory Locations
+
+The emulator looks for ROMs in the following locations (in order):
+
+1. Environment variable `M88M_ROM_DIR`
+2. `roms/` subfolder in the same directory as the executable.
+3. **Linux:** `~/.local/share/M88M/roms`
+4. **macOS:** `~/Library/Application Support/M88M/roms`
+5. **Windows:** `%APPDATA%\M88M\roms`
+
 *Note: You must own the original hardware to legally use these ROM files.*
 
 ## Building
 
 ### macOS / Linux
+
 #### Dependencies (Linux)
-On Debian-based systems (Ubuntu, etc.), you will need the following packages:
+
+On Debian-based systems (Ubuntu, etc.), you will need:
+
 ```bash
 sudo apt-get install build-essential cmake libasound2-dev libx11-dev libxcursor-dev libxinerama-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev
 ```
 
 #### Build
-```bash
-# Clone the repository
-git clone <repository-url>
-cd M88M
 
-# Configure and build
-cmake -S . -B build
+```bash
+git clone https://github.com/bubio/M88M.git
+cd M88M
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ```
-The executable will be generated at `./build/m88m`.
 
-### Windows (CMake)
-You can use CMake with Visual Studio or MinGW.
+The executable will be generated at `./build/m88m` (or `./build/M88M.app` on macOS).
+
+### Windows
+
 ```cmd
 cmake -S . -B build
 cmake --build build --config Release
@@ -68,10 +98,12 @@ cmake --build build --config Release
 
 ## Usage
 
-- **F1 / F2:** Open file dialog to mount disk to Drive 1 or Drive 2.
-- **F10 / Right Click:** Toggle the Main Menu / Settings overlay.
-- **F12:** Reset the emulator.
-- **Drag & Drop:** Drop a `.d88` file onto the window to mount it.
+- **F11 / Right Click:** Toggle the Main Menu / Settings overlay.
+- **ESC:** Close sub-menus or the main overlay.
+- **Drag & Drop:** Drop a `.d88` file onto the window to mount it to Drive 1.
+- **PC-88 Keys:** Most keys are mapped naturally. F1-F5 on your keyboard map to the PC-88 function keys.
+
+*Note: Resetting the emulator can be performed from the Main Menu (F11).*
 
 ## License
 

@@ -158,16 +158,7 @@ void UIManager::Init() {
 }
 
 void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
-    if (IsKeyPressed(KEY_F10)) ToggleMenu(coreRunner);
-    if (IsKeyPressed(KEY_F12)) {
-        if (Config::Get().flags & PC8801::Config::askbeforereset) {
-            modalState = MODAL_CONFIRM_RESET;
-            showMenu = true;
-        } else {
-            if (coreRunner) coreRunner->RequestReset();
-            else pc88->Reset();
-        }
-    }
+    if (IsKeyPressed(KEY_F11)) ToggleMenu(coreRunner);
     if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) && !showMenu) {
         if (GetMouseY() < GetScreenHeight() - 24) ToggleMenu(coreRunner);
     }
