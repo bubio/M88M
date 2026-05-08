@@ -38,14 +38,13 @@ jobs:
         cd build
         cpack -G "DEB;RPM"
 
-    - name: ZIP Packages
+    - name: Prepare Distribution
       run: |
         mkdir dist
         cp build/*.deb build/*.rpm dist/
-        zip -j m88m-linux-packages.zip dist/*
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: m88m-linux-packages
-        path: m88m-linux-packages.zip
+        path: dist/

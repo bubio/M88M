@@ -24,14 +24,8 @@ jobs:
         MACOS_UNIVERSAL: 1
       run: chmod +x scripts/build_macos.sh && ./scripts/build_macos.sh
 
-    - name: Package App Bundle
-      run: |
-        # build_macos.sh creates build/M88M.app
-        cd build
-        zip -r ../M88M-macos.zip M88M.app
-
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
         name: M88M-macos
-        path: M88M-macos.zip
+        path: build/M88M.app
