@@ -15,6 +15,9 @@ on:
     types: [published]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-26
@@ -44,7 +47,7 @@ jobs:
       run: |
         cd build
         cpack -G DragNDrop -C Release
-        mv M88M*.dmg M88M-macos-universal.dmg
+        mv [mM]88[mM]*.dmg M88M-macos-universal.dmg
 
     - name: Upload DMG Artifact
       if: github.event_name == 'release'
