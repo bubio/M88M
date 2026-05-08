@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 echo "--- Configuring with CMake ---"
 if [ "$MACOS_UNIVERSAL" == "1" ]; then
-    cmake -S . -B build -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET="11.0"
+    cmake -S . -B build -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET="13.0"
 else
     cmake -S . -B build
 fi

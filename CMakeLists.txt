@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(M88M
-    VERSION 0.1.0
+    VERSION 1.0.0
     LANGUAGES CXX C
     DESCRIPTION "PC-8801 emulator (M88 改) — raylib frontend"
 )
@@ -180,7 +180,7 @@ endif()
 if(RAYLIB_FRONT_SRC)
     if(APPLE)
         add_executable(m88_raylib MACOSX_BUNDLE ${RAYLIB_FRONT_SRC})
-        
+
         # macOS bundle resources
         set_source_files_properties(${M88M_FONT_RESOURCES} PROPERTIES
             MACOSX_PACKAGE_LOCATION "Resources/fonts")
@@ -223,7 +223,7 @@ if(RAYLIB_FRONT_SRC)
         function(embed_font input_file array_name)
             file(READ "${input_file}" FONT_DATA HEX)
             string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " FONT_DATA_FORMATTED "${FONT_DATA}")
-            file(APPEND "${FONT_HEADER_FILE}" 
+            file(APPEND "${FONT_HEADER_FILE}"
                 "static const unsigned char ${array_name}_data[] = { ${FONT_DATA_FORMATTED} };\n"
                 "static const unsigned int ${array_name}_size = sizeof(${array_name}_data);\n"
             )
@@ -246,7 +246,7 @@ if(RAYLIB_FRONT_SRC)
             "-framework AudioToolbox"
             "-framework CoreFoundation"
         )
-        
+
         # macOS App Icon compilation (actool)
         set(ICON_DOC      ${CMAKE_CURRENT_SOURCE_DIR}/assets/AppIcon.icon)
         set(ICON_OUT_DIR  ${CMAKE_CURRENT_BINARY_DIR}/AppIconCompiled)
@@ -291,16 +291,16 @@ if(RAYLIB_FRONT_SRC)
         )
     elseif(UNIX)
         target_link_libraries(m88_raylib PRIVATE pthread dl m rt)
-        
+
         find_package(X11 REQUIRED)
         target_link_libraries(m88_raylib PRIVATE ${X11_LIBRARIES})
-        
+
         # Also need these for raylib on most Linux distros
         target_link_libraries(m88_raylib PRIVATE Xcursor Xinerama Xrandr Xi)
 
         find_package(OpenGL REQUIRED)
         target_link_libraries(m88_raylib PRIVATE OpenGL::GL)
-        
+
         # ALSA for audio
         find_package(ALSA)
         if(ALSA_FOUND)
@@ -318,7 +318,7 @@ if(RAYLIB_FRONT_SRC)
         if(NOT WIN32)
             # Linux specific desktop file and icon
             install(FILES assets/AppIcon.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps RENAME m88m.png)
-            
+
             file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/m88m.desktop"
                 "[Desktop Entry]\n"
                 "Name=M88M\n"

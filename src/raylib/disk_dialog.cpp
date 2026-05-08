@@ -923,7 +923,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             bool mouseEnabled = (cfg.flags & PC8801::Config::enablemouse) != 0;
             bool mJoyEnabled = (cfg.flags & PC8801::Config::mousejoymode) != 0;
             bool sensActive = mouseEnabled && mJoyEnabled;
-            
+
             if (!sensActive) GuiSetState(STATE_DISABLED);
             GuiLabel({ sX + 15, curY, labelW, 20 }, "Sensitivity:");
             float mSensF = (float)cfg.mousesensibility;
@@ -944,7 +944,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     else if (activeTab == 5) { // About
         GuiLabel({ x + 20, pY, 500, 20 }, "M88M - PC-8801 Emulator for Modern Platforms");
         pY += 25;
-        GuiLabel({ x + 20, pY, 500, 20 }, "Version: 0.2.0-beta");
+        GuiLabel({ x + 20, pY, 500, 20 }, "Version: 1.0.0");
         pY += 35;
 
         auto DrawLink = [&](float lx, float ly, const char* text, const char* url) {
@@ -1198,11 +1198,11 @@ void UIManager::LoadRecent() {
         fio.Seek(0, FileIO::end);
         int32 size = fio.Tellp();
         fio.Seek(0, FileIO::begin);
-        
+
         std::string content;
         content.resize(size);
         fio.Read(&content[0], size);
-        
+
         std::string line;
         for (char c : content) {
             if (c == '\r' || c == '\n') {
