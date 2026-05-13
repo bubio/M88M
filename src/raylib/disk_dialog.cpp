@@ -228,6 +228,7 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
 
     if (GuiButton({ x + 20, btnY + 10, width - 110, btnH }, "Drive 1&2...")) OpenBothDrives(diskmgr);
     if (GuiButton({ x + width - 85, btnY + 10, 30, btnH }, GuiIconText(ICON_CLOCK, NULL))) {
+        recentDiskTargetDrive = -1;
         showRecentDialog = true;
     }
     if (GuiButton({ x + width - 50, btnY + 10, 30, btnH }, GuiIconText(ICON_FILE_DELETE, NULL))) {
@@ -1110,12 +1111,18 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     if (!path || !path[0]) return;
     bool success = false;
     int availableImages = 0;
+    int origImg1 = img1;
+    int origImg2 = img2;
 
     // Update last accessed directory
     lastAccessedDir = GetDirFromPath(path);
 
     // Mount Drive 1
     if (img1 >= 0) {
+        // If mounting only to Drive 1, check for collision with Drive 2 if it's the same file
+        if (img2 < 0 && std::string(path) == diskmgr->GetImagePath(1) && diskmgr->GetCurrentDisk(1) == img1) {
+            if (diskmgr->GetNumDisks(1) > 1) img1 = -1; // Force selector if multi-image
+        }
         if (diskmgr->Mount(0, path, false, img1, false)) {
             success = true;
             availableImages = (int)diskmgr->GetNumDisks(0);
@@ -1125,7 +1132,10 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     // Mount Drive 2
     if (img2 >= 0) {
         if (img1 < 0) {
-            // Mounting ONLY to Drive 2
+            // Mounting ONLY to Drive 2, check for collision with Drive 1 if it's the same file
+            if (std::string(path) == diskmgr->GetImagePath(0) && diskmgr->GetCurrentDisk(0) == img2) {
+                if (diskmgr->GetNumDisks(0) > 1) img2 = -1; // Force selector if multi-image
+            }
             if (diskmgr->Mount(1, path, false, img2, false)) {
                 success = true;
                 availableImages = (int)diskmgr->GetNumDisks(1);
@@ -1147,10 +1157,10 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     if (success) {
         AddRecent(path);
         // If mounting to only one drive, show selector if multiple images exist
-        if (img1 >= 0 && img2 < 0) {
+        if (origImg1 >= 0 && origImg2 < 0) {
             if (availableImages > 1) selectingDiskForDrive = 0;
             else selectingDiskForDrive = -1;
-        } else if (img1 < 0 && img2 >= 0) {
+        } else if (origImg1 < 0 && origImg2 >= 0) {
             if (availableImages > 1) selectingDiskForDrive = 1;
             else selectingDiskForDrive = -1;
         } else {
@@ -1261,7 +1271,9 @@ void UIManager::DrawRecentDiskDialog(DiskManager* diskmgr) {
 
         if (GuiButton({ view.x, itemY, content.width, btnH }, fileName.c_str())) {
             std::string path = recentDisks[i]; // Make a copy, don't use a reference
-            MountDisk(diskmgr, path.c_str(), 0, 1);
+            if (recentDiskTargetDrive == 0) MountDisk(diskmgr, path.c_str(), 0, -1);
+            else if (recentDiskTargetDrive == 1) MountDisk(diskmgr, path.c_str(), -1, 0);
+            else MountDisk(diskmgr, path.c_str(), 0, 1);
             showRecentDialog = false;
             break; // Exit loop after modifying vector
         }
