@@ -85,6 +85,7 @@ bool CoreRunner::Init(Draw* draw) {
 
     GetOPN1()->Connect(&coreSound);
     GetOPN2()->Connect(&coreSound);
+    GetBEEP()->Connect(&coreSound);
 
     // Connect mouse
     RaylibMouseUI* mouseUI = new RaylibMouseUI();
@@ -115,6 +116,9 @@ void CoreRunner::RestartAudio() {
         sound.Init(outrate);
         sound.SetVolume(&cfg);
         sound.SetSource(coreSound.GetSoundSource());
+        GetOPN1()->Connect(&coreSound);
+        GetOPN2()->Connect(&coreSound);
+        GetBEEP()->Connect(&coreSound);
     }
 }
 
