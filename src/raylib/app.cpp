@@ -224,6 +224,9 @@ int main() {
             FilePathList droppedFiles = LoadDroppedFiles();
             if (droppedFiles.count > 0) {
                 core.GetUIManager()->MountDisk(core.GetDiskManager(), droppedFiles.paths[0], 0, 1);
+                if (Config::Get().flag2 & PC8801::Config::resetondrop) {
+                    core.RequestReset();
+                }
             }
             UnloadDroppedFiles(droppedFiles);
         }

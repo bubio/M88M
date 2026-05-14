@@ -29,7 +29,7 @@ void Load(PC8801::Config& cfg) {
                 PC8801::Config::enablewait |
                 PC8801::Config::precisemixing |
                 PC8801::Config::mixsoundalways;
-    cfg.flag2 = 0;
+    cfg.flag2 = PC8801::Config::resetondrop;
     cfg.volfm = 0; cfg.volssg = 0; cfg.voladpcm = 0; cfg.volrhythm = 0;
     cfg.volbd = 0; cfg.volsd = 0; cfg.voltop = 0;
     cfg.volhh = 0; cfg.voltom = 0; cfg.volrim = 0;

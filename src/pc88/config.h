@@ -82,6 +82,7 @@ public:
 		saveposition	= 1 << 13,
 		scanline        = 1 << 14,
 		usenumrowfor10  = 1 << 15,
+		resetondrop     = 1 << 16,
 	};
 
 	int flags;

@@ -581,97 +581,132 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     float pY = y + 75;
     float rowH = 32;
     bool changed = false;
+    bool wasUnl = false;
 
     if (activeTab == 0) { // System
-        float labelW = 160;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "CPU Clock:");
-        int clockMode = (cfg.clock < 60) ? 0 : 1;
-        int newClock = clockMode;
-        GuiToggleGroup({ x + 180, pY, 150, 24 }, "4MHz;8MHz", &newClock);
-        if (newClock != clockMode) {
-            if (newClock == 0) { cfg.clock = 40; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; }
-            else { cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; }
-            changed = true; resetPending = true;
-        }
+        float labelW = 150;
 
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Speed:");
-        float speedValF = (float)cfg.speed;
-        if (speedEdit) GuiSetState(STATE_DISABLED);
-        if (GuiSlider({ x + 180, pY, 180, 16 }, NULL, NULL, &speedValF, 20, 200)) {
-            cfg.speed = (int)speedValF; changed = true;
-        }
-        GuiSetState(STATE_NORMAL);
-        bool wasUnl = false; if (speedEdit) { GuiUnlock(); wasUnl = true; }
-        if (GuiValueBox({ x + 370, pY, 50, 16 }, NULL, &cfg.speed, 20, 200, speedEdit)) {
-            speedEdit = !speedEdit; if (!speedEdit) changed = true;
-        }
-        if (wasUnl) GuiLock();
-        GuiLabel({ x + 425, pY, 40, 20 }, "%");
+        Rectangle scrollBounds = { x + 10, y + 70, width - 20, height - 120 };
+        Rectangle content = { 0, 0, width - 40, 400 }; 
+        Rectangle view;
+        if (!anyEdit && CheckCollisionPointRec(GetMousePosition(), scrollBounds)) systemScroll.y += GetMouseWheelMove() * 20;
+        GuiScrollPanel(scrollBounds, NULL, content, &systemScroll, &view);
+        if (systemScroll.y > 0) systemScroll.y = 0;
+        if (systemScroll.y < (view.height - content.height)) systemScroll.y = view.height - content.height;
 
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "BASIC Mode:");
-        static int modeIndex;
-        if (!basicModeEdit) {
-            if (cfg.basicmode == PC8801::Config::N88V1) modeIndex = 0;
-            else if (cfg.basicmode == PC8801::Config::N88V2) modeIndex = 1;
-            else if (cfg.basicmode == PC8801::Config::N80) modeIndex = 2;
-            else if (cfg.basicmode == PC8801::Config::N80V2) modeIndex = 3;
-        }
-        Rectangle basicRect = { x + 180, pY, 200, 24 };
-        if (basicModeEdit) { ddRect = basicRect; ddText = "N88 V1;N88 V2;N80 V1;N80 V2"; ddIndexPtr = &modeIndex; ddEditPtr = &basicModeEdit; }
-        else if (GuiDropdownBox(basicRect, "N88 V1;N88 V2;N80 V1;N80 V2", &modeIndex, false)) basicModeEdit = true;
+        BeginScissorMode((int)view.x, (int)view.y, (int)view.width, (int)view.height);
+            float sX = view.x + systemScroll.x;
+            float sY = view.y + systemScroll.y;
+            float curY = sY + 20;
 
-        pY += rowH + 4;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "CPU Mode:");
-        static int cpumode;
-        if (!cpuModeEdit) cpumode = cfg.cpumode;
-        Rectangle cpuRect = { x + 180, pY, 200, 24 };
-        if (cpuModeEdit) { ddRect = cpuRect; ddText = "Main 1 : Sub 1;Main 2 : Sub 1;Auto"; ddIndexPtr = &cpumode; ddEditPtr = &cpuModeEdit; }
-        else if (GuiDropdownBox(cpuRect, "Main 1 : Sub 1;Main 2 : Sub 1;Auto", &cpumode, false)) cpuModeEdit = true;
+            // 1. Device Group (6 items)
+            GuiGroupBox({ sX + 5, curY - 5, width - 65, rowH * 6 + 25 }, "Device");
+            curY += 10;
 
-        pY += rowH + 4;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "CPU Wait:");
-        int waitVal = (cfg.flags & PC8801::Config::enablewait) ? 1 : 0;
-        if (GuiToggleSlider({ x + 180, pY, 60, 20 }, "OFF;ON", &waitVal)) {
-            if (waitVal) cfg.flags |= PC8801::Config::enablewait; else cfg.flags &= ~PC8801::Config::enablewait; changed = true;
-        }
+            GuiLabel({ sX + 20, curY, labelW, 20 }, "CPU Clock:");
+            int clockMode = (cfg.clock < 60) ? 0 : 1;
+            int newClock = clockMode;
+            GuiToggleGroup({ sX + 170, curY, 150, 24 }, "4MHz;8MHz", &newClock);
+            if (newClock != clockMode) {
+                if (newClock == 0) { cfg.clock = 40; cfg.dipsw |= (1 << 5); cfg.mainsubratio = 1; }
+                else { cfg.clock = 80; cfg.dipsw &= ~(1 << 5); cfg.mainsubratio = 2; }
+                changed = true; resetPending = true;
+            }
+            curY += rowH;
 
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "FDD Wait:");
-        int fddwaitVal = (cfg.flag2 & PC8801::Config::fddnowait) ? 0 : 1;
-        if (GuiToggleSlider({ x + 180, pY, 60, 20 }, "OFF;ON", &fddwaitVal)) {
-            if (fddwaitVal) cfg.flag2 &= ~PC8801::Config::fddnowait; else cfg.flag2 |= PC8801::Config::fddnowait; changed = true;
-        }
+            GuiLabel({ sX + 20, curY, labelW, 20 }, "BASIC Mode:");
+            static int modeIndex;
+            if (!basicModeEdit) {
+                if (cfg.basicmode == PC8801::Config::N88V1) modeIndex = 0;
+                else if (cfg.basicmode == PC8801::Config::N88V2) modeIndex = 1;
+                else if (cfg.basicmode == PC8801::Config::N80) modeIndex = 2;
+                else if (cfg.basicmode == PC8801::Config::N80V2) modeIndex = 3;
+            }
+            Rectangle basicRect = { sX + 170, curY, 200, 24 };
+            if (basicModeEdit) { ddRect = basicRect; ddText = "N88 V1;N88 V2;N80 V1;N80 V2"; ddIndexPtr = &modeIndex; ddEditPtr = &basicModeEdit; }
+            else if (GuiDropdownBox(basicRect, "N88 V1;N88 V2;N80 V1;N80 V2", &modeIndex, false)) basicModeEdit = true;
+            curY += rowH + 4;
 
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "ERAM:");
-        float eramValF = (float)cfg.erambanks;
-        if (eramEdit) GuiSetState(STATE_DISABLED);
-        if (GuiSlider({ x + 180, pY, 180, 16 }, NULL, NULL, &eramValF, 0, 128)) {
-            cfg.erambanks = (int)eramValF; changed = true; resetPending = true;
-        }
-        GuiSetState(STATE_NORMAL);
-        wasUnl = false; if (eramEdit) { GuiUnlock(); wasUnl = true; }
-        if (GuiValueBox({ x + 370, pY, 50, 16 }, NULL, &cfg.erambanks, 0, 128, eramEdit)) {
-            eramEdit = !eramEdit; if (!eramEdit) { changed = true; resetPending = true; }
-        }
-        if (wasUnl) GuiLock();
-        GuiLabel({ x + 425, pY, 80, 20 }, "x 32KB");
+            GuiLabel({ sX + 20, curY, labelW, 20 }, "CPU Mode:");
+            static int cpumode;
+            if (!cpuModeEdit) cpumode = cfg.cpumode;
+            Rectangle cpuRect = { sX + 170, curY, 200, 24 };
+            if (cpuModeEdit) { ddRect = cpuRect; ddText = "Main 1 : Sub 1;Main 2 : Sub 1;Auto"; ddIndexPtr = &cpumode; ddEditPtr = &cpuModeEdit; }
+            else if (GuiDropdownBox(cpuRect, "Main 1 : Sub 1;Main 2 : Sub 1;Auto", &cpumode, false)) cpuModeEdit = true;
+            curY += rowH + 4;
 
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Ask Before Reset:");
-        int askVal = (cfg.flags & PC8801::Config::askbeforereset) ? 1 : 0;
-        if (GuiToggleSlider({ x + 180, pY, 60, 20 }, "OFF;ON", &askVal)) {
-            if (askVal) cfg.flags |= PC8801::Config::askbeforereset; else cfg.flags &= ~PC8801::Config::askbeforereset; changed = true;
-        }
+            GuiLabel({ sX + 20, curY, labelW, 20 }, "CPU Wait:");
+            int waitVal = (cfg.flags & PC8801::Config::enablewait) ? 1 : 0;
+            if (GuiToggleSlider({ sX + 170, curY, 60, 20 }, "OFF;ON", &waitVal)) {
+                if (waitVal) cfg.flags |= PC8801::Config::enablewait; else cfg.flags &= ~PC8801::Config::enablewait; changed = true;
+            }
+            curY += rowH;
 
-        pY += rowH;
-        GuiLabel({ x + 20, pY, labelW, 20 }, "Save Last Dir:");
-        int saveDirVal = (cfg.flags & PC8801::Config::savedirectory) ? 1 : 0;
-        if (GuiToggleSlider({ x + 180, pY, 60, 20 }, "OFF;ON", &saveDirVal)) {
-            if (saveDirVal) cfg.flags |= PC8801::Config::savedirectory; else cfg.flags &= ~PC8801::Config::savedirectory; changed = true;
-        }
+            GuiLabel({ sX + 20, curY, labelW, 20 }, "FDD Wait:");
+            int fddwaitVal = (cfg.flag2 & PC8801::Config::fddnowait) ? 0 : 1;
+            if (GuiToggleSlider({ sX + 170, curY, 60, 20 }, "OFF;ON", &fddwaitVal)) {
+                if (fddwaitVal) cfg.flag2 &= ~PC8801::Config::fddnowait; else cfg.flag2 |= PC8801::Config::fddnowait; changed = true;
+            }
+            curY += rowH;
+
+            GuiLabel({ sX + 20, curY, labelW, 20 }, "ERAM:");
+            float eramValF = (float)cfg.erambanks;
+            if (eramEdit) GuiSetState(STATE_DISABLED);
+            if (GuiSlider({ sX + 170, curY, 140, 16 }, NULL, NULL, &eramValF, 0, 128)) {
+                cfg.erambanks = (int)eramValF; changed = true; resetPending = true;
+            }
+            GuiSetState(STATE_NORMAL);
+            wasUnl = false; if (eramEdit) { GuiUnlock(); wasUnl = true; }
+            if (GuiValueBox({ sX + 320, curY, 50, 16 }, NULL, &cfg.erambanks, 0, 128, eramEdit)) {
+                eramEdit = !eramEdit; if (!eramEdit) { changed = true; resetPending = true; }
+            }
+            if (wasUnl) GuiLock();
+            GuiLabel({ sX + 375, curY, 60, 20 }, "x 32KB");
+            curY += rowH;
+
+            // 2. Host Group (4 items)
+            curY += 25;
+            GuiGroupBox({ sX + 5, curY - 5, width - 65, rowH * 4 + 15 }, "Host");
+            curY += 10;
+
+            GuiLabel({ sX + 20, curY, labelW, 20 }, "Emulation Speed:");
+            float speedValF = (float)cfg.speed;
+            if (speedEdit) GuiSetState(STATE_DISABLED);
+            if (GuiSlider({ sX + 170, curY, 140, 16 }, NULL, NULL, &speedValF, 20, 200)) {
+                cfg.speed = (int)speedValF; changed = true;
+            }
+            GuiSetState(STATE_NORMAL);
+            wasUnl = false; if (speedEdit) { GuiUnlock(); wasUnl = true; }
+            if (GuiValueBox({ sX + 320, curY, 50, 16 }, NULL, &cfg.speed, 20, 200, speedEdit)) {
+                speedEdit = !speedEdit; if (!speedEdit) changed = true;
+            }
+            if (wasUnl) GuiLock();
+            GuiLabel({ sX + 375, curY, 40, 20 }, "%");
+            curY += rowH;
+
+            GuiLabel({ sX + 20, curY, labelW, 20 }, "Ask Before Reset:");
+            int askVal = (cfg.flags & PC8801::Config::askbeforereset) ? 1 : 0;
+            if (GuiToggleSlider({ sX + 170, curY, 60, 20 }, "OFF;ON", &askVal)) {
+                if (askVal) cfg.flags |= PC8801::Config::askbeforereset; else cfg.flags &= ~PC8801::Config::askbeforereset; changed = true;
+            }
+            curY += rowH;
+
+            GuiLabel({ sX + 20, curY, labelW, 20 }, "Save Last Dir:");
+            int saveDirVal = (cfg.flags & PC8801::Config::savedirectory) ? 1 : 0;
+            if (GuiToggleSlider({ sX + 170, curY, 60, 20 }, "OFF;ON", &saveDirVal)) {
+                if (saveDirVal) cfg.flags |= PC8801::Config::savedirectory; else cfg.flags &= ~PC8801::Config::savedirectory; changed = true;
+            }
+            curY += rowH;
+
+            GuiLabel({ sX + 20, curY, labelW, 20 }, "Reset on D&D:");
+            int rodVal = (cfg.flag2 & PC8801::Config::resetondrop) ? 1 : 0;
+            if (GuiToggleSlider({ sX + 170, curY, 60, 20 }, "OFF;ON", &rodVal)) {
+                if (rodVal) cfg.flag2 |= PC8801::Config::resetondrop; else cfg.flag2 &= ~PC8801::Config::resetondrop; changed = true;
+            }
+            curY += rowH;
+        EndScissorMode();
+
+        content.height = curY - sY + 10;
     }
     else if (activeTab == 1) { // Audio
         GuiLabel({ x + 20, pY, 120, 20 }, "Port 44h:");

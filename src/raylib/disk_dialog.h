@@ -85,6 +85,7 @@ private:
     // Persistent values for uint config members (GuiValueBox requires int*)
     int bufferVal;
     int mouseSensVal;
+    Vector2 systemScroll;
     Vector2 mixerScroll;
     Vector2 inputScroll;
     
