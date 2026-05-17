@@ -54,10 +54,12 @@ jobs:
           libxrandr-dev:armhf \
           libxi-dev:armhf \
           libgl1-mesa-dev:armhf \
-          libgtk-3-dev:armhf
+          libgtk-3-dev:armhf \
+          x11proto-dev:armhf
 
     - name: Build
       run: |
+        export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
         export PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig
         cmake -S . -B build \
           -DCMAKE_BUILD_TYPE=Release \
