@@ -172,6 +172,10 @@ set(M88M_FONT_RESOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/NotoSansJP-Regular.ttf"
     "${CMAKE_CURRENT_SOURCE_DIR}/assets/ChicagoKare-Regular.ttf"
 )
+set(M88M_FONT_LICENSE_RESOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/OFL.txt"
+    "${CMAKE_CURRENT_SOURCE_DIR}/assets/NOTICE.md"
+)
 
 if(WIN32)
     list(APPEND RAYLIB_FRONT_SRC src/raylib/m88m.rc)
@@ -182,9 +186,9 @@ if(RAYLIB_FRONT_SRC)
         add_executable(m88_raylib MACOSX_BUNDLE ${RAYLIB_FRONT_SRC})
 
         # macOS bundle resources
-        set_source_files_properties(${M88M_FONT_RESOURCES} PROPERTIES
+        set_source_files_properties(${M88M_FONT_RESOURCES} ${M88M_FONT_LICENSE_RESOURCES} PROPERTIES
             MACOSX_PACKAGE_LOCATION "Resources/fonts")
-        target_sources(m88_raylib PRIVATE ${M88M_FONT_RESOURCES})
+        target_sources(m88_raylib PRIVATE ${M88M_FONT_RESOURCES} ${M88M_FONT_LICENSE_RESOURCES})
 
         set_target_properties(m88_raylib PROPERTIES
             OUTPUT_NAME "M88M"
@@ -315,6 +319,7 @@ if(RAYLIB_FRONT_SRC)
         install(TARGETS m88_raylib BUNDLE DESTINATION .)
     else()
         install(TARGETS m88_raylib RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        install(FILES ${M88M_FONT_LICENSE_RESOURCES} DESTINATION ${CMAKE_INSTALL_DOCDIR})
         if(NOT WIN32)
             # Linux specific desktop file and icon
             install(FILES assets/AppIcon.png DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/512x512/apps RENAME m88m.png)

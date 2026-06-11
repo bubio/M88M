@@ -108,6 +108,7 @@ cmake --build build --config Release
 - The original **M88** core is copyright (C) **cisc**. Please refer to `docs/README.md` for the original license terms.
 - New code, porting layers, and Raylib integration are provided under the **2-Clause BSD License**.
 - `c86ctl.h` is provided under the **2-Clause BSD License**.
+- The bundled fonts (`assets/NotoSansJP-Regular.ttf`, `assets/ChicagoKare-Regular.ttf`) are licensed under the **SIL Open Font License 1.1**. See [`assets/NOTICE.md`](assets/NOTICE.md) and [`assets/OFL.txt`](assets/OFL.txt) for details.
 
 ---
 
