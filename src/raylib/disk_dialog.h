@@ -25,7 +25,13 @@ public:
 
     bool IsMenuOpen() const { return showMenu; }
     void ToggleMenu(class CoreRunner* coreRunner = nullptr);
-    void RequestQuitConfirm() { modalState = MODAL_CONFIRM_QUIT; showMenu = true; }
+    void RequestQuitConfirm() {
+        // メニューが閉じている状態(⌘Q 等)から呼ばれた場合は、
+        // 確認ダイアログを閉じたときにメニューも畳む必要がある
+        if (!showMenu) quitOpenedMenu = true;
+        modalState = MODAL_CONFIRM_QUIT;
+        showMenu = true;
+    }
 
     enum ModalState {
         MODAL_NONE,
@@ -40,6 +46,7 @@ private:
     void DrawRecentDiskDialog(DiskManager* diskmgr);
     void DrawStateDialog(DiskManager* diskmgr, class CoreRunner* coreRunner);
     void DrawConfirmDialog(bool& shouldExit, class PC88* pc88, class CoreRunner* coreRunner);
+    void DismissConfirm();
     void DrawStatusBar(DiskManager* diskmgr);
     void DrawDriveStatus(DiskManager* diskmgr, int drive, float x, float y);
     std::string GetStatePath(DiskManager* diskmgr, int slot) const;
@@ -51,6 +58,7 @@ private:
 
     bool showMenu;
     ModalState modalState;
+    bool quitOpenedMenu; // RequestQuitConfirm がメニューを開いたか
     bool showSettings;
     bool showStateDialog;
     bool showRecentDialog;
