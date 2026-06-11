@@ -3,7 +3,7 @@ param (
 )
 
 # M88M Windows Build Script (PowerShell)
-# Requirement: Visual Studio 2022 and CMake
+# Requirement: Visual Studio 2022 or later, and CMake
 
 $BuildDir = "build"
 $Config = "RelWithDebInfo"
@@ -21,7 +21,10 @@ if (-not (Test-Path $BuildDir)) {
 }
 
 Write-Host "Configuring project..."
-cmake -S . -B $BuildDir -G "Visual Studio 17 2022" -A x64
+# Let CMake auto-detect the installed Visual Studio generator (VS 2022 / VS 2026 / etc.).
+# GitHub's windows-2025 runner now ships VS 2026, so a hardcoded "Visual Studio 17 2022"
+# generator fails with "could not find any instance of Visual Studio".
+cmake -S . -B $BuildDir -A x64
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Configuration failed."
     exit $LASTEXITCODE
