@@ -67,7 +67,7 @@ static std::string GetDirFromPath(const std::string& path) {
 }
 
 UIManager::UIManager() :
-    showMenu(false), modalState(MODAL_NONE), showSettings(false), showStateDialog(false), showRecentDialog(false),
+    showMenu(false), modalState(MODAL_NONE), quitOpenedMenu(false), showSettings(false), showStateDialog(false), showRecentDialog(false),
     selectingDiskForDrive(-1), recentDiskTargetDrive(-1), activeTab(0),
     currentStateSlot(0),
     diskScrollOffset({ 0, 0 }),
@@ -163,7 +163,7 @@ void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
         if (GetMouseY() < GetScreenHeight() - 24) ToggleMenu(coreRunner);
     }
     if (showMenu && IsKeyPressed(KEY_ESCAPE)) {
-        if (modalState != MODAL_NONE) modalState = MODAL_NONE;
+        if (modalState != MODAL_NONE) DismissConfirm();
         else if (selectingDiskForDrive != -1) selectingDiskForDrive = -1;
         else if (showRecentDialog) showRecentDialog = false;
         else if (showStateDialog) showStateDialog = false;
@@ -1333,7 +1333,7 @@ void UIManager::DrawConfirmDialog(bool& shouldExit, PC88* pc88, CoreRunner* core
     const char* msg = (modalState == MODAL_CONFIRM_RESET) ? "Are you sure you want to reset?" : "Are you sure you want to quit?";
 
     if (GuiWindowBox({ x, y, width, height }, title)) {
-        modalState = MODAL_NONE;
+        DismissConfirm();
     }
 
     GuiLabel({ x + 20, y + 40, width - 40, 20 }, msg);
@@ -1343,13 +1343,23 @@ void UIManager::DrawConfirmDialog(bool& shouldExit, PC88* pc88, CoreRunner* core
             if (coreRunner) coreRunner->RequestReset();
             else pc88->Reset();
             ToggleMenu(coreRunner);
+            modalState = MODAL_NONE;
         } else if (modalState == MODAL_CONFIRM_QUIT) {
             shouldExit = true;
+            modalState = MODAL_NONE;
         }
-        modalState = MODAL_NONE;
     }
 
     if (GuiButton({ x + 160, y + 90, 100, 30 }, "No")) {
-        modalState = MODAL_NONE;
+        DismissConfirm();
     }
+}
+
+// 確認ダイアログを閉じる。⌘Q 等でメニューが閉じた状態から開かれた
+// Quit 確認の場合は、メニューも一緒に畳んで設定画面が残らないようにする。
+void UIManager::DismissConfirm() {
+    bool closeMenu = (modalState == MODAL_CONFIRM_QUIT) && quitOpenedMenu;
+    modalState = MODAL_NONE;
+    quitOpenedMenu = false;
+    if (closeMenu) showMenu = false;
 }
