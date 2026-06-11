@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 project(M88M
-    VERSION 1.1.0
+    VERSION 1.1.1
     LANGUAGES CXX C
     DESCRIPTION "PC-8801 emulator (M88 改) — raylib frontend"
 )
