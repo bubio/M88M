@@ -23,7 +23,7 @@ jobs:
     runs-on: macos-26
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Set up Xcode 26.5
       uses: maxim-lobanov/setup-xcode@v1
