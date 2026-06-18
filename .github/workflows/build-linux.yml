@@ -56,14 +56,14 @@ jobs:
 
     - name: Upload Artifact
       if: github.event_name != 'release'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: m88m-linux-packages
         path: dist/
 
     - name: Upload Release Artifacts
       if: github.event_name == 'release'
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: m88m-linux-packages
         path: dist/
