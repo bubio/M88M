@@ -73,10 +73,16 @@ The emulator looks for ROMs in the following locations (in order):
 
 #### Dependencies (Linux)
 
-On Debian-based systems (Ubuntu, etc.), you will need:
+**Fedora / RHEL系 (dnf):**
 
 ```bash
-sudo apt-get install build-essential cmake libasound2-dev libx11-dev libxcursor-dev libxinerama-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev
+sudo dnf install -y gcc-c++ make cmake git libX11-devel libXcursor-devel libXinerama-devel libXrandr-devel libXi-devel mesa-libGL-devel alsa-lib-devel gtk3-devel
+```
+
+**Debian系 (Ubuntu等):**
+
+```bash
+sudo apt-get install build-essential cmake git libasound2-dev libx11-dev libxcursor-dev libxinerama-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev
 ```
 
 #### Build
@@ -84,6 +90,12 @@ sudo apt-get install build-essential cmake libasound2-dev libx11-dev libxcursor-
 ```bash
 git clone https://github.com/bubio/M88M.git
 cd M88M
+bash scripts/build_linux.sh
+```
+
+または手動で:
+
+```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j
 ```

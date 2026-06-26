@@ -40,6 +40,7 @@ else()
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-multichar>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-deprecated-declarations>
         $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-Wno-narrowing>
+        $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-fpermissive>
     )
 endif()
 
