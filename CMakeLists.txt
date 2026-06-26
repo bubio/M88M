@@ -149,8 +149,8 @@ include(FetchContent)
 FetchContent_Declare(
     raygui
     GIT_REPOSITORY https://github.com/raysan5/raygui.git
-    GIT_TAG        master
-    GIT_SHALLOW    TRUE
+    GIT_TAG        2d648ea0fe48bf1667b4e8d6fcedabd56003a702
+    GIT_SHALLOW    FALSE
 )
 FetchContent_MakeAvailable(raygui)
 
