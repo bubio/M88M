@@ -73,13 +73,13 @@ The emulator looks for ROMs in the following locations (in order):
 
 #### Dependencies
 
-[Homebrew](https://brew.sh/) と Xcode Command Line Tools が必要です。
+[Homebrew](https://brew.sh/) and Xcode Command Line Tools are required.
 
 ```bash
 xcode-select --install
 ```
 
-cmake は Homebrew でインストールします：
+Install cmake via Homebrew:
 
 ```bash
 brew install cmake
@@ -93,7 +93,7 @@ cd M88M
 bash scripts/build_macos.sh
 ```
 
-Universal Binary（Intel + Apple Silicon）を生成する場合：
+To build a Universal Binary (Intel + Apple Silicon):
 
 ```bash
 MACOS_UNIVERSAL=1 bash scripts/build_macos.sh
@@ -107,19 +107,19 @@ The app bundle will be generated at `./build/M88M.app`.
 
 #### Dependencies
 
-**Arch 系 (CachyOS, Manjaro 等 / pacman):**
+**Arch-based (CachyOS, Manjaro, etc. / pacman):**
 
 ```bash
 sudo pacman -S --needed base-devel cmake git libx11 libxcursor libxinerama libxrandr libxi mesa alsa-lib gtk3
 ```
 
-**Fedora / RHEL 系 (dnf):**
+**Fedora / RHEL-based (dnf):**
 
 ```bash
 sudo dnf install -y gcc-c++ make cmake git libX11-devel libXcursor-devel libXinerama-devel libXrandr-devel libXi-devel mesa-libGL-devel alsa-lib-devel gtk3-devel
 ```
 
-**Debian 系 (Ubuntu 等 / apt):**
+**Debian-based (Ubuntu, etc. / apt):**
 
 ```bash
 sudo apt-get install build-essential cmake git libasound2-dev libx11-dev libxcursor-dev libxinerama-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev
