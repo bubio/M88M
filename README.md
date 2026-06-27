@@ -69,17 +69,57 @@ The emulator looks for ROMs in the following locations (in order):
 
 ## Building
 
-### macOS / Linux
+### macOS
 
-#### Dependencies (Linux)
+#### Dependencies
 
-**Fedora / RHEL系 (dnf):**
+[Homebrew](https://brew.sh/) と Xcode Command Line Tools が必要です。
+
+```bash
+xcode-select --install
+```
+
+cmake は Homebrew でインストールします：
+
+```bash
+brew install cmake
+```
+
+#### Build
+
+```bash
+git clone https://github.com/bubio/M88M.git
+cd M88M
+bash scripts/build_macos.sh
+```
+
+Universal Binary（Intel + Apple Silicon）を生成する場合：
+
+```bash
+MACOS_UNIVERSAL=1 bash scripts/build_macos.sh
+```
+
+The app bundle will be generated at `./build/M88M.app`.
+
+---
+
+### Linux
+
+#### Dependencies
+
+**Arch 系 (CachyOS, Manjaro 等 / pacman):**
+
+```bash
+sudo pacman -S --needed base-devel cmake git libx11 libxcursor libxinerama libxrandr libxi mesa alsa-lib gtk3
+```
+
+**Fedora / RHEL 系 (dnf):**
 
 ```bash
 sudo dnf install -y gcc-c++ make cmake git libX11-devel libXcursor-devel libXinerama-devel libXrandr-devel libXi-devel mesa-libGL-devel alsa-lib-devel gtk3-devel
 ```
 
-**Debian系 (Ubuntu等):**
+**Debian 系 (Ubuntu 等 / apt):**
 
 ```bash
 sudo apt-get install build-essential cmake git libasound2-dev libx11-dev libxcursor-dev libxinerama-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev
@@ -93,14 +133,9 @@ cd M88M
 bash scripts/build_linux.sh
 ```
 
-または手動で:
+The executable will be generated at `./build/m88m`.
 
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-```
-
-The executable will be generated at `./build/m88m` (or `./build/M88M.app` on macOS).
+---
 
 ### Windows
 
@@ -108,6 +143,8 @@ The executable will be generated at `./build/m88m` (or `./build/M88M.app` on mac
 cmake -S . -B build
 cmake --build build --config Release
 ```
+
+The executable will be generated at `.\build\Release\m88m.exe`.
 
 ## Usage
 
