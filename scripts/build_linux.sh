@@ -45,7 +45,7 @@ echo -e "${YELLOW}Configuring project...${NC}"
 cmake -S . -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
 echo -e "${YELLOW}Building...${NC}"
-cmake --build "$BUILD_DIR" -j$(nproc)
+cmake --build "$BUILD_DIR" -j"$(nproc)"
 
 echo -e "${GREEN}Build complete!${NC}"
 echo -e "The executable is located at: ${YELLOW}$PROJECT_ROOT/$BUILD_DIR/m88m${NC}"
