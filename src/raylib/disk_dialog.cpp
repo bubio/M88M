@@ -603,7 +603,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         float labelW = 150;
 
         Rectangle scrollBounds = { x + 10, y + 70, width - 20, height - 120 };
-        Rectangle content = { 0, 0, width - 40, 400 }; 
+        Rectangle content = { 0, 0, width - 40, 400 };
         Rectangle view;
         if (!anyEdit && CheckCollisionPointRec(GetMousePosition(), scrollBounds)) systemScroll.y += GetMouseWheelMove() * 20;
         GuiScrollPanel(scrollBounds, NULL, content, &systemScroll, &view);
@@ -996,7 +996,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     else if (activeTab == 5) { // About
         GuiLabel({ x + 20, pY, 500, 20 }, "M88M - PC-8801 Emulator for Modern Platforms");
         pY += 25;
-        GuiLabel({ x + 20, pY, 500, 20 }, "Version: 1.1.1");
+        GuiLabel({ x + 20, pY, 500, 20 }, "Version: 1.2.0");
         pY += 35;
 
         auto DrawLink = [&](float lx, float ly, const char* text, const char* url) {
