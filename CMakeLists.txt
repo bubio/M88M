@@ -230,6 +230,13 @@ if(RAYLIB_FRONT_SRC)
 
     target_link_libraries(m88_raylib PRIVATE m88core raylib raygui nfd)
 
+    if(M88M_IS_FREEBSD)
+        # On FreeBSD, /usr/local/include/iconv.h from ports can shadow the base
+        # system header and remap iconv_* calls to libiconv_* symbols.
+        # LIBICONV_PLUG keeps the header compatible with libc's iconv.
+        target_compile_definitions(m88_raylib PRIVATE LIBICONV_PLUG)
+    endif()
+
     # --- Embedded Font (non-macOS Unix) --------------------------------
     if(UNIX AND NOT APPLE)
         message(STATUS "Embedding fonts for non-macOS Unix binary...")
