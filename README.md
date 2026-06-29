@@ -18,15 +18,16 @@ M88M is a modern, cross-platform port of the classic PC-8801 emulator **M88**, o
   </a>
 </p>
 
-While the original M88 was tightly coupled with the Win32 API and DirectX, M88M leverages **raylib** and **raygui** for its frontend, making it natively compatible with **macOS (Intel/Apple Silicon)**, **Linux**, and **Windows** via a single CMake-based build system.
+While the original M88 was tightly coupled with the Win32 API and DirectX, M88M leverages **raylib** and **raygui** for its frontend, making it natively compatible with **macOS (Intel/Apple Silicon)**, **Linux**, **FreeBSD**, and **Windows** via a single CMake-based build system.
 
 <p align="center"><img src="docs/Screenshot1.png" alt="Phantasie on M88M"></p>
 <p align="center"><img src="docs/Screenshot2.png" alt="Phantasie II on M88M"></p>
 <p align="center"><img src="docs/Screenshot3.png" alt="Phantasie II on M88M Settings"></p>
+<p align="center"><img src="docs/Screenshot4.png" alt="Wizardry 4 on M88M Settings"></p>
 
 ## Key Features
 
-- **Cross-Platform:** Native support for macOS, Linux, and Windows.
+- **Cross-Platform:** Native support for macOS, Linux, FreeBSD, and Windows.
 - **Raylib Frontend:** Modern, lightweight hardware-accelerated rendering and audio.
 - **Core Integrity:** Retains the highly accurate emulation core of the original M88 while replacing the platform-dependent layers.
 - **Modern Build System:** Uses CMake for easy compilation with modern compilers (Clang, GCC, MSVC).
@@ -42,6 +43,7 @@ M88M is fully functional and supports a wide range of PC-8801 software.
 - **N88-BASIC (V1/V2)** and compatible modes.
 - **Soundboard II (OPNA)** emulation (FM, PSG, Rhythm, ADPCM) with a built-in volume mixer.
 - **D88 Disk Support:** Mount/Unmount disks, disk image management, and "Recent Disks" history.
+- **Playlist Support:** Supports `m3u` / `m3u8` playlists for disk image workflows.
 - **State Management:** 10 save state slots with visual previews.
 - **High-DPI Scaling:** Adjustable window scaling (1x, 2x, 3x) and fullscreen support.
 - **Input:** Keyboard matrix emulation, Mouse, and Gamepad support.
@@ -63,7 +65,8 @@ The emulator looks for ROMs in the following locations (in order):
 2. `roms/` subfolder in the same directory as the executable.
 3. **Linux:** `~/.local/share/M88M/roms`
 4. **macOS:** `~/Library/Application Support/M88M/roms`
-5. **Windows:** `%APPDATA%\M88M\roms`
+5. **FreeBSD:** `~/.config/m88m/roms`
+6. **Windows:** `%APPDATA%\M88M\roms`
 
 *Note: You must own the original hardware to legally use these ROM files.*
 
@@ -137,6 +140,32 @@ The executable will be generated at `./build/m88m`.
 
 ---
 
+### FreeBSD
+
+#### Dependencies
+
+```bash
+sudo pkg install cmake git pkgconf ca_root_nss libiconv libX11 libXcursor libXinerama libXrandr libXi mesa-libs gtk3
+```
+
+#### Build
+
+```bash
+git clone https://github.com/bubio/M88M.git
+cd M88M
+sh scripts/build_freebsd.sh
+```
+
+The executable will be generated at `./build/m88m`.
+
+To build a FreeBSD pkg:
+
+```bash
+sh scripts/build_freebsd_pkg.sh
+```
+
+---
+
 ### Windows
 
 ```cmd
@@ -150,7 +179,7 @@ The executable will be generated at `.\build\Release\m88m.exe`.
 
 - **F11 / Right Click:** Toggle the Main Menu / Settings overlay.
 - **ESC:** Close sub-menus or the main overlay.
-- **Drag & Drop:** Drop a `.d88` file onto the window to mount it to Drive 1&2.
+- **Drag & Drop:** Drop a `.d88` disk image or `m3u` / `m3u8` playlist onto the window to mount it to Drive 1&2.
 
 ## License
 

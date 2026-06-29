@@ -166,6 +166,35 @@ static Font LoadLatinFont() {
     return emptyFont;
 }
 
+#if !defined(_WIN32) && !defined(__APPLE__)
+static void TrySetUnixWindowIcon() {
+    std::vector<std::string> candidates;
+
+    const char* base = GetApplicationDirectory();
+    if (base) {
+        candidates.push_back(std::string(base) + "assets/AppIcon.png");
+        candidates.push_back(std::string(base) + "../share/icons/hicolor/512x512/apps/m88m.png");
+    }
+
+    candidates.push_back("assets/AppIcon.png");
+    candidates.push_back("../assets/AppIcon.png");
+    candidates.push_back("../../assets/AppIcon.png");
+    candidates.push_back("/usr/local/share/icons/hicolor/512x512/apps/m88m.png");
+    candidates.push_back("/usr/share/icons/hicolor/512x512/apps/m88m.png");
+
+    for (const auto& path : candidates) {
+        if (access(path.c_str(), F_OK) != 0) continue;
+
+        Image icon = LoadImage(path.c_str());
+        if (icon.data != nullptr) {
+            SetWindowIcon(icon);
+            UnloadImage(icon);
+            return;
+        }
+    }
+}
+#endif
+
 int main() {
 #ifdef _WIN32
     // If not running from a console, redirect stderr to a log file
@@ -180,8 +209,11 @@ int main() {
     const int screenHeight = 424; // 400 (emulation) + 24 (status bar)
 
     InitWindow(screenWidth, screenHeight, "M88M - PC-8801 Emulator");
+#if !defined(_WIN32) && !defined(__APPLE__)
+    TrySetUnixWindowIcon();
+#endif
     SetExitKey(0); // Disable ESC exit
-
+ 
     Font fontJp = LoadJapaneseFont();
     Font fontEn = LoadLatinFont();
 
