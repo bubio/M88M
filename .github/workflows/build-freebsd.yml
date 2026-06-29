@@ -1,0 +1,59 @@
+name: Build FreeBSD (x86_64 pkg)
+
+on:
+  push:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  pull_request:
+    branches: [ main, master ]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Build pkg in FreeBSD VM
+      uses: vmactions/freebsd-vm@v1
+      with:
+        release: "14.4"
+        usesh: true
+        sync: rsync
+        prepare: |
+          pkg install -y cmake git pkgconf ca_root_nss libiconv libX11 libXcursor libXinerama libXrandr libXi mesa-libs gtk3
+        run: |
+          sh scripts/build_freebsd_pkg.sh
+
+    - name: Upload Artifact
+      if: github.event_name != 'release'
+      uses: actions/upload-artifact@v7
+      with:
+        name: m88m-freebsd-pkg
+        path: dist/*.pkg
+
+    - name: Upload Release Artifact
+      if: github.event_name == 'release'
+      uses: actions/upload-artifact@v7
+      with:
+        name: m88m-freebsd-pkg
+        path: dist/*.pkg
+
+    - name: Update Release
+      if: github.event_name == 'release'
+      uses: svenstaro/upload-release-action@v2
+      with:
+        file: dist/*.pkg
+        file_glob: true
+        overwrite: true
