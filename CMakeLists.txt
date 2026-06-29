@@ -311,8 +311,19 @@ if(RAYLIB_FRONT_SRC)
         find_package(X11 REQUIRED)
         target_link_libraries(m88_raylib PRIVATE ${X11_LIBRARIES})
 
-        # Also need these for raylib on most Linux distros
-        target_link_libraries(m88_raylib PRIVATE Xcursor Xinerama Xrandr Xi)
+        # Link X11 extension libraries by the exact paths discovered by CMake.
+        # Bare -lXcursor/-lXinerama/... works on Linux, but can fail on FreeBSD
+        # where these ports live under /usr/local/lib.
+        foreach(M88M_X11_EXT_LIB IN ITEMS
+            "${X11_Xcursor_LIB}"
+            "${X11_Xinerama_LIB}"
+            "${X11_Xrandr_LIB}"
+            "${X11_Xi_LIB}"
+        )
+            if(M88M_X11_EXT_LIB)
+                target_link_libraries(m88_raylib PRIVATE "${M88M_X11_EXT_LIB}")
+            endif()
+        endforeach()
 
         find_package(OpenGL REQUIRED)
         target_link_libraries(m88_raylib PRIVATE OpenGL::GL)
