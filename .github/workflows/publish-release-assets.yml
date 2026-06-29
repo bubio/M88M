@@ -1,0 +1,57 @@
+name: Publish Release Assets
+
+on:
+  workflow_call:
+    inputs:
+      asset-patterns:
+        description: Newline-separated filename globs to upload as release assets.
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download Release Artifacts
+      uses: actions/download-artifact@v7
+      with:
+        path: release-assets
+        merge-multiple: true
+
+    - name: Upload Release Assets
+      env:
+        GH_TOKEN: ${{ github.token }}
+        RELEASE_TAG: ${{ github.event.release.tag_name }}
+        ASSET_PATTERNS: ${{ inputs.asset-patterns }}
+      run: |
+        if [ -z "$RELEASE_TAG" ]; then
+          echo "Release tag is not available."
+          exit 1
+        fi
+
+        mapfile -t all_files < <(find release-assets -type f -print)
+        assets=()
+
+        while IFS= read -r pattern; do
+          [ -z "$pattern" ] && continue
+          for file in "${all_files[@]}"; do
+            filename="$(basename "$file")"
+            # shellcheck disable=SC2254
+            case "$filename" in
+              $pattern) assets+=("$file") ;;
+            esac
+          done
+        done <<< "$ASSET_PATTERNS"
+
+        if [ "${#assets[@]}" -eq 0 ]; then
+          echo "No release assets found."
+          exit 1
+        fi
+
+        gh release upload "$RELEASE_TAG" "${assets[@]}" --clobber

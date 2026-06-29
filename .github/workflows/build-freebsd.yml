@@ -3,20 +3,34 @@ name: Build FreeBSD (x86_64 pkg)
 on:
   push:
     branches: [ main, master ]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
+    paths:
+      - 'CMakeLists.txt'
+      - 'LICENSE'
+      - 'assets/**'
+      - 'src/**'
+      - 'scripts/build_freebsd_pkg.sh'
+      - '.github/workflows/build-freebsd.yml'
+      - '.github/workflows/publish-release-assets.yml'
   pull_request:
     branches: [ main, master ]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
+    paths:
+      - 'CMakeLists.txt'
+      - 'LICENSE'
+      - 'assets/**'
+      - 'src/**'
+      - 'scripts/build_freebsd_pkg.sh'
+      - '.github/workflows/build-freebsd.yml'
+      - '.github/workflows/publish-release-assets.yml'
   release:
     types: [published]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -37,23 +51,17 @@ jobs:
           sh scripts/build_freebsd_pkg.sh
 
     - name: Upload Artifact
-      if: github.event_name != 'release'
       uses: actions/upload-artifact@v7
       with:
-        name: m88m-freebsd-pkg
+        name: m88m-freebsd-x64-pkg
         path: dist/*.pkg
 
-    - name: Upload Release Artifact
-      if: github.event_name == 'release'
-      uses: actions/upload-artifact@v7
-      with:
-        name: m88m-freebsd-pkg
-        path: dist/*.pkg
-
-    - name: Update Release
-      if: github.event_name == 'release'
-      uses: svenstaro/upload-release-action@v2
-      with:
-        file: dist/*.pkg
-        file_glob: true
-        overwrite: true
+  publish-release:
+    if: github.event_name == 'release'
+    needs: build
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-release-assets.yml
+    with:
+      asset-patterns: |
+        *.pkg
