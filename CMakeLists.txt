@@ -384,8 +384,6 @@ if(RAYLIB_FRONT_SRC)
         set(CPACK_DEBIAN_PACKAGE_MAINTAINER "seiji")
         # Basic dependencies for raylib/nfd on Ubuntu
         set(CPACK_DEBIAN_PACKAGE_DEPENDS "libasound2, libgtk-3-0, libx11-6")
-    elseif(M88M_IS_FREEBSD)
-        set(CPACK_GENERATOR "TXZ")
     endif()
 
     include(CPack)

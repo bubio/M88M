@@ -88,7 +88,7 @@ sudo apt-get install build-essential cmake git libasound2-dev libx11-dev libxcur
 #### Dependencies (FreeBSD)
 
 ```bash
-pkg install cmake git pkgconf libiconv libX11 libXcursor libXinerama libXrandr libXi mesa-libs gtk3
+pkg install cmake git pkgconf ca_root_nss libiconv libX11 libXcursor libXinerama libXrandr libXi mesa-libs gtk3
 ```
 
 #### Build
@@ -103,6 +103,12 @@ FreeBSDでは:
 
 ```bash
 sh scripts/build_freebsd.sh
+```
+
+FreeBSD pkg を作る場合:
+
+```bash
+sh scripts/build_freebsd_pkg.sh
 ```
 
 または手動で:
