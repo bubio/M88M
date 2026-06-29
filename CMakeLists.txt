@@ -191,6 +191,10 @@ if(WIN32)
 endif()
 
 if(RAYLIB_FRONT_SRC)
+    if(APPLE OR UNIX)
+        find_package(Iconv REQUIRED)
+    endif()
+
     if(APPLE)
         add_executable(m88_raylib MACOSX_BUNDLE ${RAYLIB_FRONT_SRC})
 
@@ -251,7 +255,7 @@ if(RAYLIB_FRONT_SRC)
 
     if(APPLE)
         target_link_libraries(m88_raylib PRIVATE
-            iconv
+            Iconv::Iconv
             "-framework Cocoa"
             "-framework IOKit"
             "-framework CoreVideo"
@@ -303,7 +307,7 @@ if(RAYLIB_FRONT_SRC)
             comdlg32
         )
     elseif(UNIX)
-        target_link_libraries(m88_raylib PRIVATE pthread m)
+        target_link_libraries(m88_raylib PRIVATE Iconv::Iconv pthread m)
         if(NOT M88M_IS_FREEBSD)
             target_link_libraries(m88_raylib PRIVATE dl rt)
         endif()

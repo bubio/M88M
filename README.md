@@ -88,7 +88,7 @@ sudo apt-get install build-essential cmake git libasound2-dev libx11-dev libxcur
 #### Dependencies (FreeBSD)
 
 ```bash
-sudo pkg install cmake git pkgconf libX11 libXcursor libXinerama libXrandr libXi mesa-libs gtk3
+pkg install cmake git pkgconf libiconv libX11 libXcursor libXinerama libXrandr libXi mesa-libs gtk3
 ```
 
 #### Build
