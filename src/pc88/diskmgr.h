@@ -58,7 +58,7 @@ public:
 	const char* GetFileName() const { return diskname; }
 	uint GetNumDisks() { return ndisks; }
 	bool SetDiskSize(int index, int newsize);
-	bool IsReadOnly() { return readonly; }
+	bool IsReadOnly() { return readonly || (playlist && (fio.GetFlags() & FileIO::readonly)); }
 	uint IsOpen() { return ref > 0; }
 	bool AddDisk(const char* title, uint type);
 
@@ -66,10 +66,12 @@ private:
 	struct DiskInfo
 	{
 		char title[20];
+		char path[MAX_PATH];
 		int32 pos;
 		int32 size;
 	};
 	bool ReadHeaders();
+	bool ReadPlaylist(const char* filename);
 	void Close();
 	bool IsValidHeader(D88::ImageHeader&);
 	
@@ -77,6 +79,7 @@ private:
 	int ndisks;
 	int ref;
 	bool readonly;
+	bool playlist;
 	DiskInfo disks[max_disks];
 	char diskname[MAX_PATH];
 };
@@ -139,5 +142,3 @@ private:
 
 	CriticalSection cs;
 };
-
-

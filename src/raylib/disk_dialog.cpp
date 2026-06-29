@@ -58,6 +58,14 @@ static const char* GetFileNameOnly(const char* path) {
     return f ? f + 1 : path;
 }
 
+static std::string StripExtension(std::string name) {
+    size_t dot = name.find_last_of('.');
+    if (dot != std::string::npos) {
+        name.resize(dot);
+    }
+    return name;
+}
+
 static std::string GetDirFromPath(const std::string& path) {
     size_t last = path.find_last_of("/\\");
     if (last != std::string::npos) {
@@ -68,7 +76,7 @@ static std::string GetDirFromPath(const std::string& path) {
 
 UIManager::UIManager() :
     showMenu(false), modalState(MODAL_NONE), quitOpenedMenu(false), showSettings(false), showStateDialog(false), showRecentDialog(false),
-    selectingDiskForDrive(-1), recentDiskTargetDrive(-1), activeTab(0),
+    selectingDiskForDrive(-1), selectingBothDrives(false), recentDiskTargetDrive(-1), activeTab(0),
     currentStateSlot(0),
     diskScrollOffset({ 0, 0 }),
     recentScrollOffset({ 0, 0 }),
@@ -164,7 +172,7 @@ void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
     }
     if (showMenu && IsKeyPressed(KEY_ESCAPE)) {
         if (modalState != MODAL_NONE) DismissConfirm();
-        else if (selectingDiskForDrive != -1) selectingDiskForDrive = -1;
+        else if (selectingDiskForDrive != -1) { selectingDiskForDrive = -1; selectingBothDrives = false; }
         else if (showRecentDialog) showRecentDialog = false;
         else if (showStateDialog) showStateDialog = false;
         else if (showSettings) showSettings = false;
@@ -212,8 +220,8 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
     const char* path1 = diskmgr->GetImagePath(0);
     const char* path2 = diskmgr->GetImagePath(1);
     std::string groupTitle = "Disk Drives";
-    if (path1[0]) groupTitle = Paths::NormalizeNFC(GetFileNameOnly(path1));
-    else if (path2[0]) groupTitle = Paths::NormalizeNFC(GetFileNameOnly(path2));
+    if (path1[0]) groupTitle = Paths::NormalizeNFC(StripExtension(GetFileNameOnly(path1)));
+    else if (path2[0]) groupTitle = Paths::NormalizeNFC(StripExtension(GetFileNameOnly(path2)));
 
     bool groupJp = ContainsJapanese(groupTitle);
     if (groupJp && IsFontValid(fontJp)) {
@@ -263,7 +271,7 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
 
         bool hasMultiple = diskmgr->GetNumDisks(i) > 1;
         if (GuiButton({ x + width - 85, btnY + 10, 30, btnH }, hasMultiple ? GuiIconText(ICON_FILE_COPY, NULL) : GuiIconText(ICON_FILE_OPEN, NULL))) {
-            if (hasMultiple) selectingDiskForDrive = i;
+            if (hasMultiple) { selectingDiskForDrive = i; selectingBothDrives = false; }
             else OpenNativeDialog(diskmgr, i);
         }
 
@@ -302,7 +310,7 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
 
 void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     nfdchar_t *outPath = NULL;
-    nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
+    nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk,m3u,m3u8" } };
 
     const nfdchar_t* defaultPath = NULL;
     if (Config::Get().flags & PC8801::Config::savedirectory) {
@@ -356,7 +364,12 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
             if (!currentPath.empty()) {
                 diskmgr->Mount(selectingDiskForDrive, currentPath.c_str(), false, i, false);
             }
-            selectingDiskForDrive = -1;
+            if (selectingBothDrives && selectingDiskForDrive == 0) {
+                selectingDiskForDrive = 1;
+            } else {
+                selectingDiskForDrive = -1;
+                selectingBothDrives = false;
+            }
         }
 
         if (isJp && IsFontValid(fontEn)) {
@@ -366,7 +379,10 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
     }
     EndScissorMode();
 
-    if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) selectingDiskForDrive = -1;
+    if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) {
+        selectingDiskForDrive = -1;
+        selectingBothDrives = false;
+    }
 }
 
 static std::string GetPathHash(const std::string& path) {
@@ -454,7 +470,7 @@ static std::string GetCurrentDiskDisplayName(DiskManager* diskmgr) {
     }
     const char* path = diskmgr->GetImagePath(0);
     if (path[0]) {
-        return Paths::NormalizeNFC(GetFileNameOnly(path));
+        return Paths::NormalizeNFC(StripExtension(GetFileNameOnly(path)));
     }
     return "snapshot";
 }
@@ -1195,19 +1211,26 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
         if (origImg1 >= 0 && origImg2 < 0) {
             if (availableImages > 1) selectingDiskForDrive = 0;
             else selectingDiskForDrive = -1;
+            selectingBothDrives = false;
         } else if (origImg1 < 0 && origImg2 >= 0) {
             if (availableImages > 1) selectingDiskForDrive = 1;
             else selectingDiskForDrive = -1;
+            selectingBothDrives = false;
         } else {
-            // Auto mount both (Drive 1&2, Recent, D&D) - don't show selector
-            selectingDiskForDrive = -1;
+            if (availableImages > 2) {
+                selectingDiskForDrive = 0;
+                selectingBothDrives = true;
+            } else {
+                selectingDiskForDrive = -1;
+                selectingBothDrives = false;
+            }
         }
     }
 }
 
 void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
     nfdchar_t *outPath = NULL;
-    nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk" } };
+    nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk,m3u,m3u8" } };
 
     const nfdchar_t* defaultPath = NULL;
     if (Config::Get().flags & PC8801::Config::savedirectory) {
@@ -1297,7 +1320,7 @@ void UIManager::DrawRecentDiskDialog(DiskManager* diskmgr) {
         float itemY = view.y + i * (btnH + 4) + recentScrollOffset.y;
         if (itemY + btnH < view.y || itemY > view.y + view.height) continue;
 
-        std::string fileName = Paths::NormalizeNFC(GetFileNameOnly(recentDisks[i].c_str()));
+        std::string fileName = Paths::NormalizeNFC(StripExtension(GetFileNameOnly(recentDisks[i].c_str())));
         bool isJp = ContainsJapanese(fileName);
         if (isJp && IsFontValid(fontJp)) {
             GuiSetFont(fontJp);
