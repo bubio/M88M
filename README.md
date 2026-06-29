@@ -69,7 +69,7 @@ The emulator looks for ROMs in the following locations (in order):
 
 ## Building
 
-### macOS / Linux
+### macOS / Linux / FreeBSD
 
 #### Dependencies (Linux)
 
@@ -85,12 +85,24 @@ sudo dnf install -y gcc-c++ make cmake git libX11-devel libXcursor-devel libXine
 sudo apt-get install build-essential cmake git libasound2-dev libx11-dev libxcursor-dev libxinerama-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev
 ```
 
+#### Dependencies (FreeBSD)
+
+```bash
+pkg install cmake git pkgconf libX11 libXcursor libXinerama libXrandr libXi mesa-libs gtk3
+```
+
 #### Build
 
 ```bash
 git clone https://github.com/bubio/M88M.git
 cd M88M
 bash scripts/build_linux.sh
+```
+
+FreeBSDでは:
+
+```bash
+sh scripts/build_freebsd.sh
 ```
 
 または手動で:
