@@ -284,7 +284,7 @@ int main() {
                 Color textColor = GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_NORMAL));
                 while (std::getline(ss, line, '\n')) {
                     if (IsFontValid(fontEn)) {
-                        DrawTextEx(fontEn, line.c_str(), { x + 25, (float)lineY }, 14, 1, textColor);
+                        DrawTextEx(fontEn, line.c_str(), { x + 25, (float)lineY }, 16, 1, textColor);
                     } else {
                         DrawText(line.c_str(), (int)x + 25, lineY, 10, textColor);
                     }
