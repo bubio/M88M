@@ -1,26 +1,56 @@
-name: Build Windows (x86_64)
+name: Build Windows (x64/x86/arm64)
 
 on:
   push:
     branches: [ main, master ]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
+    paths:
+      - 'CMakeLists.txt'
+      - 'LICENSE'
+      - 'assets/**'
+      - 'src/**'
+      - 'scripts/build_win.ps1'
+      - '.github/workflows/build-windows.yml'
+      - '.github/workflows/publish-release-assets.yml'
   pull_request:
     branches: [ main, master ]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
+    paths:
+      - 'CMakeLists.txt'
+      - 'LICENSE'
+      - 'assets/**'
+      - 'src/**'
+      - 'scripts/build_win.ps1'
+      - '.github/workflows/build-windows.yml'
+      - '.github/workflows/publish-release-assets.yml'
   release:
     types: [published]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: windows-2025
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            cmake_arch: x64
+            artifact: m88m-windows-x64-zip
+            package: m88m-windows-x64
+          - arch: x86
+            cmake_arch: Win32
+            artifact: m88m-windows-x86-zip
+            package: m88m-windows-x86
+          - arch: arm64
+            cmake_arch: ARM64
+            artifact: m88m-windows-arm64-zip
+            package: m88m-windows-arm64
 
     steps:
     - uses: actions/checkout@v7
@@ -35,34 +65,28 @@ jobs:
         magick assets/AppIcon.png -define icon:auto-resize=256,128,64,48,32,16 assets/AppIcon.ico
 
     - name: Build
-      run: ./scripts/build_win.ps1
+      run: ./scripts/build_win.ps1 -Architecture ${{ matrix.cmake_arch }}
 
     - name: Prepare Artifact
       run: |
         mkdir package
         copy build\RelWithDebInfo\m88m.exe package\
 
+    - name: Compress Artifact
+      run: powershell Compress-Archive -Path package\* -DestinationPath build\${{ matrix.package }}.zip
+
     - name: Upload Artifact
-      if: github.event_name != 'release'
       uses: actions/upload-artifact@v7
       with:
-        name: m88m-windows
-        path: package/
+        name: ${{ matrix.artifact }}
+        path: build/${{ matrix.package }}.zip
 
-    - name: Compress for Release
-      if: github.event_name == 'release'
-      run: powershell Compress-Archive -Path package\* -DestinationPath build\m88m-windows.zip
-
-    - name: Upload Release Artifact
-      if: github.event_name == 'release'
-      uses: actions/upload-artifact@v7
-      with:
-        name: m88m-windows.zip
-        path: build/m88m-windows.zip
-
-    - name: Update Release
-      if: github.event_name == 'release'
-      uses: svenstaro/upload-release-action@v2
-      with:
-        file: build/m88m-windows.zip
-        overwrite: true
+  publish-release:
+    if: github.event_name == 'release'
+    needs: build
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-release-assets.yml
+    with:
+      asset-patterns: |
+        *.zip

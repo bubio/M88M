@@ -3,20 +3,34 @@ name: Build macOS (Universal)
 on:
   push:
     branches: [ main, master ]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
+    paths:
+      - 'CMakeLists.txt'
+      - 'LICENSE'
+      - 'assets/**'
+      - 'src/**'
+      - 'scripts/build_macos.sh'
+      - '.github/workflows/build-macos.yml'
+      - '.github/workflows/publish-release-assets.yml'
   pull_request:
     branches: [ main, master ]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
+    paths:
+      - 'CMakeLists.txt'
+      - 'LICENSE'
+      - 'assets/**'
+      - 'src/**'
+      - 'scripts/build_macos.sh'
+      - '.github/workflows/build-macos.yml'
+      - '.github/workflows/publish-release-assets.yml'
   release:
     types: [published]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -39,7 +53,7 @@ jobs:
       if: github.event_name != 'release'
       uses: actions/upload-artifact@v7
       with:
-        name: M88M-macos-app
+        name: m88m-macos-universal-app
         path: build/M88M.app
 
     - name: Package DMG (Release only)
@@ -47,18 +61,21 @@ jobs:
       run: |
         cd build
         cpack -G DragNDrop -C Release
-        mv [mM]88[mM]*.dmg M88M-macos-universal.dmg
+        mv [mM]88[mM]*.dmg m88m-macos-universal.dmg
 
     - name: Upload DMG Artifact
       if: github.event_name == 'release'
       uses: actions/upload-artifact@v7
       with:
-        name: M88M-macos-universal.dmg
-        path: build/M88M-macos-universal.dmg
+        name: m88m-macos-universal-dmg
+        path: build/m88m-macos-universal.dmg
 
-    - name: Update Release
-      if: github.event_name == 'release'
-      uses: svenstaro/upload-release-action@v2
-      with:
-        file: build/M88M-macos-universal.dmg
-        overwrite: true
+  publish-release:
+    if: github.event_name == 'release'
+    needs: build
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-release-assets.yml
+    with:
+      asset-patterns: |
+        *.dmg

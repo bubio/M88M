@@ -3,20 +3,32 @@ name: Build Raspberry Pi (armhf)
 on:
   push:
     branches: [ main, master ]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
+    paths:
+      - 'CMakeLists.txt'
+      - 'LICENSE'
+      - 'assets/**'
+      - 'src/**'
+      - '.github/workflows/build-rpi.yml'
+      - '.github/workflows/publish-release-assets.yml'
   pull_request:
     branches: [ main, master ]
-    paths-ignore:
-      - 'docs/**'
-      - '**.md'
+    paths:
+      - 'CMakeLists.txt'
+      - 'LICENSE'
+      - 'assets/**'
+      - 'src/**'
+      - '.github/workflows/build-rpi.yml'
+      - '.github/workflows/publish-release-assets.yml'
   release:
     types: [published]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -69,7 +81,7 @@ jobs:
           -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ \
           -DCPACK_GENERATOR=DEB \
           -DCPACK_DEBIAN_PACKAGE_ARCHITECTURE=armhf
-        cmake --build build -j $(nproc)
+        cmake --build build -j "$(nproc)"
 
     - name: Package with CPack
       run: |
@@ -82,23 +94,17 @@ jobs:
         cp build/*.deb dist/
 
     - name: Upload Artifact
-      if: github.event_name != 'release'
       uses: actions/upload-artifact@v7
       with:
-        name: m88m-rpi-armhf
+        name: m88m-linux-armhf-deb
         path: dist/
 
-    - name: Upload Release Artifacts
-      if: github.event_name == 'release'
-      uses: actions/upload-artifact@v7
-      with:
-        name: m88m-rpi-armhf
-        path: dist/
-
-    - name: Update Release
-      if: github.event_name == 'release'
-      uses: svenstaro/upload-release-action@v2
-      with:
-        file: dist/*.deb
-        file_glob: true
-        overwrite: true
+  publish-release:
+    if: github.event_name == 'release'
+    needs: build
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-release-assets.yml
+    with:
+      asset-patterns: |
+        *.deb

@@ -1,5 +1,6 @@
 param (
-    [string]$Action = ""
+    [string]$Action = "",
+    [string]$Architecture = "x64"
 )
 
 # M88M Windows Build Script (PowerShell)
@@ -24,7 +25,7 @@ Write-Host "Configuring project..."
 # Let CMake auto-detect the installed Visual Studio generator (VS 2022 / VS 2026 / etc.).
 # GitHub's windows-2025 runner now ships VS 2026, so a hardcoded "Visual Studio 17 2022"
 # generator fails with "could not find any instance of Visual Studio".
-cmake -S . -B $BuildDir -A x64
+cmake -S . -B $BuildDir -A $Architecture
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Configuration failed."
     exit $LASTEXITCODE
