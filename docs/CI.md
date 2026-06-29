@@ -21,9 +21,9 @@ m88m-linux-arm64-deb
 m88m-linux-arm64-rpm
 m88m-linux-arm64-appimage
 m88m-linux-armhf-deb
-m88m-windows-x64-zip
-m88m-windows-x86-zip
-m88m-windows-arm64-zip
+m88m-windows-x64-app
+m88m-windows-x86-app
+m88m-windows-arm64-app
 m88m-macos-universal-app
 m88m-macos-universal-dmg
 m88m-freebsd-x64-pkg
@@ -60,9 +60,15 @@ from starting unnecessary builds.
 ## Release publishing
 
 Platform workflows build and upload artifacts with read-only repository
-permissions. Release asset publishing is delegated to
+permissions. Do not upload a ZIP file as a workflow artifact unless the ZIP is
+the actual payload being inspected. `actions/upload-artifact` already wraps
+downloaded artifacts in a ZIP file, so uploading a ZIP file produces a ZIP
+inside another ZIP.
+
+Release asset publishing is delegated to
 `.github/workflows/publish-release-assets.yml`, which is a reusable workflow
 with `contents: write` only for the upload job.
 
 The reusable workflow downloads artifacts from the current run, filters them by
-filename glob, and uploads them with `gh release upload --clobber`.
+filename glob, optionally creates release ZIP files from directory artifacts,
+and uploads them with `gh release upload --clobber`.

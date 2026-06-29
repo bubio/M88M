@@ -5,7 +5,13 @@ on:
     inputs:
       asset-patterns:
         description: Newline-separated filename globs to upload as release assets.
-        required: true
+        required: false
+        default: ""
+        type: string
+      zip-artifacts:
+        description: Newline-separated artifact=zip-file mappings to zip before upload.
+        required: false
+        default: ""
         type: string
 
 permissions:
@@ -22,18 +28,38 @@ jobs:
       uses: actions/download-artifact@v7
       with:
         path: release-assets
-        merge-multiple: true
 
     - name: Upload Release Assets
       env:
         GH_TOKEN: ${{ github.token }}
         RELEASE_TAG: ${{ github.event.release.tag_name }}
         ASSET_PATTERNS: ${{ inputs.asset-patterns }}
+        ZIP_ARTIFACTS: ${{ inputs.zip-artifacts }}
       run: |
         if [ -z "$RELEASE_TAG" ]; then
           echo "Release tag is not available."
           exit 1
         fi
+
+        mkdir -p release-upload
+
+        while IFS= read -r mapping; do
+          [ -z "$mapping" ] && continue
+          artifact_name="${mapping%%=*}"
+          zip_name="${mapping#*=}"
+          artifact_dir="release-assets/$artifact_name"
+
+          if [ "$artifact_name" = "$zip_name" ] || [ -z "$artifact_name" ] || [ -z "$zip_name" ]; then
+            echo "Invalid zip artifact mapping: $mapping"
+            exit 1
+          fi
+          if [ ! -d "$artifact_dir" ]; then
+            echo "Artifact directory not found: $artifact_dir"
+            exit 1
+          fi
+
+          (cd "$artifact_dir" && zip -r "../../release-upload/$zip_name" .)
+        done <<< "$ZIP_ARTIFACTS"
 
         mapfile -t all_files < <(find release-assets -type f -print)
         assets=()
@@ -48,6 +74,9 @@ jobs:
             esac
           done
         done <<< "$ASSET_PATTERNS"
+
+        mapfile -t zip_files < <(find release-upload -type f -name '*.zip' -print)
+        assets+=("${zip_files[@]}")
 
         if [ "${#assets[@]}" -eq 0 ]; then
           echo "No release assets found."
