@@ -8,8 +8,100 @@
 #include "diskmgr.h"
 #include "status.h"
 #include "misc.h"
+#include <cctype>
+#include <string>
 
 using namespace D88;
+
+namespace {
+static bool EndsWithIgnoreCase(const char* value, const char* suffix)
+{
+	if (!value || !suffix)
+		return false;
+
+	size_t valueLen = strlen(value);
+	size_t suffixLen = strlen(suffix);
+	if (valueLen < suffixLen)
+		return false;
+
+	value += valueLen - suffixLen;
+	for (size_t i=0; i<suffixLen; i++)
+	{
+		unsigned char a = (unsigned char)value[i];
+		unsigned char b = (unsigned char)suffix[i];
+		if (tolower(a) != tolower(b))
+			return false;
+	}
+	return true;
+}
+
+static bool IsPlaylistPath(const char* filename)
+{
+	return EndsWithIgnoreCase(filename, ".m3u") || EndsWithIgnoreCase(filename, ".m3u8");
+}
+
+static std::string TrimAscii(std::string s)
+{
+	size_t first = 0;
+	while (first < s.size() && isspace((unsigned char)s[first]))
+		first++;
+
+	size_t last = s.size();
+	while (last > first && isspace((unsigned char)s[last - 1]))
+		last--;
+
+	return s.substr(first, last - first);
+}
+
+static bool IsAbsolutePath(const std::string& path)
+{
+	if (path.empty())
+		return false;
+	if (path[0] == '/' || path[0] == '\\')
+		return true;
+	return path.size() >= 3
+		&& isalpha((unsigned char)path[0])
+		&& path[1] == ':'
+		&& (path[2] == '/' || path[2] == '\\');
+}
+
+static std::string GetDirFromPath(const std::string& path)
+{
+	size_t last = path.find_last_of("/\\");
+	if (last != std::string::npos)
+		return path.substr(0, last);
+	return "";
+}
+
+static std::string JoinPath(const std::string& dir, const std::string& file)
+{
+	if (dir.empty() || IsAbsolutePath(file))
+		return file;
+	char last = dir[dir.size() - 1];
+	if (last == '/' || last == '\\')
+		return dir + file;
+	return dir + "/" + file;
+}
+
+static void CopyTitleFromPath(char* dest, size_t destSize, const std::string& path)
+{
+	if (!destSize)
+		return;
+
+	const char* f1 = strrchr(path.c_str(), '/');
+	const char* f2 = strrchr(path.c_str(), '\\');
+	const char* file = (f1 > f2) ? f1 : f2;
+	file = file ? file + 1 : path.c_str();
+	std::string title = file;
+	size_t dot = title.find_last_of('.');
+	if (dot != std::string::npos)
+		title.resize(dot);
+
+	size_t maxLen = Min((size_t)16, destSize - 1);
+	strncpy(dest, title.c_str(), maxLen);
+	dest[maxLen] = 0;
+}
+}
 
 // ---------------------------------------------------------------------------
 //	�\�z�E�j��
@@ -17,6 +109,7 @@ using namespace D88;
 DiskImageHolder::DiskImageHolder()
 {
 	ref = 0;
+	playlist = false;
 }
 
 DiskImageHolder::~DiskImageHolder()
@@ -38,6 +131,20 @@ bool DiskImageHolder::Open(const char* filename, bool ro, bool create)
 	
 	// �t�@�C�����J��
 	readonly = ro;
+	playlist = false;
+
+	// m3u/m3u8 are read-only playlist containers whose entries are mounted by index.
+	if (IsPlaylistPath(filename))
+	{
+		strncpy(diskname, filename, MAX_PATH-1);
+		diskname[MAX_PATH-1] = 0;
+
+		if (!ReadPlaylist(filename))
+			return false;
+
+		ref = 1;
+		return true;
+	}
 	
 	if (readonly || !fio.Open(filename, 0))
 	{
@@ -75,6 +182,9 @@ bool DiskImageHolder::Open(const char* filename, bool ro, bool create)
 //
 bool DiskImageHolder::AddDisk(const char* title, uint type)
 {
+	if (playlist)
+		return false;
+
 	if (ndisks >= max_disks)
 		return false;
 
@@ -158,6 +268,67 @@ bool DiskImageHolder::ReadHeaders()
 }
 
 // ---------------------------------------------------------------------------
+//	m3u �v���C���X�g�̓ǂݍ���
+//
+bool DiskImageHolder::ReadPlaylist(const char* filename)
+{
+	FileIO list;
+	if (!list.Open(filename, FileIO::readonly))
+		return false;
+
+	list.Seek(0, FileIO::end);
+	int32 size = list.Tellp();
+	if (size <= 0)
+		return false;
+
+	std::string content;
+	content.resize((size_t)size);
+	list.Seek(0, FileIO::begin);
+	if (list.Read(&content[0], size) != size)
+		return false;
+
+	std::string baseDir = GetDirFromPath(filename);
+	std::string line;
+	ndisks = 0;
+	for (size_t i=0; i<=content.size() && ndisks<max_disks; i++)
+	{
+		char c = (i < content.size()) ? content[i] : '\n';
+		if (c == '\r' || c == '\n')
+		{
+			std::string item = TrimAscii(line);
+			if (item.size() >= 3
+				&& (unsigned char)item[0] == 0xef
+				&& (unsigned char)item[1] == 0xbb
+				&& (unsigned char)item[2] == 0xbf)
+			{
+				item.erase(0, 3);
+				item = TrimAscii(item);
+			}
+
+			if (!item.empty() && item[0] != '#')
+			{
+				std::string path = FileIO::ResolvePathCaseInsensitive(JoinPath(baseDir, item));
+				DiskInfo& disk = disks[ndisks++];
+				memset(&disk, 0, sizeof(disk));
+				strncpy(disk.path, path.c_str(), MAX_PATH-1);
+				disk.path[MAX_PATH-1] = 0;
+				CopyTitleFromPath(disk.title, sizeof(disk.title), path);
+			}
+			line.clear();
+			if (c == '\r' && i + 1 < content.size() && content[i + 1] == '\n')
+				i++;
+		}
+		else
+		{
+			line.push_back(c);
+		}
+	}
+
+	playlist = ndisks > 0;
+	return playlist;
+}
+
+// ---------------------------------------------------------------------------
 //	�Ƃ���
 //
 void DiskImageHolder::Close()
@@ -166,6 +337,7 @@ void DiskImageHolder::Close()
 	ndisks = 0;
 	diskname[0] = 0;
 	ref = 0;
+	playlist = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -246,6 +418,13 @@ FileIO* DiskImageHolder::GetDisk(int index)
 {
 	if (index < ndisks)
 	{
+		if (playlist)
+		{
+			if (!fio.Open(disks[index].path, readonly ? FileIO::readonly : 0))
+				return 0;
+			fio.SetLogicalOrigin(0);
+			return &fio;
+		}
 		fio.SetLogicalOrigin(disks[index].pos);
 		return &fio;
 	}
@@ -260,6 +439,12 @@ bool DiskImageHolder::SetDiskSize(int index, int newsize)
 	int i;
 	if (index >= ndisks)
 		return false;
+
+	if (playlist)
+	{
+		disks[index].size = newsize;
+		return true;
+	}
 
 	int32 sizediff = newsize - disks[index].size;
 	if (!sizediff)

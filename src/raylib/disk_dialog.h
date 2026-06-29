@@ -63,6 +63,7 @@ private:
     bool showStateDialog;
     bool showRecentDialog;
     int selectingDiskForDrive; // -1: none, 0: Drive 1, 1: Drive 2
+    bool selectingBothDrives;
     int recentDiskTargetDrive;
     int activeTab;
     int currentStateSlot;
