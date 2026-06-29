@@ -72,26 +72,60 @@ The emulator looks for ROMs in the following locations (in order):
 
 ## Building
 
-### macOS / Linux / FreeBSD
+### macOS
 
-#### Dependencies (Linux)
+#### Dependencies
 
-**Fedora / RHEL (dnf):**
+[Homebrew](https://brew.sh/) and Xcode Command Line Tools are required.
+
+```bash
+xcode-select --install
+```
+
+Install cmake via Homebrew:
+
+```bash
+brew install cmake
+```
+
+#### Build
+
+```bash
+git clone https://github.com/bubio/M88M.git
+cd M88M
+bash scripts/build_macos.sh
+```
+
+To build a Universal Binary (Intel + Apple Silicon):
+
+```bash
+MACOS_UNIVERSAL=1 bash scripts/build_macos.sh
+```
+
+The app bundle will be generated at `./build/M88M.app`.
+
+---
+
+### Linux
+
+#### Dependencies
+
+**Arch-based (CachyOS, Manjaro, etc. / pacman):**
+
+```bash
+sudo pacman -S --needed base-devel cmake git libx11 libxcursor libxinerama libxrandr libxi mesa alsa-lib gtk3
+```
+
+**Fedora / RHEL-based (dnf):**
 
 ```bash
 sudo dnf install -y gcc-c++ make cmake git libX11-devel libXcursor-devel libXinerama-devel libXrandr-devel libXi-devel mesa-libGL-devel alsa-lib-devel gtk3-devel
 ```
 
-**Debian / Ubuntu:**
+**Debian-based (Ubuntu, etc. / apt):**
 
 ```bash
 sudo apt-get install build-essential cmake git libasound2-dev libx11-dev libxcursor-dev libxinerama-dev libxrandr-dev libxi-dev libgl1-mesa-dev libgtk-3-dev
-```
-
-#### Dependencies (FreeBSD)
-
-```bash
-pkg install cmake git pkgconf ca_root_nss libiconv libX11 libXcursor libXinerama libXrandr libXi mesa-libs gtk3
 ```
 
 #### Build
@@ -102,11 +136,27 @@ cd M88M
 bash scripts/build_linux.sh
 ```
 
-On FreeBSD:
+The executable will be generated at `./build/m88m`.
+
+---
+
+### FreeBSD
+
+#### Dependencies
 
 ```bash
+sudo pkg install cmake git pkgconf ca_root_nss libiconv libX11 libXcursor libXinerama libXrandr libXi mesa-libs gtk3
+```
+
+#### Build
+
+```bash
+git clone https://github.com/bubio/M88M.git
+cd M88M
 sh scripts/build_freebsd.sh
 ```
+
+The executable will be generated at `./build/m88m`.
 
 To build a FreeBSD pkg:
 
@@ -114,14 +164,7 @@ To build a FreeBSD pkg:
 sh scripts/build_freebsd_pkg.sh
 ```
 
-Or build manually:
-
-```bash
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-```
-
-The executable will be generated at `./build/m88m` (or `./build/M88M.app` on macOS).
+---
 
 ### Windows
 
@@ -129,6 +172,8 @@ The executable will be generated at `./build/m88m` (or `./build/M88M.app` on mac
 cmake -S . -B build
 cmake --build build --config Release
 ```
+
+The executable will be generated at `.\build\Release\m88m.exe`.
 
 ## Usage
 

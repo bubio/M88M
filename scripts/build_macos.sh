@@ -13,7 +13,7 @@ fi
 
 echo "--- Building M88M ---"
 # CPUコア数に合わせて並列ビルド
-cmake --build build -j$(sysctl -n hw.ncpu)
+cmake --build build -j"$(sysctl -n hw.ncpu)"
 
 echo "--- Build Complete ---"
 if [ "$(uname)" == "Darwin" ]; then
