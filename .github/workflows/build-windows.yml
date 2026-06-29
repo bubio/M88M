@@ -41,15 +41,15 @@ jobs:
         include:
           - arch: x64
             cmake_arch: x64
-            artifact: m88m-windows-x64-zip
+            artifact: m88m-windows-x64-app
             package: m88m-windows-x64
           - arch: x86
             cmake_arch: Win32
-            artifact: m88m-windows-x86-zip
+            artifact: m88m-windows-x86-app
             package: m88m-windows-x86
           - arch: arm64
             cmake_arch: ARM64
-            artifact: m88m-windows-arm64-zip
+            artifact: m88m-windows-arm64-app
             package: m88m-windows-arm64
 
     steps:
@@ -72,14 +72,11 @@ jobs:
         mkdir package
         copy build\RelWithDebInfo\m88m.exe package\
 
-    - name: Compress Artifact
-      run: powershell Compress-Archive -Path package\* -DestinationPath build\${{ matrix.package }}.zip
-
     - name: Upload Artifact
       uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.artifact }}
-        path: build/${{ matrix.package }}.zip
+        path: package/
 
   publish-release:
     if: github.event_name == 'release'
@@ -88,5 +85,7 @@ jobs:
       contents: write
     uses: ./.github/workflows/publish-release-assets.yml
     with:
-      asset-patterns: |
-        *.zip
+      zip-artifacts: |
+        m88m-windows-x64-app=m88m-windows-x64.zip
+        m88m-windows-x86-app=m88m-windows-x86.zip
+        m88m-windows-arm64-app=m88m-windows-arm64.zip
