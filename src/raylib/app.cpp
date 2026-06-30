@@ -29,7 +29,10 @@
 #undef DrawText
 #undef DrawTextEx
 
-// Resource ID from m88m.rc
+// Resource IDs from m88m.rc
+#ifndef IDI_ICON1
+#define IDI_ICON1 1
+#endif
 #ifndef IDR_FONT_NOTOSANS
 #define IDR_FONT_NOTOSANS 101
 #endif
@@ -209,7 +212,27 @@ int main() {
     const int screenHeight = 424; // 400 (emulation) + 24 (status bar)
 
     InitWindow(screenWidth, screenHeight, "M88M - PC-8801 Emulator");
-#if !defined(_WIN32) && !defined(__APPLE__)
+#ifdef _WIN32
+    {
+        // compat.h defines NOUSER to avoid winuser.h conflicts with raylib,
+        // so LoadIcon/SendMessage are unavailable. Use GetProcAddress instead.
+        HWND hwnd = (HWND)GetWindowHandle();
+        HMODULE user32 = GetModuleHandleA("user32.dll");
+        if (hwnd && user32) {
+            typedef HICON (WINAPI *PFN_LoadIconW)(HINSTANCE, LPCWSTR);
+            typedef LRESULT (WINAPI *PFN_SendMessageW)(HWND, UINT, WPARAM, LPARAM);
+            auto pfnLoadIcon = (PFN_LoadIconW)GetProcAddress(user32, "LoadIconW");
+            auto pfnSendMsg  = (PFN_SendMessageW)GetProcAddress(user32, "SendMessageW");
+            if (pfnLoadIcon && pfnSendMsg) {
+                HICON hIcon = pfnLoadIcon(GetModuleHandle(NULL), (LPCWSTR)(ULONG_PTR)(WORD)IDI_ICON1);
+                if (hIcon) {
+                    pfnSendMsg(hwnd, 0x0080 /*WM_SETICON*/, 0 /*ICON_SMALL*/, (LPARAM)hIcon);
+                    pfnSendMsg(hwnd, 0x0080 /*WM_SETICON*/, 1 /*ICON_BIG*/, (LPARAM)hIcon);
+                }
+            }
+        }
+    }
+#elif !defined(__APPLE__)
     TrySetUnixWindowIcon();
 #endif
     SetExitKey(0); // Disable ESC exit
