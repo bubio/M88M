@@ -41,16 +41,13 @@ jobs:
         include:
           - arch: x64
             cmake_arch: x64
-            artifact: m88m-windows-x64-app
-            package: m88m-windows-x64
+            artifact: m88m-windows-x64
           - arch: x86
             cmake_arch: Win32
-            artifact: m88m-windows-x86-app
-            package: m88m-windows-x86
+            artifact: m88m-windows-x86
           - arch: arm64
             cmake_arch: ARM64
-            artifact: m88m-windows-arm64-app
-            package: m88m-windows-arm64
+            artifact: m88m-windows-arm64
 
     steps:
     - uses: actions/checkout@v7
@@ -86,6 +83,6 @@ jobs:
     uses: ./.github/workflows/publish-release-assets.yml
     with:
       zip-artifacts: |
-        m88m-windows-x64-app=m88m-windows-x64.zip
-        m88m-windows-x86-app=m88m-windows-x86.zip
-        m88m-windows-arm64-app=m88m-windows-arm64.zip
+        m88m-windows-x64=m88m-windows-x64.zip
+        m88m-windows-x86=m88m-windows-x86.zip
+        m88m-windows-arm64=m88m-windows-arm64.zip

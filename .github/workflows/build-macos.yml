@@ -49,12 +49,20 @@ jobs:
         MACOS_UNIVERSAL: 1
       run: chmod +x scripts/build_macos.sh && ./scripts/build_macos.sh
 
+    - name: Package .app (zip)
+      if: github.event_name != 'release'
+      run: |
+        ditto -c -k --sequesterRsrc --keepParent \
+          build/M88M.app \
+          build/m88m-macos-universal.zip
+
     - name: Upload .app Artifact
       if: github.event_name != 'release'
       uses: actions/upload-artifact@v7
       with:
-        name: m88m-macos-universal-app
-        path: build/M88M.app
+        name: m88m-macos-universal
+        path: build/m88m-macos-universal.zip
+        if-no-files-found: error
 
     - name: Package DMG (Release only)
       if: github.event_name == 'release'
