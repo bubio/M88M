@@ -122,6 +122,13 @@ sudo pacman -S --needed base-devel cmake git libx11 libxcursor libxinerama libxr
 sudo dnf install -y gcc-c++ make cmake git libX11-devel libXcursor-devel libXinerama-devel libXrandr-devel libXi-devel mesa-libGL-devel alsa-lib-devel gtk3-devel
 ```
 
+**openSUSE (zypper):**
+
+```bash
+sudo zypper install -t pattern devel_basis
+sudo zypper install cmake git libX11-devel libXcursor-devel libXinerama-devel libXrandr-devel libXi-devel Mesa-libGL-devel alsa-devel gtk3-devel
+```
+
 **Debian-based (Ubuntu, etc. / apt):**
 
 ```bash
