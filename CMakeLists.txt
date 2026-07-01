@@ -36,6 +36,14 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(M88M_IS_LINUX TRUE)
 endif()
 
+# When targeting Raspberry Pi OS (armhf/arm64), build raylib for GLES 2.0 and
+# name the packages with a "raspios" platform token so they are clearly
+# distinct from the generic desktop-GL Linux builds. The Pi's Mesa V3D driver
+# tops out at OpenGL 3.1, so a desktop GL 3.3 context fails at window creation
+# (GLXBadFBConfig) even on 64-bit Pi OS — GLES is required on both armhf and
+# arm64.
+option(M88M_RASPIOS "Target Raspberry Pi OS (force GLES 2.0, raspios package naming)" OFF)
+
 # FMGEN's table maths rely on type-punning; -fno-strict-aliasing keeps the
 # emitted code identical to the MSVC original.
 if(MSVC)
@@ -153,8 +161,9 @@ else()
     # desktop GL. A desktop GL 3.3 context fails at window creation on the Pi's
     # GPU (GLXBadFBConfig), so build raylib for GLES 2.0 on ARM Linux. raylib's
     # desktop backend then requests a GLES2 context via EGL, which the Pi's
-    # Mesa driver supports.
-    if(M88M_IS_LINUX AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+    # Mesa driver supports. armhf matches "arm"; the 64-bit Pi build reports
+    # "aarch64" (which does not match "arm"), so M88M_RASPIOS forces GLES there.
+    if(M88M_IS_LINUX AND (M88M_RASPIOS OR CMAKE_SYSTEM_PROCESSOR MATCHES "arm"))
         set(OPENGL_VERSION "ES 2.0" CACHE STRING "" FORCE)
     endif()
 
@@ -401,9 +410,16 @@ if(RAYLIB_FRONT_SRC)
         # ones where these libraries were renamed (Debian trixie /
         # Ubuntu 24.04+).
         set(CPACK_DEBIAN_PACKAGE_DEPENDS "libasound2 | libasound2t64, libgtk-3-0 | libgtk-3-0t64, libx11-6")
-        # Name packages as m88m-<version>-linux-<arch>.<ext> using each
+        # Name packages as m88m-<version>-<platform>-<arch>.<ext> using each
         # ecosystem's native architecture token (deb: amd64/arm64/armhf,
-        # rpm: x86_64/aarch64) so per-arch release assets don't collide.
+        # rpm: x86_64/aarch64) so per-arch release assets don't collide. The
+        # platform token is "raspios" for the Raspberry Pi OS builds and
+        # "linux" for the generic desktop builds.
+        if(M88M_RASPIOS)
+            set(_m88m_platform "raspios")
+        else()
+            set(_m88m_platform "linux")
+        endif()
         if(CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
             set(_m88m_deb_arch "${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
         elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
@@ -418,8 +434,8 @@ if(RAYLIB_FRONT_SRC)
         else()
             set(_m88m_rpm_arch "x86_64")
         endif()
-        set(CPACK_DEBIAN_FILE_NAME "m88m-${M88M_VERSION}-linux-${_m88m_deb_arch}.deb")
-        set(CPACK_RPM_FILE_NAME "m88m-${M88M_VERSION}-linux-${_m88m_rpm_arch}.rpm")
+        set(CPACK_DEBIAN_FILE_NAME "m88m-${M88M_VERSION}-${_m88m_platform}-${_m88m_deb_arch}.deb")
+        set(CPACK_RPM_FILE_NAME "m88m-${M88M_VERSION}-${_m88m_platform}-${_m88m_rpm_arch}.rpm")
     endif()
 
     include(CPack)

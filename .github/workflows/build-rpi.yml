@@ -1,4 +1,4 @@
-name: Build Raspberry Pi (armhf)
+name: Build Raspberry Pi OS (armhf/arm64)
 
 on:
   push:
@@ -32,12 +32,29 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 32-bit Raspberry Pi OS: cross-compiled on an x86 host (no armhf
+          # runner exists). Targets ARMv7-A + NEON (Pi 2 / Zero 2 W and later).
+          - arch: armhf
+            runs-on: ubuntu-22.04
+          # 64-bit Raspberry Pi OS: built natively on the arm64 runner.
+          # Ubuntu 22.04's glibc is close to Raspberry Pi OS (Debian bookworm),
+          # so the binary stays compatible; a newer runner would link against a
+          # glibc too recent for Pi OS.
+          - arch: arm64
+            runs-on: ubuntu-22.04-arm
+
+    runs-on: ${{ matrix.runs-on }}
 
     steps:
     - uses: actions/checkout@v7
 
+    # --- armhf: cross-compile on x86 host --------------------------------
     - name: Switch apt sources to ports.ubuntu.com for armhf
+      if: matrix.arch == 'armhf'
       run: |
         FLAVOR="$(lsb_release -sc)"
         sudo tee /etc/apt/sources.list.d/armhf.list <<LIST
@@ -51,7 +68,8 @@ jobs:
         LIST
         sudo sed -E -i 's/deb (http|file|mirror)/deb [arch=amd64,i386] \1/' /etc/apt/sources.list
 
-    - name: Install Cross-Compile Tools and Dependencies
+    - name: Install cross-compile tools and dependencies (armhf)
+      if: matrix.arch == 'armhf'
       run: |
         sudo dpkg --add-architecture armhf
         sudo apt-get update
@@ -71,7 +89,8 @@ jobs:
           libgtk-3-dev:armhf \
           x11proto-dev:armhf
 
-    - name: Build
+    - name: Configure and build (armhf)
+      if: matrix.arch == 'armhf'
       run: |
         export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
         export PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig
@@ -83,6 +102,7 @@ jobs:
         ARM_FLAGS="-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -ffast-math"
         cmake -S . -B build \
           -DCMAKE_BUILD_TYPE=Release \
+          -DM88M_RASPIOS=ON \
           -DCMAKE_SYSTEM_NAME=Linux \
           -DCMAKE_SYSTEM_PROCESSOR=armv7l \
           -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
@@ -93,6 +113,46 @@ jobs:
           -DCPACK_DEBIAN_PACKAGE_ARCHITECTURE=armhf
         cmake --build build -j "$(nproc)"
 
+    # --- arm64: native build on the arm64 runner -------------------------
+    - name: Install dependencies (arm64)
+      if: matrix.arch == 'arm64'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          pkg-config \
+          libasound2-dev \
+          libx11-dev \
+          libxcursor-dev \
+          libxinerama-dev \
+          libxrandr-dev \
+          libxi-dev \
+          libgl1-mesa-dev \
+          libegl1-mesa-dev \
+          libgles2-mesa-dev \
+          libgtk-3-dev
+
+    - name: Configure and build (arm64)
+      if: matrix.arch == 'arm64'
+      run: |
+        # M88M_RASPIOS forces GLES 2.0 (the Pi's Mesa V3D driver tops out at
+        # desktop GL 3.1, so a GL 3.3 context fails even on 64-bit Pi OS) and
+        # names the package m88m-<version>-raspios-arm64.deb.
+        # NEON is mandatory on ARMv8-A, so no -mfpu flag is needed; -ffast-math
+        # is still required to let GCC vectorize the FIR's float accumulation
+        # (matching the armhf build's audio performance).
+        ARM64_FLAGS="-ffast-math"
+        cmake -S . -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DM88M_RASPIOS=ON \
+          -DCMAKE_C_FLAGS="$ARM64_FLAGS" \
+          -DCMAKE_CXX_FLAGS="$ARM64_FLAGS" \
+          -DCPACK_GENERATOR=DEB \
+          -DCPACK_DEBIAN_PACKAGE_ARCHITECTURE=arm64
+        cmake --build build -j "$(nproc)"
+
+    # --- shared ----------------------------------------------------------
     - name: Package with CPack
       run: |
         cd build
@@ -106,7 +166,7 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v7
       with:
-        name: m88m-linux-armhf-deb
+        name: m88m-raspios-${{ matrix.arch }}-deb
         path: dist/
 
   publish-release:

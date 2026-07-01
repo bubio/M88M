@@ -52,18 +52,21 @@ M88M is fully functional and supports a wide range of PC-8801 software.
 
 Prebuilt binaries are available on the [**Releases**](https://github.com/bubio/M88M/releases/latest) page. Assets are named `m88m-<version>-<platform>-<arch>.<ext>`:
 
-| Platform | Format | Architectures |
-|----------|--------|---------------|
-| Windows | `.zip` | `x64`, `x86`, `arm64` |
-| macOS | `.dmg` | `universal` (Intel + Apple Silicon) |
-| Linux | `.AppImage` | `x86_64`, `aarch64` |
-| Linux (Debian / Ubuntu) | `.deb` | `amd64`, `arm64`, `armhf` |
-| Linux (Fedora / RHEL / openSUSE) | `.rpm` | `x86_64`, `aarch64` |
-| FreeBSD | `.pkg` | `amd64` |
+| Platform | `<platform>` token | Format | Architectures |
+|----------|--------------------|--------|---------------|
+| Windows | `windows` | `.zip` | `x64`, `x86`, `arm64` |
+| macOS | `macos` | `.dmg` | `universal` (Intel + Apple Silicon) |
+| Linux (portable) | `linux` | `.AppImage` | `x86_64`, `aarch64` |
+| Linux (Debian / Ubuntu) | `linux` | `.deb` | `amd64`, `arm64` |
+| Linux (Fedora / RHEL / openSUSE) | `linux` | `.rpm` | `x86_64`, `aarch64` |
+| Raspberry Pi OS | `raspios` | `.deb` | `arm64`, `armhf` |
+| FreeBSD | `freebsd` | `.pkg` | `amd64` |
 
 > Before running, you must supply the required ROM files — see [Prerequisites](#prerequisites). To build from source instead, see [Building](#building).
 >
-> The Linux `armhf` build targets ARMv7 with NEON, so it requires a Raspberry Pi 2 / Zero 2 W or later. The original Pi Zero / Pi 1 (ARMv6) are not supported; use a 64-bit OS with the `arm64` build where possible.
+> **Raspberry Pi:** use the `raspios` build — install it with `sudo apt install ./m88m-<version>-raspios-<arch>.deb`. The `armhf` (32-bit) variant targets ARMv7 with NEON, so it requires a Raspberry Pi 2 / Zero 2 W or later.
+>
+> **Windows on ARM:** the OS ships no desktop OpenGL driver, which M88M (via raylib) requires. If M88M launches but no window appears, install the **"OpenCL, OpenGL, and Vulkan Compatibility Pack"** from the Microsoft Store and start it again.
 
 ## Prerequisites
 
@@ -80,7 +83,7 @@ The emulator looks for ROMs in the following locations (in order):
 
 1. Environment variable `M88M_ROM_DIR`
 2. `roms/` subfolder in the same directory as the executable.
-3. **Linux:** `~/.local/share/M88M/roms`
+3. **Linux (including Raspberry Pi OS):** `~/.local/share/M88M/roms`
 4. **macOS:** `~/Library/Application Support/M88M/roms`
 5. **FreeBSD:** `~/.config/m88m/roms`
 6. **Windows:** `%APPDATA%\M88M\roms`
@@ -164,6 +167,29 @@ The executable will be generated at `./build/m88m`.
 
 ---
 
+### Raspberry Pi OS
+
+Raspberry Pi OS is Debian-based, so you can build natively on the Pi. The Pi's GPU only supports OpenGL ES, so pass `-DM88M_RASPIOS=ON` to build raylib for GLES 2.0 (otherwise the window fails to open with `GLXBadFBConfig`).
+
+#### Dependencies
+
+```bash
+sudo apt-get install build-essential cmake git libasound2-dev libx11-dev libxcursor-dev libxinerama-dev libxrandr-dev libxi-dev libgl1-mesa-dev libegl1-mesa-dev libgles2-mesa-dev libgtk-3-dev
+```
+
+#### Build
+
+```bash
+git clone https://github.com/bubio/M88M.git
+cd M88M
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DM88M_RASPIOS=ON
+cmake --build build -j"$(nproc)"
+```
+
+The executable will be generated at `./build/m88m`. On a 32-bit OS, `-DM88M_RASPIOS=ON` produces an ARMv7 + NEON build, which requires a Raspberry Pi 2 / Zero 2 W or later.
+
+---
+
 ### FreeBSD
 
 #### Dependencies
@@ -207,8 +233,6 @@ cd M88M
 ```
 
 `-Architecture` accepts `x64` (default), `Win32` (32-bit x86), or `ARM64`. The executable will be generated at `.\build\RelWithDebInfo\m88m.exe`.
-
-> **Windows on ARM:** Windows on ARM does not ship a desktop OpenGL driver, which M88M (via raylib) requires. If M88M launches but no window appears, install the **"OpenCL, OpenGL, and Vulkan Compatibility Pack"** from the Microsoft Store and start it again.
 
 ## Usage
 
