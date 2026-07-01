@@ -44,14 +44,12 @@ jobs:
             deb-artifact: m88m-linux-x64-deb
             rpm-artifact: m88m-linux-x64-rpm
             appimage-artifact: m88m-linux-x64-appimage
-            appimage-file: m88m-linux-x64.AppImage
           - arch: arm64
             runs-on: ubuntu-24.04-arm
             linuxdeploy-arch: aarch64
             deb-artifact: m88m-linux-arm64-deb
             rpm-artifact: m88m-linux-arm64-rpm
             appimage-artifact: m88m-linux-arm64-appimage
-            appimage-file: m88m-linux-arm64.AppImage
 
     runs-on: ${{ matrix.runs-on }}
 
@@ -93,9 +91,6 @@ jobs:
       if: github.event_name == 'release'
       env:
         APPIMAGE_EXTRACT_AND_RUN: 1
-        # Name the generated AppImage directly so it does not collide with
-        # the downloaded linuxdeploy-*.AppImage when we move it.
-        OUTPUT: ${{ matrix.appimage-file }}
       run: |
         cmake --install build --prefix build/AppDir/usr
         # AppIcon.png is a 1024x1024 master, but it is installed into the
@@ -105,6 +100,12 @@ jobs:
         convert build/AppDir/usr/share/icons/hicolor/512x512/apps/m88m.png \
           -resize 512x512 \
           build/AppDir/usr/share/icons/hicolor/512x512/apps/m88m.png
+        # Name the AppImage m88m-<version>-linux-<arch>.AppImage. OUTPUT is
+        # honoured by linuxdeploy-plugin-appimage, so the file is written
+        # directly under that name (avoiding a glob collision with the
+        # downloaded linuxdeploy-*.AppImage).
+        VERSION="$(sed -n 's/^[[:space:]]*VERSION[[:space:]]*\([0-9][0-9.]*\).*/\1/p' CMakeLists.txt | head -n 1)"
+        export OUTPUT="m88m-${VERSION}-linux-${{ matrix.linuxdeploy-arch }}.AppImage"
         wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${{ matrix.linuxdeploy-arch }}.AppImage
         chmod +x linuxdeploy-${{ matrix.linuxdeploy-arch }}.AppImage
         ./linuxdeploy-${{ matrix.linuxdeploy-arch }}.AppImage \
@@ -112,7 +113,7 @@ jobs:
           -d build/AppDir/usr/share/applications/m88m.desktop \
           -i build/AppDir/usr/share/icons/hicolor/512x512/apps/m88m.png \
           -o appimage
-        mv "${{ matrix.appimage-file }}" dist/appimage/
+        mv "$OUTPUT" dist/appimage/
 
     - name: Upload DEB Artifact
       uses: actions/upload-artifact@v7

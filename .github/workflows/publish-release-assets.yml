@@ -24,6 +24,14 @@ jobs:
       contents: write
 
     steps:
+    - uses: actions/checkout@v7
+
+    - name: Determine version
+      id: ver
+      run: |
+        VERSION="$(sed -n 's/^[[:space:]]*VERSION[[:space:]]*\([0-9][0-9.]*\).*/\1/p' CMakeLists.txt | head -n 1)"
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
     - name: Download Release Artifacts
       uses: actions/download-artifact@v7
       with:
@@ -36,6 +44,7 @@ jobs:
         RELEASE_TAG: ${{ github.event.release.tag_name }}
         ASSET_PATTERNS: ${{ inputs.asset-patterns }}
         ZIP_ARTIFACTS: ${{ inputs.zip-artifacts }}
+        VERSION: ${{ steps.ver.outputs.version }}
       run: |
         if [ -z "$RELEASE_TAG" ]; then
           echo "Release tag is not available."
@@ -48,6 +57,8 @@ jobs:
           [ -z "$mapping" ] && continue
           artifact_name="${mapping%%=*}"
           zip_name="${mapping#*=}"
+          # Allow callers to embed the project version via a {version} token.
+          zip_name="${zip_name//\{version\}/$VERSION}"
           artifact_dir="release-assets/$artifact_name"
 
           if [ "$artifact_name" = "$zip_name" ] || [ -z "$artifact_name" ] || [ -z "$zip_name" ]; then

@@ -83,6 +83,6 @@ jobs:
     uses: ./.github/workflows/publish-release-assets.yml
     with:
       zip-artifacts: |
-        m88m-windows-x64=m88m-windows-x64.zip
-        m88m-windows-x86=m88m-windows-x86.zip
-        m88m-windows-arm64=m88m-windows-arm64.zip
+        m88m-windows-x64=m88m-{version}-windows-x64.zip
+        m88m-windows-x86=m88m-{version}-windows-x86.zip
+        m88m-windows-arm64=m88m-{version}-windows-arm64.zip

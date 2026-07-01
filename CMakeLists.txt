@@ -388,11 +388,25 @@ if(RAYLIB_FRONT_SRC)
         set(CPACK_DEBIAN_PACKAGE_MAINTAINER "seiji")
         # Basic dependencies for raylib/nfd on Ubuntu
         set(CPACK_DEBIAN_PACKAGE_DEPENDS "libasound2, libgtk-3-0, libx11-6")
-        # Include the architecture in the package filenames
-        # (e.g. m88m_1.2.0_amd64.deb, m88m-1.2.0-1.x86_64.rpm) so that
-        # per-arch release assets don't collide.
-        set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
-        set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
+        # Name packages as m88m-<version>-linux-<arch>.<ext> using each
+        # ecosystem's native architecture token (deb: amd64/arm64/armhf,
+        # rpm: x86_64/aarch64) so per-arch release assets don't collide.
+        if(CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
+            set(_m88m_deb_arch "${CPACK_DEBIAN_PACKAGE_ARCHITECTURE}")
+        elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+            set(_m88m_deb_arch "arm64")
+        elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+            set(_m88m_deb_arch "armhf")
+        else()
+            set(_m88m_deb_arch "amd64")
+        endif()
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+            set(_m88m_rpm_arch "aarch64")
+        else()
+            set(_m88m_rpm_arch "x86_64")
+        endif()
+        set(CPACK_DEBIAN_FILE_NAME "m88m-${M88M_VERSION}-linux-${_m88m_deb_arch}.deb")
+        set(CPACK_RPM_FILE_NAME "m88m-${M88M_VERSION}-linux-${_m88m_rpm_arch}.rpm")
     endif()
 
     include(CPack)

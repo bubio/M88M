@@ -67,16 +67,17 @@ jobs:
     - name: Package DMG (Release only)
       if: github.event_name == 'release'
       run: |
+        VERSION="$(sed -n 's/^[[:space:]]*VERSION[[:space:]]*\([0-9][0-9.]*\).*/\1/p' CMakeLists.txt | head -n 1)"
         cd build
         cpack -G DragNDrop -C Release
-        mv [mM]88[mM]*.dmg m88m-macos-universal.dmg
+        mv [mM]88[mM]*.dmg "m88m-${VERSION}-macos-universal.dmg"
 
     - name: Upload DMG Artifact
       if: github.event_name == 'release'
       uses: actions/upload-artifact@v7
       with:
         name: m88m-macos-universal-dmg
-        path: build/m88m-macos-universal.dmg
+        path: build/m88m-*-macos-universal.dmg
 
   publish-release:
     if: github.event_name == 'release'

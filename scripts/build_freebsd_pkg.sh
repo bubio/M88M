@@ -76,10 +76,10 @@ if [ -z "$PKG_FILE" ]; then
 fi
 
 # pkg names the artifact "m88m-<version>.pkg" with no architecture; rename it
-# to include the arch (e.g. m88m-1.2.0-FreeBSD-amd64.pkg) so release assets
-# are distinguishable per platform.
+# to m88m-<version>-freebsd-<arch>.pkg (e.g. m88m-1.2.0-freebsd-amd64.pkg) so
+# release assets are distinguishable per platform.
 ARCH="$(uname -m)"
-ARCH_PKG_FILE="$DIST_DIR/m88m-$VERSION-FreeBSD-$ARCH.pkg"
+ARCH_PKG_FILE="$DIST_DIR/m88m-$VERSION-freebsd-$ARCH.pkg"
 if [ "$PKG_FILE" != "$ARCH_PKG_FILE" ]; then
     mv "$PKG_FILE" "$ARCH_PKG_FILE"
     PKG_FILE="$ARCH_PKG_FILE"
