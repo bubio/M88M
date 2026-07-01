@@ -386,8 +386,12 @@ if(RAYLIB_FRONT_SRC)
     if(M88M_IS_LINUX)
         set(CPACK_GENERATOR "DEB;RPM")
         set(CPACK_DEBIAN_PACKAGE_MAINTAINER "seiji")
-        # Basic dependencies for raylib/nfd on Ubuntu
-        set(CPACK_DEBIAN_PACKAGE_DEPENDS "libasound2, libgtk-3-0, libx11-6")
+        # Basic runtime dependencies for raylib/nfd. Accept both the classic
+        # names and the 64-bit time_t (t64) names so the package installs on
+        # older releases (Debian bookworm / Ubuntu 22.04) as well as newer
+        # ones where these libraries were renamed (Debian trixie /
+        # Ubuntu 24.04+).
+        set(CPACK_DEBIAN_PACKAGE_DEPENDS "libasound2 | libasound2t64, libgtk-3-0 | libgtk-3-0t64, libx11-6")
         # Name packages as m88m-<version>-linux-<arch>.<ext> using each
         # ecosystem's native architecture token (deb: amd64/arm64/armhf,
         # rpm: x86_64/aarch64) so per-arch release assets don't collide.
