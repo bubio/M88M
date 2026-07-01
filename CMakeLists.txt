@@ -149,6 +149,15 @@ else()
     set(SUPPORT_MODULE_RAUDIO  ON  CACHE BOOL "" FORCE)
     set(SUPPORT_MODULE_RMODELS OFF CACHE BOOL "" FORCE)
 
+    # Raspberry Pi (and other ARM boards) expose OpenGL ES rather than full
+    # desktop GL. A desktop GL 3.3 context fails at window creation on the Pi's
+    # GPU (GLXBadFBConfig), so build raylib for GLES 2.0 on ARM Linux. raylib's
+    # desktop backend then requests a GLES2 context via EGL, which the Pi's
+    # Mesa driver supports.
+    if(M88M_IS_LINUX AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+        set(OPENGL_VERSION "ES 2.0" CACHE STRING "" FORCE)
+    endif()
+
     FetchContent_Declare(
         raylib
         GIT_REPOSITORY https://github.com/raysan5/raylib.git

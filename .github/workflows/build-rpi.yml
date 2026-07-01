@@ -66,6 +66,8 @@ jobs:
           libxrandr-dev:armhf \
           libxi-dev:armhf \
           libgl1-mesa-dev:armhf \
+          libegl1-mesa-dev:armhf \
+          libgles2-mesa-dev:armhf \
           libgtk-3-dev:armhf \
           x11proto-dev:armhf
 

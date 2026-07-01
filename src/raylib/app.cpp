@@ -217,11 +217,12 @@ int main() {
     const int screenHeight = 424; // 400 (emulation) + 24 (status bar)
 
     InitWindow(screenWidth, screenHeight, "M88M - PC-8801 Emulator");
-#ifdef _WIN32
     if (!IsWindowReady()) {
-        // Windows on ARM (and GL-less VMs) may lack a desktop OpenGL driver, so
-        // raylib's OpenGL window creation fails here. Don't continue windowless;
-        // point the user at the compatibility pack that provides OpenGL.
+        // OpenGL/window creation failed (e.g. no desktop GL driver on Windows
+        // on ARM, or a Raspberry Pi GPU that only provides OpenGL ES). Don't
+        // continue windowless; raylib would crash on the first GPU resource
+        // load. Report the failure and exit.
+#ifdef _WIN32
         HMODULE user32 = GetModuleHandleA("user32.dll");
         if (user32) {
             typedef int (WINAPI *PFN_MessageBoxW)(HWND, LPCWSTR, LPCWSTR, UINT);
@@ -236,8 +237,13 @@ int main() {
                     0x10 /* MB_ICONERROR */);
             }
         }
+#else
+        std::cerr << "Failed to initialize the graphics device (OpenGL).\n"
+                     "M88M requires an OpenGL-capable display." << std::endl;
+#endif
         return 1;
     }
+#ifdef _WIN32
     {
         // compat.h defines NOUSER to avoid winuser.h conflicts with raylib,
         // so LoadIcon/SendMessage are unavailable. Use GetProcAddress instead.
