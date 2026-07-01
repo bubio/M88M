@@ -13,11 +13,17 @@ static void GlobalAudioCallback(void* buffer, unsigned int frames) {
 RaylibSound::RaylibSound() : outputSource(nullptr), sampleRate(48000) { stream = {0}; }
 RaylibSound::~RaylibSound() { Cleanup(); }
 
-void RaylibSound::Init(uint32 rate) {
+void RaylibSound::Init(uint32 rate, int deviceBufferFrames) {
     sampleRate = rate;
     InitAudioDevice();
     if (!IsAudioDeviceReady()) return;
-    SetAudioStreamBufferSizeDefault(1024);
+    // The "Sound Buffer" setting drives this device buffer, which is what
+    // actually governs dropout resilience. The audio callback resamples and
+    // mixes OPNA on demand (fillwhenempty), so the SRC ring size alone does not
+    // add real-time slack; only a larger device buffer lets an occasional slow
+    // callback finish before the queued audio runs out (at the cost of latency).
+    if (deviceBufferFrames < 512) deviceBufferFrames = 512;
+    SetAudioStreamBufferSizeDefault(deviceBufferFrames);
     stream = LoadAudioStream(sampleRate, 16, 2);
 }
 

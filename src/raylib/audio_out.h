@@ -12,7 +12,7 @@ public:
     RaylibSound();
     virtual ~RaylibSound();
 
-    void Init(uint32 rate);
+    void Init(uint32 rate, int deviceBufferFrames);
     void Start();
     void Pause(bool paused);
     void SetVolume(const PC8801::Config* cfg);

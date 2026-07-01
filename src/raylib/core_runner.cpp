@@ -73,7 +73,7 @@ bool CoreRunner::Init(Draw* draw) {
     if (bufsize < 1024) bufsize = 4096;
     if (!coreSound.Init(this, outrate, bufsize)) return false;
     coreSound.ApplyConfig(&Config::Get());
-    sound.Init(outrate);
+    sound.Init(outrate, bufsize);
     sound.SetVolume(&Config::Get());
     sound.SetSource(coreSound.GetSoundSource());
 
@@ -113,7 +113,7 @@ void CoreRunner::RestartAudio() {
     
     if (coreSound.Init(this, outrate, bufsize)) {
         coreSound.ApplyConfig(&cfg);
-        sound.Init(outrate);
+        sound.Init(outrate, bufsize);
         sound.SetVolume(&cfg);
         sound.SetSource(coreSound.GetSoundSource());
         GetOPN1()->Connect(&coreSound);
@@ -337,7 +337,7 @@ void CoreRunner::Run() {
                     if (samples < 1024) samples = 4096;
                     coreSound.Init(this, currentRate, samples);
                     sound.Cleanup();
-                    sound.Init(currentRate);
+                    sound.Init(currentRate, samples);
                     sound.Start();
                     lastRate = currentRate;
                     lastBufMs = currentBufMs;

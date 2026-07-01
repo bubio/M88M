@@ -752,12 +752,12 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
         GuiLabel({ x + 20, pY, 120, 20 }, "Buffer (ms):");
         float bufValF = (float)cfg.soundbuffer;
         if (bufferEdit) GuiSetState(STATE_DISABLED);
-        if (GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &bufValF, 50, 500)) {
+        if (GuiSlider({ x + 150, pY, 180, 16 }, NULL, NULL, &bufValF, 20, 500)) {
             cfg.soundbuffer = (uint)bufValF; changed = true; resetPending = true;
         }
         GuiSetState(STATE_NORMAL);
         bool wasUnl = false; if (bufferEdit) { GuiUnlock(); wasUnl = true; }
-        if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &bufferVal, 50, 500, bufferEdit)) {
+        if (GuiValueBox({ x + 340, pY, 50, 16 }, NULL, &bufferVal, 20, 500, bufferEdit)) {
             bufferEdit = !bufferEdit; if (!bufferEdit) { cfg.soundbuffer = (uint)bufferVal; changed = true; resetPending = true; }
         }
         if (wasUnl) GuiLock();
