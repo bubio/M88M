@@ -121,7 +121,12 @@ elseif(WIN32)
     else()
         set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_win64_mingw-w64.zip")
     endif()
-elseif(M88M_IS_LINUX)
+elseif(M88M_IS_LINUX AND NOT M88M_RASPIOS)
+    # The Raspberry Pi builds (M88M_RASPIOS) must not use these prebuilt
+    # binaries: they are compiled for desktop OpenGL (wrong for the Pi's GPU)
+    # and against a newer glibc than Raspberry Pi OS ships. Leaving
+    # RAYLIB_BINARY_URL unset makes the block below build raylib from source
+    # with GLES 2.0 instead.
     if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|amd64")
         set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_linux_amd64.tar.gz")
     elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
