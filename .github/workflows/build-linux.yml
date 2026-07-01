@@ -93,6 +93,9 @@ jobs:
       if: github.event_name == 'release'
       env:
         APPIMAGE_EXTRACT_AND_RUN: 1
+        # Name the generated AppImage directly so it does not collide with
+        # the downloaded linuxdeploy-*.AppImage when we move it.
+        OUTPUT: ${{ matrix.appimage-file }}
       run: |
         cmake --install build --prefix build/AppDir/usr
         # AppIcon.png is a 1024x1024 master, but it is installed into the
@@ -109,7 +112,7 @@ jobs:
           -d build/AppDir/usr/share/applications/m88m.desktop \
           -i build/AppDir/usr/share/icons/hicolor/512x512/apps/m88m.png \
           -o appimage
-        mv ./*.AppImage dist/appimage/${{ matrix.appimage-file }}
+        mv "${{ matrix.appimage-file }}" dist/appimage/
 
     - name: Upload DEB Artifact
       uses: actions/upload-artifact@v7

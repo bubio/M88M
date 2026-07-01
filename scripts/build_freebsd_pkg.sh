@@ -75,5 +75,15 @@ if [ -z "$PKG_FILE" ]; then
     exit 1
 fi
 
+# pkg names the artifact "m88m-<version>.pkg" with no architecture; rename it
+# to include the arch (e.g. m88m-1.2.0-FreeBSD-amd64.pkg) so release assets
+# are distinguishable per platform.
+ARCH="$(uname -m)"
+ARCH_PKG_FILE="$DIST_DIR/m88m-$VERSION-FreeBSD-$ARCH.pkg"
+if [ "$PKG_FILE" != "$ARCH_PKG_FILE" ]; then
+    mv "$PKG_FILE" "$ARCH_PKG_FILE"
+    PKG_FILE="$ARCH_PKG_FILE"
+fi
+
 printf "%b\n" "${GREEN}Package complete!${NC}"
 printf "%b\n" "The package is located at: ${YELLOW}$PKG_FILE${NC}"

@@ -388,6 +388,11 @@ if(RAYLIB_FRONT_SRC)
         set(CPACK_DEBIAN_PACKAGE_MAINTAINER "seiji")
         # Basic dependencies for raylib/nfd on Ubuntu
         set(CPACK_DEBIAN_PACKAGE_DEPENDS "libasound2, libgtk-3-0, libx11-6")
+        # Include the architecture in the package filenames
+        # (e.g. m88m_1.2.0_amd64.deb, m88m-1.2.0-1.x86_64.rpm) so that
+        # per-arch release assets don't collide.
+        set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
+        set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
     endif()
 
     include(CPack)
