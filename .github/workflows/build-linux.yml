@@ -95,6 +95,13 @@ jobs:
         APPIMAGE_EXTRACT_AND_RUN: 1
       run: |
         cmake --install build --prefix build/AppDir/usr
+        # AppIcon.png is a 1024x1024 master, but it is installed into the
+        # hicolor 512x512 directory; resize it so linuxdeploy's resolution
+        # check against the directory name passes.
+        sudo apt-get install -y imagemagick
+        convert build/AppDir/usr/share/icons/hicolor/512x512/apps/m88m.png \
+          -resize 512x512 \
+          build/AppDir/usr/share/icons/hicolor/512x512/apps/m88m.png
         wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${{ matrix.linuxdeploy-arch }}.AppImage
         chmod +x linuxdeploy-${{ matrix.linuxdeploy-arch }}.AppImage
         ./linuxdeploy-${{ matrix.linuxdeploy-arch }}.AppImage \

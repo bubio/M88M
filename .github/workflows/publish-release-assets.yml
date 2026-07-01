@@ -32,6 +32,7 @@ jobs:
     - name: Upload Release Assets
       env:
         GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
         RELEASE_TAG: ${{ github.event.release.tag_name }}
         ASSET_PATTERNS: ${{ inputs.asset-patterns }}
         ZIP_ARTIFACTS: ${{ inputs.zip-artifacts }}
