@@ -75,12 +75,20 @@ jobs:
       run: |
         export PKG_CONFIG_PATH=/usr/lib/arm-linux-gnueabihf/pkgconfig:/usr/share/pkgconfig
         export PKG_CONFIG_LIBDIR=/usr/lib/arm-linux-gnueabihf/pkgconfig
+        # Target ARMv7-A with NEON so the audio resampler/mixer float loops
+        # vectorize. This drops support for ARMv6 boards (Pi 1 / original Pi
+        # Zero) but greatly speeds up audio on Pi 2 / Zero 2 W and later,
+        # avoiding real-time audio dropouts. -ffast-math lets GCC vectorize the
+        # FIR's float accumulation.
+        ARM_FLAGS="-march=armv7-a -mfpu=neon-vfpv4 -mfloat-abi=hard -ffast-math"
         cmake -S . -B build \
           -DCMAKE_BUILD_TYPE=Release \
           -DCMAKE_SYSTEM_NAME=Linux \
           -DCMAKE_SYSTEM_PROCESSOR=armv7l \
           -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc \
           -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++ \
+          -DCMAKE_C_FLAGS="$ARM_FLAGS" \
+          -DCMAKE_CXX_FLAGS="$ARM_FLAGS" \
           -DCPACK_GENERATOR=DEB \
           -DCPACK_DEBIAN_PACKAGE_ARCHITECTURE=armhf
         cmake --build build -j "$(nproc)"

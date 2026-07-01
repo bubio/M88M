@@ -62,6 +62,8 @@ Prebuilt binaries are available on the [**Releases**](https://github.com/bubio/M
 | FreeBSD | `.pkg` | `amd64` |
 
 > Before running, you must supply the required ROM files — see [Prerequisites](#prerequisites). To build from source instead, see [Building](#building).
+>
+> The Linux `armhf` build targets ARMv7 with NEON, so it requires a Raspberry Pi 2 / Zero 2 W or later. The original Pi Zero / Pi 1 (ARMv6) are not supported; use a 64-bit OS with the `arm64` build where possible.
 
 ## Prerequisites
 
