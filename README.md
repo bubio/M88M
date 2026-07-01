@@ -182,6 +182,8 @@ cmake --build build --config Release
 
 The executable will be generated at `.\build\Release\m88m.exe`.
 
+> **Windows on ARM:** Windows on ARM does not ship a desktop OpenGL driver, which M88M (via raylib) requires. If M88M launches but no window appears, install the **"OpenCL, OpenGL, and Vulkan Compatibility Pack"** from the Microsoft Store and start it again.
+
 ## Usage
 
 - **F11 / Right Click:** Toggle the Main Menu / Settings overlay.

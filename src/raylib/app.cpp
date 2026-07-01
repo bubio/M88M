@@ -200,12 +200,17 @@ static void TrySetUnixWindowIcon() {
 
 int main() {
 #ifdef _WIN32
-    // If not running from a console, redirect stderr to a log file
+    // If not running from a console, redirect output to a log file.
+    // raylib's TraceLog() writes to stdout (not stderr), so redirect stdout and
+    // point stderr at the same stream; otherwise the log stays empty even when
+    // raylib reports fatal errors (e.g. failed OpenGL init).
     if (!GetConsoleWindow()) {
         std::string logDir = Paths::GetConfigDir();
         Paths::EnsureDirectory(logDir);
         std::string logPath = logDir + "/m88m.log";
-        freopen(logPath.c_str(), "w", stderr);
+        if (freopen(logPath.c_str(), "w", stdout)) {
+            _dup2(_fileno(stdout), _fileno(stderr));
+        }
     }
 #endif
     const int screenWidth = 640;
@@ -213,6 +218,26 @@ int main() {
 
     InitWindow(screenWidth, screenHeight, "M88M - PC-8801 Emulator");
 #ifdef _WIN32
+    if (!IsWindowReady()) {
+        // Windows on ARM (and GL-less VMs) may lack a desktop OpenGL driver, so
+        // raylib's OpenGL window creation fails here. Don't continue windowless;
+        // point the user at the compatibility pack that provides OpenGL.
+        HMODULE user32 = GetModuleHandleA("user32.dll");
+        if (user32) {
+            typedef int (WINAPI *PFN_MessageBoxW)(HWND, LPCWSTR, LPCWSTR, UINT);
+            auto pfnMessageBox = (PFN_MessageBoxW)GetProcAddress(user32, "MessageBoxW");
+            if (pfnMessageBox) {
+                pfnMessageBox(NULL,
+                    L"Failed to initialize the graphics device (OpenGL).\n\n"
+                    L"On Windows on ARM, install the \"OpenCL, OpenGL, and Vulkan "
+                    L"Compatibility Pack\" from the Microsoft Store, then launch "
+                    L"M88M again.",
+                    L"M88M - Graphics initialization failed",
+                    0x10 /* MB_ICONERROR */);
+            }
+        }
+        return 1;
+    }
     {
         // compat.h defines NOUSER to avoid winuser.h conflicts with raylib,
         // so LoadIcon/SendMessage are unavailable. Use GetProcAddress instead.
