@@ -48,6 +48,21 @@ M88M is fully functional and supports a wide range of PC-8801 software.
 - **High-DPI Scaling:** Adjustable window scaling (1x, 2x, 3x) and fullscreen support.
 - **Input:** Keyboard matrix emulation, Mouse, and Gamepad support.
 
+## Download
+
+Prebuilt binaries are available on the [**Releases**](https://github.com/bubio/M88M/releases/latest) page. Assets are named `m88m-<version>-<platform>-<arch>.<ext>`:
+
+| Platform | Format | Architectures |
+|----------|--------|---------------|
+| Windows | `.zip` | `x64`, `x86`, `arm64` |
+| macOS | `.dmg` | `universal` (Intel + Apple Silicon) |
+| Linux | `.AppImage` | `x86_64`, `aarch64` |
+| Linux (Debian / Ubuntu) | `.deb` | `amd64`, `arm64`, `armhf` |
+| Linux (Fedora / RHEL / openSUSE) | `.rpm` | `x86_64`, `aarch64` |
+| FreeBSD | `.pkg` | `amd64` |
+
+> Before running, you must supply the required ROM files — see [Prerequisites](#prerequisites). To build from source instead, see [Building](#building).
+
 ## Prerequisites
 
 To run the emulator, you must provide the necessary PC-8801 ROM files. Place the following files in the `roms` directory:
@@ -175,12 +190,21 @@ sh scripts/build_freebsd_pkg.sh
 
 ### Windows
 
-```cmd
-cmake -S . -B build
-cmake --build build --config Release
+#### Dependencies
+
+**Visual Studio 2022 (or later)** with the C++ desktop workload, and **CMake**, are required.
+
+#### Build
+
+Run the PowerShell build script (CMake auto-detects the installed Visual Studio generator):
+
+```powershell
+git clone https://github.com/bubio/M88M.git
+cd M88M
+./scripts/build_win.ps1 -Architecture x64
 ```
 
-The executable will be generated at `.\build\Release\m88m.exe`.
+`-Architecture` accepts `x64` (default), `Win32` (32-bit x86), or `ARM64`. The executable will be generated at `.\build\RelWithDebInfo\m88m.exe`.
 
 > **Windows on ARM:** Windows on ARM does not ship a desktop OpenGL driver, which M88M (via raylib) requires. If M88M launches but no window appears, install the **"OpenCL, OpenGL, and Vulkan Compatibility Pack"** from the Microsoft Store and start it again.
 
