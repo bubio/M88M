@@ -68,6 +68,8 @@ Prebuilt binaries are available on the [**Releases**](https://github.com/bubio/M
 > **Raspberry Pi:** use the `raspios` build — install it with `sudo apt install ./m88m-<version>-raspios-<arch>.deb`. The `armhf` (32-bit) variant targets ARMv7 with NEON, so it requires a Raspberry Pi 2 / Zero 2 W or later.
 >
 > **Windows on ARM:** the OS ships no desktop OpenGL driver, which M88M (via raylib) requires. If M88M launches but no window appears, install the **"OpenCL, OpenGL, and Vulkan Compatibility Pack"** from the Microsoft Store and start it again.
+>
+> **Haiku:** the `.zip` contains the `m88m` executable and license files only. SDL2 must be installed on the system before running it, for example with `pkgman install libsdl2`.
 
 ## Prerequisites
 
@@ -227,7 +229,8 @@ pkgman install cmake git pkgconfig libiconv_devel libsdl2_devel nfd_devel
 ```
 
 M88M builds raylib 6.0 from source on Haiku so it matches the raygui version
-used by the frontend. The raylib source build uses the SDL backend on Haiku.
+used by the frontend. The raylib source build uses the SDL backend on Haiku,
+so SDL2 is required at both build time and runtime.
 If your repository only provides runtime package names, install `sdl2` and
 `nfd` instead. If `libiconv_devel` is unavailable, try the build anyway; Haiku
 may provide iconv through the base system in your image.
