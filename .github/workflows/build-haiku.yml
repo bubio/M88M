@@ -9,6 +9,7 @@ on:
       - 'assets/**'
       - 'src/**'
       - 'scripts/build_haiku.sh'
+      - 'scripts/prepare_haiku_app.sh'
       - '.github/workflows/build-haiku.yml'
       - '.github/workflows/publish-release-assets.yml'
   pull_request:
@@ -19,6 +20,7 @@ on:
       - 'assets/**'
       - 'src/**'
       - 'scripts/build_haiku.sh'
+      - 'scripts/prepare_haiku_app.sh'
       - '.github/workflows/build-haiku.yml'
       - '.github/workflows/publish-release-assets.yml'
   release:
@@ -66,9 +68,12 @@ jobs:
     - name: Stage app
       run: |
         rm -rf dist/m88m-haiku-x64
-        mkdir -p dist/m88m-haiku-x64
+        mkdir -p dist/m88m-haiku-x64/licenses
         cp build/m88m dist/m88m-haiku-x64/
-        cp -R build/assets dist/m88m-haiku-x64/
+        sh scripts/prepare_haiku_app.sh dist/m88m-haiku-x64/m88m assets/AppIcon.png
+        cp LICENSE dist/m88m-haiku-x64/
+        cp assets/NOTICE.md dist/m88m-haiku-x64/licenses/
+        cp assets/OFL.txt dist/m88m-haiku-x64/licenses/
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v7

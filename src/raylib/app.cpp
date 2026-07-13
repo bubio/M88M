@@ -172,6 +172,15 @@ static Font LoadLatinFont() {
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 static void TrySetUnixWindowIcon() {
+#ifdef M88_EMBED_APP_ICON
+    Image embeddedIcon = LoadImageFromMemory(".png", embedded_app_icon_png_data, (int)embedded_app_icon_png_size);
+    if (embeddedIcon.data != nullptr) {
+        SetWindowIcon(embeddedIcon);
+        UnloadImage(embeddedIcon);
+        return;
+    }
+#endif
+
     std::vector<std::string> candidates;
 
     const char* base = GetApplicationDirectory();
