@@ -2,7 +2,7 @@ name: Build Haiku (x86_64)
 
 on:
   push:
-    branches: [ main, master, codex/haiku-build-experiment ]
+    branches: [ main, master ]
     paths:
       - 'CMakeLists.txt'
       - 'LICENSE'
@@ -12,7 +12,7 @@ on:
       - '.github/workflows/build-haiku.yml'
       - '.github/workflows/publish-release-assets.yml'
   pull_request:
-    branches: [ main, master, codex/haiku-build-experiment ]
+    branches: [ main, master ]
     paths:
       - 'CMakeLists.txt'
       - 'LICENSE'
