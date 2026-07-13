@@ -17,13 +17,131 @@
 #include <ctime>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+
+#ifdef __HAIKU__
+#include <Application.h>
+#include <Entry.h>
+#include <FilePanel.h>
+#include <Looper.h>
+#include <Message.h>
+#include <Messenger.h>
+#include <Path.h>
+#include <OS.h>
+#endif
 
 namespace {
 static const char* kDiskImageFilter = "d88,d77,88i,dim,dx9,784,dsk,m3u,m3u8";
 
+#ifdef __HAIKU__
+class HaikuFileDialogLooper : public BLooper {
+public:
+    HaikuFileDialogLooper()
+        : BLooper("M88M file dialog"),
+          doneSem(create_sem(0, "M88M file dialog done")),
+          result(NFD_CANCEL) {
+    }
+
+    ~HaikuFileDialogLooper() override {
+        if (doneSem >= 0) delete_sem(doneSem);
+    }
+
+    void MessageReceived(BMessage* message) override {
+        if (!message) {
+            Finish(NFD_ERROR);
+            return;
+        }
+
+        if (message->what == B_REFS_RECEIVED) {
+            entry_ref ref;
+            if (message->FindRef("refs", 0, &ref) == B_OK) {
+                BEntry entry(&ref, true);
+                BPath path;
+                if (entry.InitCheck() == B_OK && entry.GetPath(&path) == B_OK && path.Path()) {
+                    selectedPath = path.Path();
+                    Finish(NFD_OKAY);
+                    return;
+                }
+            }
+            Finish(NFD_ERROR);
+            return;
+        }
+
+        if (message->what == B_CANCEL) {
+            Finish(NFD_CANCEL);
+            return;
+        }
+
+        BLooper::MessageReceived(message);
+    }
+
+    sem_id DoneSem() const { return doneSem; }
+    nfdresult_t Result() const { return result; }
+    const std::string& SelectedPath() const { return selectedPath; }
+
+private:
+    void Finish(nfdresult_t dialogResult) {
+        result = dialogResult;
+        if (doneSem >= 0) release_sem(doneSem);
+    }
+
+    sem_id doneSem;
+    nfdresult_t result;
+    std::string selectedPath;
+};
+
+static bool MakeHaikuDirectoryRef(const char* path, entry_ref& ref) {
+    if (!path || !path[0]) return false;
+
+    BEntry entry(path, true);
+    if (entry.InitCheck() != B_OK || !entry.IsDirectory()) return false;
+
+    return entry.GetRef(&ref) == B_OK;
+}
+
+static nfdresult_t OpenHaikuDiskImageDialog(nfdchar_t** outPath, const nfdchar_t* defaultPath) {
+    if (!outPath) return NFD_ERROR;
+    *outPath = nullptr;
+
+    HaikuFileDialogLooper* looper = new HaikuFileDialogLooper();
+    if (looper->DoneSem() < 0) {
+        delete looper;
+        return NFD_ERROR;
+    }
+
+    thread_id looperThread = looper->Run();
+    if (looperThread < 0) {
+        delete looper;
+        return NFD_ERROR;
+    }
+
+    BMessenger target(looper);
+    entry_ref startRef;
+    entry_ref* startRefPtr = MakeHaikuDirectoryRef(defaultPath, startRef) ? &startRef : nullptr;
+    BFilePanel* panel = new BFilePanel(B_OPEN_PANEL, &target, startRefPtr, B_FILE_NODE, false);
+    panel->Show();
+
+    status_t waitStatus = acquire_sem(looper->DoneSem());
+    nfdresult_t result = (waitStatus == B_OK) ? looper->Result() : NFD_ERROR;
+    std::string selectedPath = looper->SelectedPath();
+
+    delete panel;
+
+    if (looper->Lock()) looper->Quit();
+
+    if (result == NFD_OKAY) {
+        *outPath = (nfdchar_t*)std::malloc(selectedPath.size() + 1);
+        if (!*outPath) return NFD_ERROR;
+        std::memcpy(*outPath, selectedPath.c_str(), selectedPath.size() + 1);
+    }
+
+    return result;
+}
+#endif
+
 static nfdresult_t OpenDiskImageDialog(nfdchar_t** outPath, const nfdchar_t* defaultPath) {
 #ifdef __HAIKU__
-    return NFD_OpenDialog(kDiskImageFilter, defaultPath, outPath);
+    return OpenHaikuDiskImageDialog(outPath, defaultPath);
 #else
     nfdfilteritem_t filterItem[1] = { { "Disk Image", kDiskImageFilter } };
     return NFD_OpenDialog(outPath, filterItem, 1, defaultPath);
