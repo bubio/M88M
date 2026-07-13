@@ -10,8 +10,6 @@
 #include <vector>
 #include <string>
 #include <sstream>
-#include <cstdio>
-#include <cstring>
 
 #ifndef _WIN32
 #include <unistd.h>
@@ -46,13 +44,6 @@
 
 #ifdef M88_EMBED_FONT
 #include "embedded_font.h"
-#endif
-
-#ifdef __HAIKU__
-#include <Bitmap.h>
-#include <Node.h>
-#include <NodeInfo.h>
-#include <image.h>
 #endif
 
 static Font LoadJapaneseFont() {
@@ -179,67 +170,6 @@ static Font LoadLatinFont() {
     return emptyFont;
 }
 
-#if defined(__HAIKU__) && defined(M88_EMBED_APP_ICON)
-static std::string GetHaikuExecutablePath() {
-    int32 cookie = 0;
-    image_info info;
-    while (get_next_image_info(0, &cookie, &info) == B_OK) {
-        if (info.type == B_APP_IMAGE && info.name[0] != '\0') {
-            return info.name;
-        }
-    }
-    return "";
-}
-
-static bool SetHaikuBitmapIcon(BNodeInfo& nodeInfo, const Image& source, int size, icon_size which) {
-    Image icon = ImageCopy(source);
-    ImageResize(&icon, size, size);
-    ImageFormat(&icon, PIXELFORMAT_UNCOMPRESSED_R8G8B8A8);
-
-    BBitmap bitmap(BRect(0, 0, size - 1, size - 1), B_RGBA32);
-    if (!bitmap.IsValid() || bitmap.Bits() == nullptr) {
-        UnloadImage(icon);
-        return false;
-    }
-
-    const unsigned char* src = (const unsigned char*)icon.data;
-    unsigned char* dst = (unsigned char*)bitmap.Bits();
-    const int dstStride = (int)bitmap.BytesPerRow();
-    for (int y = 0; y < size; y++) {
-        memcpy(dst + y * dstStride, src + y * size * 4, (size_t)size * 4);
-    }
-
-    status_t status = nodeInfo.SetIcon(&bitmap, which);
-    UnloadImage(icon);
-    return status == B_OK;
-}
-
-static void TryStampHaikuFileIcon() {
-    std::string path = GetHaikuExecutablePath();
-    if (path.empty()) return;
-
-    BNode node(path.c_str());
-    if (node.InitCheck() != B_OK) return;
-
-    BNodeInfo nodeInfo(&node);
-    BBitmap existing(BRect(0, 0, 31, 31), B_RGBA32);
-    if (existing.IsValid() && nodeInfo.GetIcon(&existing, B_LARGE_ICON) == B_OK) return;
-
-    Image source = LoadImageFromMemory(".png", embedded_app_icon_png_data, (int)embedded_app_icon_png_size);
-    if (source.data == nullptr) return;
-
-    bool largeOk = SetHaikuBitmapIcon(nodeInfo, source, 32, B_LARGE_ICON);
-    bool miniOk = SetHaikuBitmapIcon(nodeInfo, source, 16, B_MINI_ICON);
-    UnloadImage(source);
-
-    if (largeOk || miniOk) {
-        std::fprintf(stderr, "M88M: stamped Haiku file icon on %s\n", path.c_str());
-    } else {
-        std::fprintf(stderr, "M88M: failed to stamp Haiku file icon on %s\n", path.c_str());
-    }
-}
-#endif
-
 #if !defined(_WIN32) && !defined(__APPLE__)
 static void TrySetUnixWindowIcon() {
 #ifdef M88_EMBED_APP_ICON
@@ -279,10 +209,6 @@ static void TrySetUnixWindowIcon() {
 #endif
 
 int main() {
-#if defined(__HAIKU__) && defined(M88_EMBED_APP_ICON)
-    TryStampHaikuFileIcon();
-#endif
-
 #ifdef _WIN32
     // If not running from a console, redirect output to a log file.
     // raylib's TraceLog() writes to stdout (not stderr), so redirect stdout and
