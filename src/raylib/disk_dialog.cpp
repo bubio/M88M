@@ -1462,11 +1462,7 @@ void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
         NfdResultName(result), drive, defaultPath ? defaultPath : "(null)", outPath ? outPath : "(null)");
 #endif
     if (result == NFD_OKAY && outPath) {
-#ifdef __HAIKU__
-        MountDisk(diskmgr, outPath, 0, 1);
-#else
         MountDisk(diskmgr, outPath, (drive == 0) ? 0 : -1, (drive == 1) ? 0 : -1);
-#endif
         FreeNfdPath(outPath);
     }
 }
