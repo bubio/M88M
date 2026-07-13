@@ -70,12 +70,9 @@ jobs:
     - name: Stage app
       run: |
         rm -rf dist/m88m-haiku-x64
-        mkdir -p dist/m88m-haiku-x64/licenses
+        mkdir -p dist/m88m-haiku-x64
         cp build/m88m dist/m88m-haiku-x64/
-        sh scripts/prepare_haiku_app.sh dist/m88m-haiku-x64/m88m assets/AppIcon.png
-        cp LICENSE dist/m88m-haiku-x64/
-        cp assets/NOTICE.md dist/m88m-haiku-x64/licenses/
-        cp assets/OFL.txt dist/m88m-haiku-x64/licenses/
+        sh scripts/prepare_haiku_app.sh dist/m88m-haiku-x64/m88m assets/AppIcon.hvif
 
     - name: Create HPKG
       run: |

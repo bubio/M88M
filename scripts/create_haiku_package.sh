@@ -41,7 +41,7 @@ if [ -f assets/OFL.txt ]; then
 fi
 
 if [ -x scripts/prepare_haiku_app.sh ]; then
-    scripts/prepare_haiku_app.sh "$ROOT_DIR/apps/M88M/M88M" assets/AppIcon.png
+    scripts/prepare_haiku_app.sh "$ROOT_DIR/apps/M88M/M88M" assets/AppIcon.hvif
 fi
 
 cat > "$ROOT_DIR/.PackageInfo" <<EOF
