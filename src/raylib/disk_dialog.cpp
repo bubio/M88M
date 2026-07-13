@@ -38,6 +38,57 @@ static void FreeNfdPath(nfdchar_t* path) {
 #endif
 }
 
+static int HexValue(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+static std::string PercentDecodePath(const std::string& input) {
+    std::string output;
+    output.reserve(input.size());
+
+    for (size_t i = 0; i < input.size(); i++) {
+        if (input[i] == '%' && i + 2 < input.size()) {
+            int hi = HexValue(input[i + 1]);
+            int lo = HexValue(input[i + 2]);
+            if (hi >= 0 && lo >= 0) {
+                output.push_back((char)((hi << 4) | lo));
+                i += 2;
+                continue;
+            }
+        }
+        output.push_back(input[i]);
+    }
+
+    return output;
+}
+
+static std::string NormalizeSelectedPath(const char* rawPath) {
+    if (!rawPath || !rawPath[0]) return {};
+
+    std::string path(rawPath);
+    while (!path.empty() && (path.back() == '\r' || path.back() == '\n')) {
+        path.pop_back();
+    }
+
+    const std::string filePrefix = "file://";
+    if (path.rfind(filePrefix, 0) == 0) {
+        std::string rest = path.substr(filePrefix.size());
+        const std::string localhost = "localhost";
+        if (rest.rfind(localhost, 0) == 0) {
+            rest.erase(0, localhost.size());
+        }
+        if (rest.empty() || rest[0] != '/') {
+            rest.insert(rest.begin(), '/');
+        }
+        path = rest;
+    }
+
+    return PercentDecodePath(path);
+}
+
 struct StateSlotInfo {
     bool exists = false;
     std::string modified;
@@ -1182,22 +1233,25 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
 }
 
 void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2) {
-    if (!path || !path[0]) return;
+    std::string mountPath = NormalizeSelectedPath(path);
+    if (mountPath.empty()) return;
+
+    const char* diskPath = mountPath.c_str();
     bool success = false;
     int availableImages = 0;
     int origImg1 = img1;
     int origImg2 = img2;
 
     // Update last accessed directory
-    lastAccessedDir = GetDirFromPath(path);
+    lastAccessedDir = GetDirFromPath(diskPath);
 
     // Mount Drive 1
     if (img1 >= 0) {
         // If mounting only to Drive 1, check for collision with Drive 2 if it's the same file
-        if (img2 < 0 && std::string(path) == diskmgr->GetImagePath(1) && diskmgr->GetCurrentDisk(1) == img1) {
+        if (img2 < 0 && mountPath == diskmgr->GetImagePath(1) && diskmgr->GetCurrentDisk(1) == img1) {
             if (diskmgr->GetNumDisks(1) > 1) img1 = -1; // Force selector if multi-image
         }
-        if (diskmgr->Mount(0, path, false, img1, false)) {
+        if (diskmgr->Mount(0, diskPath, false, img1, false)) {
             success = true;
             availableImages = (int)diskmgr->GetNumDisks(0);
         }
@@ -1207,10 +1261,10 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     if (img2 >= 0) {
         if (img1 < 0) {
             // Mounting ONLY to Drive 2, check for collision with Drive 1 if it's the same file
-            if (std::string(path) == diskmgr->GetImagePath(0) && diskmgr->GetCurrentDisk(0) == img2) {
+            if (mountPath == diskmgr->GetImagePath(0) && diskmgr->GetCurrentDisk(0) == img2) {
                 if (diskmgr->GetNumDisks(0) > 1) img2 = -1; // Force selector if multi-image
             }
-            if (diskmgr->Mount(1, path, false, img2, false)) {
+            if (diskmgr->Mount(1, diskPath, false, img2, false)) {
                 success = true;
                 availableImages = (int)diskmgr->GetNumDisks(1);
             }
@@ -1218,7 +1272,7 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
             // Both drives specified (Drive 1&2 auto-mount behavior)
             //availableImages should be set from Drive 1 mount above
             if (img2 < availableImages) {
-                if (diskmgr->Mount(1, path, false, img2, false)) {
+                if (diskmgr->Mount(1, diskPath, false, img2, false)) {
                     success = true;
                 }
             } else {
@@ -1229,7 +1283,7 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     }
 
     if (success) {
-        AddRecent(path);
+        AddRecent(mountPath);
         // If mounting to only one drive, show selector if multiple images exist
         if (origImg1 >= 0 && origImg2 < 0) {
             if (availableImages > 1) selectingDiskForDrive = 0;
@@ -1248,6 +1302,8 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
                 selectingBothDrives = false;
             }
         }
+    } else {
+        statusdisplay.Show(100, 3000, "Disk mount failed: %.96s", diskPath);
     }
 }
 
