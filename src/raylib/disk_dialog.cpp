@@ -1237,6 +1237,9 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     if (mountPath.empty()) return;
 
     const char* diskPath = mountPath.c_str();
+#ifdef __HAIKU__
+    std::fprintf(stderr, "M88M: mounting disk: %s\n", diskPath);
+#endif
     bool success = false;
     int availableImages = 0;
     int origImg1 = img1;
@@ -1283,6 +1286,9 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     }
 
     if (success) {
+#ifdef __HAIKU__
+        std::fprintf(stderr, "M88M: disk mounted: %s\n", diskPath);
+#endif
         AddRecent(mountPath);
         // If mounting to only one drive, show selector if multiple images exist
         if (origImg1 >= 0 && origImg2 < 0) {
@@ -1303,6 +1309,9 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
             }
         }
     } else {
+#ifdef __HAIKU__
+        std::fprintf(stderr, "M88M: disk mount failed: %s\n", diskPath);
+#endif
         statusdisplay.Show(100, 3000, "Disk mount failed: %.96s", diskPath);
     }
 }
