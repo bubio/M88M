@@ -7,6 +7,9 @@
 #include <vector>
 
 namespace PC8801 { class Config; }
+#ifdef __HAIKU__
+class BSoundPlayer;
+#endif
 
 class RaylibSound {
 public:
@@ -22,7 +25,6 @@ public:
     void SetSource(SoundSource* src);
 
     void FillOutput(int16_t* buffer, unsigned int frames);
-    void Update();
 
 private:
     static void AudioCallback(void* buffer, unsigned int frames);
@@ -32,4 +34,7 @@ private:
     int sampleRate;
     int streamBufferFrames;
     std::vector<int16_t> updateBuffer;
+#ifdef __HAIKU__
+    BSoundPlayer* haikuPlayer;
+#endif
 };

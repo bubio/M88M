@@ -378,7 +378,6 @@ void CoreRunner::Run() {
 
             TimeSync();
             actualTicks = Proceed(ticksToRun, clockParam, speedParam);
-            sound.Update();
             UpdateScreen(true);
         }
 
