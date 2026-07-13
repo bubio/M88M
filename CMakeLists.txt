@@ -192,6 +192,9 @@ else()
         GIT_SHALLOW    TRUE
     )
     FetchContent_MakeAvailable(raylib)
+    if(M88M_IS_HAIKU)
+        target_compile_definitions(raylib PRIVATE MA_NO_THREAD_PRIORITY)
+    endif()
 endif()
 
 include(FetchContent)
