@@ -18,7 +18,7 @@ M88M is a modern, cross-platform port of the classic PC-8801 emulator **M88**, o
   </a>
 </p>
 
-While the original M88 was tightly coupled with the Win32 API and DirectX, M88M leverages **raylib** and **raygui** for its frontend, making it natively compatible with **macOS (Intel/Apple Silicon)**, **Linux**, **FreeBSD**, and **Windows** via a single CMake-based build system.
+While the original M88 was tightly coupled with the Win32 API and DirectX, M88M leverages **raylib** and **raygui** for its frontend, making it natively compatible with **macOS (Intel/Apple Silicon)**, **Linux**, **FreeBSD**, **Haiku**, and **Windows** via a single CMake-based build system.
 
 <p align="center"><img src="docs/Screenshot1.png" alt="Phantasie on M88M"></p>
 <p align="center"><img src="docs/Screenshot2.png" alt="Phantasie II on M88M"></p>
@@ -27,7 +27,7 @@ While the original M88 was tightly coupled with the Win32 API and DirectX, M88M 
 
 ## Key Features
 
-- **Cross-Platform:** Native support for macOS, Linux, FreeBSD, and Windows.
+- **Cross-Platform:** Native support for macOS, Linux, FreeBSD, Haiku, and Windows.
 - **Raylib Frontend:** Modern, lightweight hardware-accelerated rendering and audio.
 - **Core Integrity:** Retains the highly accurate emulation core of the original M88 while replacing the platform-dependent layers.
 - **Modern Build System:** Uses CMake for easy compilation with modern compilers (Clang, GCC, MSVC).
@@ -61,6 +61,7 @@ Prebuilt binaries are available on the [**Releases**](https://github.com/bubio/M
 | Linux (Fedora / RHEL / openSUSE) | `linux` | `.rpm` | `x86_64`, `aarch64` |
 | Raspberry Pi OS | `raspios` | `.deb` | `arm64`, `armhf` |
 | FreeBSD | `freebsd` | `.pkg` | `amd64` |
+| Haiku | `haiku` | `.zip` | `x64` |
 
 > Before running, you must supply the required ROM files — see [Prerequisites](#prerequisites). To build from source instead, see [Building](#building).
 >
@@ -86,7 +87,8 @@ The emulator looks for ROMs in the following locations (in order):
 3. **Linux (including Raspberry Pi OS):** `~/.local/share/M88M/roms`
 4. **macOS:** `~/Library/Application Support/M88M/roms`
 5. **FreeBSD:** `~/.config/m88m/roms`
-6. **Windows:** `%APPDATA%\M88M\roms`
+6. **Haiku:** `/boot/home/config/settings/m88m/roms`
+7. **Windows:** `%APPDATA%\M88M\roms`
 
 *Note: You must own the original hardware to legally use these ROM files.*
 
@@ -213,6 +215,30 @@ To build a FreeBSD pkg:
 ```bash
 sh scripts/build_freebsd_pkg.sh
 ```
+
+---
+
+### Haiku
+
+#### Dependencies
+
+```bash
+pkgman install cmake git pkgconfig libiconv_devel raylib_devel nfd_devel
+```
+
+If your repository only provides the runtime package names, install `raylib`
+and `nfd` instead. If `libiconv_devel` is unavailable, try the build anyway;
+Haiku may provide iconv through the base system in your image.
+
+#### Build
+
+```bash
+git clone https://github.com/bubio/M88M.git
+cd M88M
+sh scripts/build_haiku.sh
+```
+
+The executable will be generated at `./build/m88m`.
 
 ---
 
