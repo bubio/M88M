@@ -223,12 +223,13 @@ sh scripts/build_freebsd_pkg.sh
 #### Dependencies
 
 ```bash
-pkgman install cmake git pkgconfig libiconv_devel raylib_devel nfd_devel
+pkgman install cmake git pkgconfig libiconv_devel nfd_devel
 ```
 
-If your repository only provides the runtime package names, install `raylib`
-and `nfd` instead. If `libiconv_devel` is unavailable, try the build anyway;
-Haiku may provide iconv through the base system in your image.
+M88M builds raylib 6.0 from source on Haiku so it matches the raygui version
+used by the frontend. If your repository only provides the runtime nfd package
+name, install `nfd` instead. If `libiconv_devel` is unavailable, try the build
+anyway; Haiku may provide iconv through the base system in your image.
 
 #### Build
 

@@ -110,23 +110,6 @@ target_link_libraries(m88core PUBLIC ZLIB::ZLIB)
 # --- raylib ------------------------------------------------------------
 include(FetchContent)
 
-if(M88M_IS_HAIKU)
-    find_package(raylib QUIET)
-    if(NOT TARGET raylib)
-        find_path(RAYLIB_INCLUDE_DIR raylib.h)
-        find_library(RAYLIB_LIBRARY NAMES raylib)
-        if(RAYLIB_INCLUDE_DIR AND RAYLIB_LIBRARY)
-            add_library(raylib UNKNOWN IMPORTED GLOBAL)
-            set_target_properties(raylib PROPERTIES
-                IMPORTED_LOCATION "${RAYLIB_LIBRARY}"
-                INTERFACE_INCLUDE_DIRECTORIES "${RAYLIB_INCLUDE_DIR}"
-            )
-        else()
-            message(FATAL_ERROR "Haiku builds require the raylib package. Install it with pkgman, for example: pkgman install raylib raylib_devel")
-        endif()
-    endif()
-endif()
-
 # Automatically select binary URL based on platform/arch
 if(TARGET raylib)
     message(STATUS "Using system raylib")
