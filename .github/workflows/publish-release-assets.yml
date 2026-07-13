@@ -52,6 +52,9 @@ jobs:
         fi
 
         mkdir -p release-upload
+        # A single downloaded artifact can be extracted directly into release-assets/
+        # instead of release-assets/<artifact-name>/.
+        zip_mapping_count="$(printf '%s\n' "$ZIP_ARTIFACTS" | sed '/^[[:space:]]*$/d' | wc -l)"
 
         while IFS= read -r mapping; do
           [ -z "$mapping" ] && continue
@@ -66,11 +69,23 @@ jobs:
             exit 1
           fi
           if [ ! -d "$artifact_dir" ]; then
-            echo "Artifact directory not found: $artifact_dir"
-            exit 1
+            has_single_mapping=false
+            release_assets_exists=false
+            release_assets_not_empty=false
+            [ "$zip_mapping_count" -eq 1 ] && has_single_mapping=true
+            [ -d release-assets ] && release_assets_exists=true
+            [ "$release_assets_exists" = true ] && find release-assets -mindepth 1 -print -quit | grep -q . && release_assets_not_empty=true
+
+            if [ "$has_single_mapping" = true ] && [ "$release_assets_exists" = true ] && [ "$release_assets_not_empty" = true ]; then
+              artifact_dir="release-assets"
+            else
+              echo "Artifact directory not found: $artifact_dir"
+              exit 1
+            fi
           fi
 
-          (cd "$artifact_dir" && zip -r "../../release-upload/$zip_name" .)
+          output_zip="$(pwd)/release-upload/$zip_name"
+          (cd "$artifact_dir" && zip -r "$output_zip" .)
         done <<< "$ZIP_ARTIFACTS"
 
         mapfile -t all_files < <(find release-assets -type f -print)
