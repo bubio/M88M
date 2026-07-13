@@ -163,6 +163,11 @@ std::string GetConfigDir() {
             path = std::string(userProfile) + "/.m88m";
         }
     }
+#elif defined(__HAIKU__)
+    const char* home = std::getenv("HOME");
+    if (home) {
+        path = std::string(home) + "/config/settings/m88m";
+    }
 #else
     const char* xdg = std::getenv("XDG_CONFIG_HOME");
     if (xdg) {
@@ -176,7 +181,7 @@ std::string GetConfigDir() {
 #endif
     if (!path.empty()) {
         // Recursive directory creation would be better, but for now:
-#if !defined(__APPLE__) && !defined(_WIN32)
+#if !defined(__APPLE__) && !defined(_WIN32) && !defined(__HAIKU__)
         const char* home = std::getenv("HOME");
         if (home) EnsureDirectory(std::string(home) + "/.config");
 #endif

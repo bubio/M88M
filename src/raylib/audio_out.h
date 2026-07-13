@@ -4,8 +4,12 @@
 #include "soundsrc.h"
 #include <atomic>
 #include <cstdint>
+#include <vector>
 
 namespace PC8801 { class Config; }
+#ifdef __HAIKU__
+class BSoundPlayer;
+#endif
 
 class RaylibSound {
 public:
@@ -28,4 +32,9 @@ private:
     AudioStream stream;
     std::atomic<SoundSource*> outputSource;
     int sampleRate;
+    int streamBufferFrames;
+    std::vector<int16_t> updateBuffer;
+#ifdef __HAIKU__
+    BSoundPlayer* haikuPlayer;
+#endif
 };

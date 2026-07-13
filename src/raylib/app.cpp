@@ -4,6 +4,7 @@
 #include "core_runner.h"
 #include "config.h"
 #include "paths.h"
+#include "haiku_drop.h"
 #include "raylib_mouse.cpp"
 #include <iostream>
 #include <vector>
@@ -171,6 +172,15 @@ static Font LoadLatinFont() {
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 static void TrySetUnixWindowIcon() {
+#ifdef M88_EMBED_APP_ICON
+    Image embeddedIcon = LoadImageFromMemory(".png", embedded_app_icon_png_data, (int)embedded_app_icon_png_size);
+    if (embeddedIcon.data != nullptr) {
+        SetWindowIcon(embeddedIcon);
+        UnloadImage(embeddedIcon);
+        return;
+    }
+#endif
+
     std::vector<std::string> candidates;
 
     const char* base = GetApplicationDirectory();
@@ -266,6 +276,9 @@ int main() {
 #elif !defined(__APPLE__)
     TrySetUnixWindowIcon();
 #endif
+#ifdef __HAIKU__
+    HaikuInstallDropHandler();
+#endif
     SetExitKey(0); // Disable ESC exit
  
     Font fontJp = LoadJapaneseFont();
@@ -305,6 +318,16 @@ int main() {
         }
         core.UpdateUI(shouldExit);
         core.UpdateInput();
+
+#ifdef __HAIKU__
+        std::string haikuDroppedPath;
+        while (HaikuPollDroppedFile(haikuDroppedPath)) {
+            core.GetUIManager()->MountDisk(core.GetDiskManager(), haikuDroppedPath.c_str(), 0, 1);
+            if (Config::Get().flag2 & PC8801::Config::resetondrop) {
+                core.RequestReset();
+            }
+        }
+#endif
 
         if (IsFileDropped()) {
             FilePathList droppedFiles = LoadDroppedFiles();

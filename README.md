@@ -13,21 +13,39 @@ M88M is a modern, cross-platform port of the classic PC-8801 emulator **M88**, o
   <a href="https://github.com/bubio/M88M/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/bubio/M88M" alt="License">
   </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-windows.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-windows.yml/badge.svg" alt="Windows">
+  </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-macos.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-macos.yml/badge.svg" alt="macOS">
+  </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-linux.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-linux.yml/badge.svg" alt="Linux">
+  </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-rpi.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-rpi.yml/badge.svg" alt="Raspberry Pi OS">
+  </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-freebsd.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-freebsd.yml/badge.svg" alt="FreeBSD">
+  </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-haiku.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-haiku.yml/badge.svg" alt="haiku">
+  </a>
   <a href="https://github.com/bubio/M88M/releases/latest">
     <img src="https://img.shields.io/github/downloads/bubio/M88M/total.svg" alt="Downloads">
   </a>
 </p>
 
-While the original M88 was tightly coupled with the Win32 API and DirectX, M88M leverages **raylib** and **raygui** for its frontend, making it natively compatible with **macOS (Intel/Apple Silicon)**, **Linux**, **FreeBSD**, and **Windows** via a single CMake-based build system.
+While the original M88 was tightly coupled with the Win32 API and DirectX, M88M leverages **raylib** and **raygui** for its frontend, making it natively compatible with **macOS (Intel/Apple Silicon)**, **Linux**, **FreeBSD**, **Haiku**, and **Windows** via a single CMake-based build system.
 
-<p align="center"><img src="docs/Screenshot1.png" alt="Phantasie on M88M"></p>
-<p align="center"><img src="docs/Screenshot2.png" alt="Phantasie II on M88M"></p>
-<p align="center"><img src="docs/Screenshot3.png" alt="Phantasie II on M88M Settings"></p>
-<p align="center"><img src="docs/Screenshot4.png" alt="Wizardry 4 on M88M Settings"></p>
+<p align="center"><img src="docs/Screenshot1.png" alt="Phantasie on M88M running on Ubuntu"></p>
+<p align="center"><img src="docs/Screenshot2.png" alt="Phantasie II on M88M Settings running on Ubuntu"></p>
+<p align="center"><img src="docs/Screenshot3.png" alt="Wizardry 4 on M88M running on FreeBSD"></p>
+<p align="center"><img src="docs/Screenshot4.png" alt="Hydlide 3 on M88M running on Haiku"></p>
 
 ## Key Features
 
-- **Cross-Platform:** Native support for macOS, Linux, FreeBSD, and Windows.
+- **Cross-Platform:** Native support for macOS, Linux, FreeBSD, Haiku, and Windows.
 - **Raylib Frontend:** Modern, lightweight hardware-accelerated rendering and audio.
 - **Core Integrity:** Retains the highly accurate emulation core of the original M88 while replacing the platform-dependent layers.
 - **Modern Build System:** Uses CMake for easy compilation with modern compilers (Clang, GCC, MSVC).
@@ -61,12 +79,15 @@ Prebuilt binaries are available on the [**Releases**](https://github.com/bubio/M
 | Linux (Fedora / RHEL / openSUSE) | `linux` | `.rpm` | `x86_64`, `aarch64` |
 | Raspberry Pi OS | `raspios` | `.deb` | `arm64`, `armhf` |
 | FreeBSD | `freebsd` | `.pkg` | `amd64` |
+| Haiku | `haiku` | `.zip` | `x64` |
 
 > Before running, you must supply the required ROM files — see [Prerequisites](#prerequisites). To build from source instead, see [Building](#building).
 >
 > **Raspberry Pi:** use the `raspios` build — install it with `sudo apt install ./m88m-<version>-raspios-<arch>.deb`. The `armhf` (32-bit) variant targets ARMv7 with NEON, so it requires a Raspberry Pi 2 / Zero 2 W or later.
 >
 > **Windows on ARM:** the OS ships no desktop OpenGL driver, which M88M (via raylib) requires. If M88M launches but no window appears, install the **"OpenCL, OpenGL, and Vulkan Compatibility Pack"** from the Microsoft Store and start it again.
+>
+> **Haiku:** the `.zip` contains the `m88m` executable and license files only. SDL2 must be installed on the system before running it, for example with `pkgman install libsdl2`.
 
 ## Prerequisites
 
@@ -86,7 +107,8 @@ The emulator looks for ROMs in the following locations (in order):
 3. **Linux (including Raspberry Pi OS):** `~/.local/share/M88M/roms`
 4. **macOS:** `~/Library/Application Support/M88M/roms`
 5. **FreeBSD:** `~/.config/m88m/roms`
-6. **Windows:** `%APPDATA%\M88M\roms`
+6. **Haiku:** `/boot/home/config/settings/m88m/roms`
+7. **Windows:** `%APPDATA%\M88M\roms`
 
 *Note: You must own the original hardware to legally use these ROM files.*
 
@@ -213,6 +235,33 @@ To build a FreeBSD pkg:
 ```bash
 sh scripts/build_freebsd_pkg.sh
 ```
+
+---
+
+### Haiku
+
+#### Dependencies
+
+```bash
+pkgman install cmake git pkgconfig libiconv_devel libsdl2_devel
+```
+
+M88M builds raylib 6.0 from source on Haiku so it matches the raygui version
+used by the frontend. The raylib source build uses the SDL backend on Haiku,
+so SDL2 is required at both build time and runtime.
+If your repository only provides runtime package names, install `sdl2` instead.
+If `libiconv_devel` is unavailable, try the build anyway; Haiku may provide
+iconv through the base system in your image.
+
+#### Build
+
+```bash
+git clone https://github.com/bubio/M88M.git
+cd M88M
+sh scripts/build_haiku.sh
+```
+
+The executable will be generated at `./build/m88m`.
 
 ---
 

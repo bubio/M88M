@@ -101,6 +101,7 @@ bool CoreRunner::Init(Draw* draw) {
 }
 
 void CoreRunner::StopAudio() {
+    sound.SetSource(nullptr);
     sound.Cleanup();
     coreSound.Cleanup();
 }
@@ -292,6 +293,7 @@ void CoreRunner::Stop() {
         running = false;
         if (thread.joinable()) thread.join();
     }
+    StopAudio();
 }
 
 void CoreRunner::Pause(bool p) { paused = p; }

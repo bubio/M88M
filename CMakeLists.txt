@@ -7,7 +7,7 @@ project(M88M
 
 # --- Global settings -----------------------------------------------------
 set(M88M_VERSION "${M88M_VERSION_MAJOR}.${M88M_VERSION_MINOR}.${M88M_VERSION_PATCH}")
-set(MACOSX_BUNDLE_MINIMUM_SYSTEM_VERSION "13.0")
+set(MACOSX_BUNDLE_MINIMUM_SYSTEM_VERSION "13.5")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -19,7 +19,7 @@ if(APPLE)
     # Single-arch by default; pass -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
     # at configure time for a universal binary.
     if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "" FORCE)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "13.5" CACHE STRING "" FORCE)
     endif()
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
 endif()
@@ -29,9 +29,12 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
 endif()
 
 set(M88M_IS_FREEBSD FALSE)
+set(M88M_IS_HAIKU FALSE)
 set(M88M_IS_LINUX FALSE)
 if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     set(M88M_IS_FREEBSD TRUE)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Haiku")
+    set(M88M_IS_HAIKU TRUE)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     set(M88M_IS_LINUX TRUE)
 endif()
@@ -108,7 +111,9 @@ target_link_libraries(m88core PUBLIC ZLIB::ZLIB)
 include(FetchContent)
 
 # Automatically select binary URL based on platform/arch
-if(APPLE)
+if(TARGET raylib)
+    message(STATUS "Using system raylib")
+elseif(APPLE)
     # raylib 6.0 release uses a universal binary for macOS
     set(RAYLIB_BINARY_URL "https://github.com/raysan5/raylib/releases/download/6.0/raylib-6.0_macos.tar.gz")
 elseif(WIN32)
@@ -134,7 +139,9 @@ elseif(M88M_IS_LINUX AND NOT M88M_RASPIOS)
     endif()
 endif()
 
-if(RAYLIB_BINARY_URL)
+if(TARGET raylib)
+    # System raylib was found above.
+elseif(RAYLIB_BINARY_URL)
     message(STATUS "Downloading raylib binary: ${RAYLIB_BINARY_URL}")
     FetchContent_Declare(
         raylib_bin
@@ -162,6 +169,12 @@ else()
     set(SUPPORT_MODULE_RAUDIO  ON  CACHE BOOL "" FORCE)
     set(SUPPORT_MODULE_RMODELS OFF CACHE BOOL "" FORCE)
 
+    # raylib's default desktop backend uses GLFW/X11 when building from
+    # source. Haiku has no X11 in the CI image, so use raylib's SDL backend.
+    if(M88M_IS_HAIKU)
+        set(PLATFORM "SDL" CACHE STRING "" FORCE)
+    endif()
+
     # Raspberry Pi (and other ARM boards) expose OpenGL ES rather than full
     # desktop GL. A desktop GL 3.3 context fails at window creation on the Pi's
     # GPU (GLXBadFBConfig), so build raylib for GLES 2.0 on ARM Linux. raylib's
@@ -179,6 +192,11 @@ else()
         GIT_SHALLOW    TRUE
     )
     FetchContent_MakeAvailable(raylib)
+    if(M88M_IS_HAIKU)
+        target_compile_options(raylib PRIVATE
+            -include "${CMAKE_CURRENT_SOURCE_DIR}/src/raylib/haiku_raylib_compat.h"
+        )
+    endif()
 endif()
 
 include(FetchContent)
@@ -195,12 +213,14 @@ add_library(raygui INTERFACE)
 target_include_directories(raygui INTERFACE ${raygui_SOURCE_DIR}/src)
 
 # --- nativefiledialog-extended -----------------------------------------
-FetchContent_Declare(
-    nfd
-    GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
-    GIT_TAG        v1.2.1
-)
-FetchContent_MakeAvailable(nfd)
+if(NOT M88M_IS_HAIKU)
+    FetchContent_Declare(
+        nfd
+        GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
+        GIT_TAG        v1.2.1
+    )
+    FetchContent_MakeAvailable(nfd)
+endif()
 
 # --- raylib frontend executable ----------------------------------------
 file(GLOB RAYLIB_FRONT_SRC src/raylib/*.cpp)
@@ -218,7 +238,7 @@ if(WIN32)
 endif()
 
 if(RAYLIB_FRONT_SRC)
-    if(APPLE OR UNIX)
+    if(APPLE OR UNIX OR M88M_IS_HAIKU)
         find_package(Iconv REQUIRED)
     endif()
 
@@ -246,16 +266,21 @@ if(RAYLIB_FRONT_SRC)
         endif()
         set_target_properties(m88_raylib PROPERTIES OUTPUT_NAME "m88m")
 
-        # Copy assets to the output directory so the executable can find them
-        add_custom_command(TARGET m88_raylib POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${CMAKE_CURRENT_SOURCE_DIR}/assets
-            $<TARGET_FILE_DIR:m88_raylib>/assets
-            COMMENT "Copying assets to output directory..."
-        )
+        if(NOT M88M_IS_HAIKU)
+            # Copy assets to the output directory so the executable can find them
+            add_custom_command(TARGET m88_raylib POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_directory
+                ${CMAKE_CURRENT_SOURCE_DIR}/assets
+                $<TARGET_FILE_DIR:m88_raylib>/assets
+                COMMENT "Copying assets to output directory..."
+            )
+        endif()
     endif()
 
-    target_link_libraries(m88_raylib PRIVATE m88core raylib raygui nfd)
+    target_link_libraries(m88_raylib PRIVATE m88core raylib raygui)
+    if(NOT M88M_IS_HAIKU)
+        target_link_libraries(m88_raylib PRIVATE nfd)
+    endif()
 
     if(M88M_IS_FREEBSD)
         # On FreeBSD, /usr/local/include/iconv.h from ports can shadow the base
@@ -265,25 +290,26 @@ if(RAYLIB_FRONT_SRC)
     endif()
 
     # --- Embedded Font (non-macOS Unix) --------------------------------
-    if(UNIX AND NOT APPLE)
+    if((UNIX OR M88M_IS_HAIKU) AND NOT APPLE)
         message(STATUS "Embedding fonts for non-macOS Unix binary...")
         set(FONT_HEADER_FILE "${CMAKE_CURRENT_BINARY_DIR}/embedded_font.h")
         file(WRITE "${FONT_HEADER_FILE}" "// Autogenerated font data\n")
 
-        # Function to embed a font file into the header
-        function(embed_font input_file array_name)
-            file(READ "${input_file}" FONT_DATA HEX)
-            string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " FONT_DATA_FORMATTED "${FONT_DATA}")
+        # Function to embed a binary asset into the header
+        function(embed_asset input_file array_name)
+            file(READ "${input_file}" ASSET_DATA HEX)
+            string(REGEX REPLACE "([0-9a-f][0-9a-f])" "0x\\1, " ASSET_DATA_FORMATTED "${ASSET_DATA}")
             file(APPEND "${FONT_HEADER_FILE}"
-                "static const unsigned char ${array_name}_data[] = { ${FONT_DATA_FORMATTED} };\n"
+                "static const unsigned char ${array_name}_data[] = { ${ASSET_DATA_FORMATTED} };\n"
                 "static const unsigned int ${array_name}_size = sizeof(${array_name}_data);\n"
             )
         endfunction()
 
-        embed_font("${CMAKE_CURRENT_SOURCE_DIR}/assets/NotoSansJP-Regular.ttf" "embedded_font_jp")
-        embed_font("${CMAKE_CURRENT_SOURCE_DIR}/assets/ChicagoKare-Regular.ttf" "embedded_font_latin")
+        embed_asset("${CMAKE_CURRENT_SOURCE_DIR}/assets/NotoSansJP-Regular.ttf" "embedded_font_jp")
+        embed_asset("${CMAKE_CURRENT_SOURCE_DIR}/assets/ChicagoKare-Regular.ttf" "embedded_font_latin")
+        embed_asset("${CMAKE_CURRENT_SOURCE_DIR}/assets/AppIcon.png" "embedded_app_icon_png")
 
-        target_compile_definitions(m88_raylib PRIVATE M88_EMBED_FONT)
+        target_compile_definitions(m88_raylib PRIVATE M88_EMBED_FONT M88_EMBED_APP_ICON)
         target_include_directories(m88_raylib PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
     endif()
 
@@ -340,6 +366,8 @@ if(RAYLIB_FRONT_SRC)
             uuid
             comdlg32
         )
+    elseif(M88M_IS_HAIKU)
+        target_link_libraries(m88_raylib PRIVATE Iconv::Iconv pthread m be media tracker)
     elseif(UNIX)
         target_link_libraries(m88_raylib PRIVATE Iconv::Iconv pthread m)
         if(NOT M88M_IS_FREEBSD)
@@ -408,7 +436,7 @@ if(RAYLIB_FRONT_SRC)
 
     if(M88M_IS_LINUX)
         set(CPACK_GENERATOR "DEB;RPM")
-        set(CPACK_DEBIAN_PACKAGE_MAINTAINER "seiji")
+        set(CPACK_DEBIAN_PACKAGE_MAINTAINER "bubio")
         # Basic runtime dependencies for raylib/nfd. Accept both the classic
         # names and the 64-bit time_t (t64) names so the package installs on
         # older releases (Debian bookworm / Ubuntu 22.04) as well as newer

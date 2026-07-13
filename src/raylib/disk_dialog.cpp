@@ -3,7 +3,12 @@
 #define RAYGUI_MALLOC(sz) malloc(sz)
 #include "raygui.h"
 #include "style_cyber.h"
+#ifdef __HAIKU__
+typedef char nfdchar_t;
+typedef enum { NFD_ERROR, NFD_OKAY, NFD_CANCEL } nfdresult_t;
+#else
 #include "nfd.h"
+#endif
 #include "config.h"
 #include "pc88.h"
 #include "paths.h"
@@ -16,8 +21,206 @@
 #include <cctype>
 #include <ctime>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+#ifdef __HAIKU__
+#include <Application.h>
+#include <Entry.h>
+#include <FilePanel.h>
+#include <Looper.h>
+#include <Message.h>
+#include <Messenger.h>
+#include <Path.h>
+#include <OS.h>
+#endif
 
 namespace {
+static const char* kDiskImageFilter = "d88,d77,88i,dim,dx9,784,dsk,m3u,m3u8";
+
+#ifdef __HAIKU__
+class HaikuFileDialogLooper : public BLooper {
+public:
+    HaikuFileDialogLooper()
+        : BLooper("M88M file dialog"),
+          doneSem(create_sem(0, "M88M file dialog done")),
+          result(NFD_CANCEL) {
+    }
+
+    ~HaikuFileDialogLooper() override {
+        if (doneSem >= 0) delete_sem(doneSem);
+    }
+
+    void MessageReceived(BMessage* message) override {
+        if (!message) {
+            Finish(NFD_ERROR);
+            return;
+        }
+
+        if (message->what == B_REFS_RECEIVED) {
+            entry_ref ref;
+            if (message->FindRef("refs", 0, &ref) == B_OK) {
+                BEntry entry(&ref, true);
+                BPath path;
+                if (entry.InitCheck() == B_OK && entry.GetPath(&path) == B_OK && path.Path()) {
+                    selectedPath = path.Path();
+                    Finish(NFD_OKAY);
+                    return;
+                }
+            }
+            Finish(NFD_ERROR);
+            return;
+        }
+
+        if (message->what == B_CANCEL) {
+            Finish(NFD_CANCEL);
+            return;
+        }
+
+        BLooper::MessageReceived(message);
+    }
+
+    sem_id DoneSem() const { return doneSem; }
+    nfdresult_t Result() const { return result; }
+    const std::string& SelectedPath() const { return selectedPath; }
+
+private:
+    void Finish(nfdresult_t dialogResult) {
+        result = dialogResult;
+        if (doneSem >= 0) release_sem(doneSem);
+    }
+
+    sem_id doneSem;
+    nfdresult_t result;
+    std::string selectedPath;
+};
+
+static bool MakeHaikuDirectoryRef(const char* path, entry_ref& ref) {
+    if (!path || !path[0]) return false;
+
+    BEntry entry(path, true);
+    if (entry.InitCheck() != B_OK || !entry.IsDirectory()) return false;
+
+    return entry.GetRef(&ref) == B_OK;
+}
+
+static nfdresult_t OpenHaikuDiskImageDialog(nfdchar_t** outPath, const nfdchar_t* defaultPath) {
+    if (!outPath) return NFD_ERROR;
+    *outPath = nullptr;
+
+    HaikuFileDialogLooper* looper = new HaikuFileDialogLooper();
+    if (looper->DoneSem() < 0) {
+        delete looper;
+        return NFD_ERROR;
+    }
+
+    thread_id looperThread = looper->Run();
+    if (looperThread < 0) {
+        delete looper;
+        return NFD_ERROR;
+    }
+
+    BMessenger target(looper);
+    entry_ref startRef;
+    entry_ref* startRefPtr = MakeHaikuDirectoryRef(defaultPath, startRef) ? &startRef : nullptr;
+    BFilePanel* panel = new BFilePanel(B_OPEN_PANEL, &target, startRefPtr, B_FILE_NODE, false);
+    panel->Show();
+
+    status_t waitStatus = acquire_sem(looper->DoneSem());
+    nfdresult_t result = (waitStatus == B_OK) ? looper->Result() : NFD_ERROR;
+    std::string selectedPath = looper->SelectedPath();
+
+    delete panel;
+
+    if (looper->Lock()) looper->Quit();
+
+    if (result == NFD_OKAY) {
+        *outPath = (nfdchar_t*)std::malloc(selectedPath.size() + 1);
+        if (!*outPath) return NFD_ERROR;
+        std::memcpy(*outPath, selectedPath.c_str(), selectedPath.size() + 1);
+    }
+
+    return result;
+}
+#endif
+
+static nfdresult_t OpenDiskImageDialog(nfdchar_t** outPath, const nfdchar_t* defaultPath) {
+#ifdef __HAIKU__
+    return OpenHaikuDiskImageDialog(outPath, defaultPath);
+#else
+    nfdfilteritem_t filterItem[1] = { { "Disk Image", kDiskImageFilter } };
+    return NFD_OpenDialog(outPath, filterItem, 1, defaultPath);
+#endif
+}
+
+static const char* NfdResultName(nfdresult_t result) {
+    switch (result) {
+        case NFD_OKAY: return "OKAY";
+        case NFD_CANCEL: return "CANCEL";
+        case NFD_ERROR: return "ERROR";
+        default: return "UNKNOWN";
+    }
+}
+
+static void FreeNfdPath(nfdchar_t* path) {
+#ifdef __HAIKU__
+    free(path);
+#else
+    NFD_FreePath(path);
+#endif
+}
+
+static int HexValue(char c) {
+    if (c >= '0' && c <= '9') return c - '0';
+    if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+    return -1;
+}
+
+static std::string PercentDecodePath(const std::string& input) {
+    std::string output;
+    output.reserve(input.size());
+
+    for (size_t i = 0; i < input.size(); i++) {
+        if (input[i] == '%' && i + 2 < input.size()) {
+            int hi = HexValue(input[i + 1]);
+            int lo = HexValue(input[i + 2]);
+            if (hi >= 0 && lo >= 0) {
+                output.push_back((char)((hi << 4) | lo));
+                i += 2;
+                continue;
+            }
+        }
+        output.push_back(input[i]);
+    }
+
+    return output;
+}
+
+static std::string NormalizeSelectedPath(const char* rawPath) {
+    if (!rawPath || !rawPath[0]) return {};
+
+    std::string path(rawPath);
+    while (!path.empty() && (path.back() == '\r' || path.back() == '\n')) {
+        path.pop_back();
+    }
+
+    const std::string filePrefix = "file://";
+    if (path.rfind(filePrefix, 0) == 0) {
+        std::string rest = path.substr(filePrefix.size());
+        const std::string localhost = "localhost";
+        if (rest.rfind(localhost, 0) == 0) {
+            rest.erase(0, localhost.size());
+        }
+        if (rest.empty() || rest[0] != '/') {
+            rest.insert(rest.begin(), '/');
+        }
+        path = rest;
+    }
+
+    return PercentDecodePath(path);
+}
+
 struct StateSlotInfo {
     bool exists = false;
     std::string modified;
@@ -97,13 +300,17 @@ UIManager::UIManager() :
     fontJp = {0};
     fontEn = {0};
     LoadRecent();
+#ifndef __HAIKU__
     NFD_Init();
+#endif
 }
 
 UIManager::~UIManager() {
     SaveRecent();
     if (IsTextureValid(statePreviewTexture)) UnloadTexture(statePreviewTexture);
+#ifndef __HAIKU__
     NFD_Quit();
+#endif
 }
 
 void UIManager::DrawEnText(const char* text, int x, int y, Color color) const {
@@ -310,16 +517,20 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
 
 void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     nfdchar_t *outPath = NULL;
-    nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk,m3u,m3u8" } };
 
     const nfdchar_t* defaultPath = NULL;
     if (Config::Get().flags & PC8801::Config::savedirectory) {
         if (!lastAccessedDir.empty()) defaultPath = lastAccessedDir.c_str();
     }
 
-    if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {
+    nfdresult_t result = OpenDiskImageDialog(&outPath, defaultPath);
+#ifdef __HAIKU__
+    std::fprintf(stderr, "M88M: nfd result=%s default=%s path=%s\n",
+        NfdResultName(result), defaultPath ? defaultPath : "(null)", outPath ? outPath : "(null)");
+#endif
+    if (result == NFD_OKAY && outPath) {
         MountDisk(diskmgr, outPath, 0, 1);
-        NFD_FreePath(outPath);
+        FreeNfdPath(outPath);
     }
 }
 
@@ -1159,22 +1370,28 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
 }
 
 void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2) {
-    if (!path || !path[0]) return;
+    std::string mountPath = NormalizeSelectedPath(path);
+    if (mountPath.empty()) return;
+
+    const char* diskPath = mountPath.c_str();
+#ifdef __HAIKU__
+    std::fprintf(stderr, "M88M: mounting disk: %s\n", diskPath);
+#endif
     bool success = false;
     int availableImages = 0;
     int origImg1 = img1;
     int origImg2 = img2;
 
     // Update last accessed directory
-    lastAccessedDir = GetDirFromPath(path);
+    lastAccessedDir = GetDirFromPath(diskPath);
 
     // Mount Drive 1
     if (img1 >= 0) {
         // If mounting only to Drive 1, check for collision with Drive 2 if it's the same file
-        if (img2 < 0 && std::string(path) == diskmgr->GetImagePath(1) && diskmgr->GetCurrentDisk(1) == img1) {
+        if (img2 < 0 && mountPath == diskmgr->GetImagePath(1) && diskmgr->GetCurrentDisk(1) == img1) {
             if (diskmgr->GetNumDisks(1) > 1) img1 = -1; // Force selector if multi-image
         }
-        if (diskmgr->Mount(0, path, false, img1, false)) {
+        if (diskmgr->Mount(0, diskPath, false, img1, false)) {
             success = true;
             availableImages = (int)diskmgr->GetNumDisks(0);
         }
@@ -1184,10 +1401,10 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     if (img2 >= 0) {
         if (img1 < 0) {
             // Mounting ONLY to Drive 2, check for collision with Drive 1 if it's the same file
-            if (std::string(path) == diskmgr->GetImagePath(0) && diskmgr->GetCurrentDisk(0) == img2) {
+            if (mountPath == diskmgr->GetImagePath(0) && diskmgr->GetCurrentDisk(0) == img2) {
                 if (diskmgr->GetNumDisks(0) > 1) img2 = -1; // Force selector if multi-image
             }
-            if (diskmgr->Mount(1, path, false, img2, false)) {
+            if (diskmgr->Mount(1, diskPath, false, img2, false)) {
                 success = true;
                 availableImages = (int)diskmgr->GetNumDisks(1);
             }
@@ -1195,7 +1412,7 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
             // Both drives specified (Drive 1&2 auto-mount behavior)
             //availableImages should be set from Drive 1 mount above
             if (img2 < availableImages) {
-                if (diskmgr->Mount(1, path, false, img2, false)) {
+                if (diskmgr->Mount(1, diskPath, false, img2, false)) {
                     success = true;
                 }
             } else {
@@ -1206,7 +1423,10 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     }
 
     if (success) {
-        AddRecent(path);
+#ifdef __HAIKU__
+        std::fprintf(stderr, "M88M: disk mounted: %s\n", diskPath);
+#endif
+        AddRecent(mountPath);
         // If mounting to only one drive, show selector if multiple images exist
         if (origImg1 >= 0 && origImg2 < 0) {
             if (availableImages > 1) selectingDiskForDrive = 0;
@@ -1225,21 +1445,30 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
                 selectingBothDrives = false;
             }
         }
+    } else {
+#ifdef __HAIKU__
+        std::fprintf(stderr, "M88M: disk mount failed: %s\n", diskPath);
+#endif
+        statusdisplay.Show(100, 3000, "Disk mount failed: %.96s", diskPath);
     }
 }
 
 void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
     nfdchar_t *outPath = NULL;
-    nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk,m3u,m3u8" } };
 
     const nfdchar_t* defaultPath = NULL;
     if (Config::Get().flags & PC8801::Config::savedirectory) {
         if (!lastAccessedDir.empty()) defaultPath = lastAccessedDir.c_str();
     }
 
-    if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {
+    nfdresult_t result = OpenDiskImageDialog(&outPath, defaultPath);
+#ifdef __HAIKU__
+    std::fprintf(stderr, "M88M: nfd result=%s drive=%d default=%s path=%s\n",
+        NfdResultName(result), drive, defaultPath ? defaultPath : "(null)", outPath ? outPath : "(null)");
+#endif
+    if (result == NFD_OKAY && outPath) {
         MountDisk(diskmgr, outPath, (drive == 0) ? 0 : -1, (drive == 1) ? 0 : -1);
-        NFD_FreePath(outPath);
+        FreeNfdPath(outPath);
     }
 }
 
