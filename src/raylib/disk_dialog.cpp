@@ -21,13 +21,22 @@
 namespace {
 static const char* kDiskImageFilter = "d88,d77,88i,dim,dx9,784,dsk,m3u,m3u8";
 
-static bool OpenDiskImageDialog(nfdchar_t** outPath, const nfdchar_t* defaultPath) {
+static nfdresult_t OpenDiskImageDialog(nfdchar_t** outPath, const nfdchar_t* defaultPath) {
 #ifdef __HAIKU__
-    return NFD_OpenDialog(kDiskImageFilter, defaultPath, outPath) == NFD_OKAY;
+    return NFD_OpenDialog(kDiskImageFilter, defaultPath, outPath);
 #else
     nfdfilteritem_t filterItem[1] = { { "Disk Image", kDiskImageFilter } };
-    return NFD_OpenDialog(outPath, filterItem, 1, defaultPath) == NFD_OKAY;
+    return NFD_OpenDialog(outPath, filterItem, 1, defaultPath);
 #endif
+}
+
+static const char* NfdResultName(nfdresult_t result) {
+    switch (result) {
+        case NFD_OKAY: return "OKAY";
+        case NFD_CANCEL: return "CANCEL";
+        case NFD_ERROR: return "ERROR";
+        default: return "UNKNOWN";
+    }
 }
 
 static void FreeNfdPath(nfdchar_t* path) {
@@ -391,7 +400,12 @@ void UIManager::OpenBothDrives(DiskManager* diskmgr) {
         if (!lastAccessedDir.empty()) defaultPath = lastAccessedDir.c_str();
     }
 
-    if (OpenDiskImageDialog(&outPath, defaultPath)) {
+    nfdresult_t result = OpenDiskImageDialog(&outPath, defaultPath);
+#ifdef __HAIKU__
+    std::fprintf(stderr, "M88M: nfd result=%s default=%s path=%s\n",
+        NfdResultName(result), defaultPath ? defaultPath : "(null)", outPath ? outPath : "(null)");
+#endif
+    if (result == NFD_OKAY && outPath) {
         MountDisk(diskmgr, outPath, 0, 1);
         FreeNfdPath(outPath);
     }
@@ -1324,8 +1338,17 @@ void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
         if (!lastAccessedDir.empty()) defaultPath = lastAccessedDir.c_str();
     }
 
-    if (OpenDiskImageDialog(&outPath, defaultPath)) {
+    nfdresult_t result = OpenDiskImageDialog(&outPath, defaultPath);
+#ifdef __HAIKU__
+    std::fprintf(stderr, "M88M: nfd result=%s drive=%d default=%s path=%s\n",
+        NfdResultName(result), drive, defaultPath ? defaultPath : "(null)", outPath ? outPath : "(null)");
+#endif
+    if (result == NFD_OKAY && outPath) {
+#ifdef __HAIKU__
+        MountDisk(diskmgr, outPath, 0, 1);
+#else
         MountDisk(diskmgr, outPath, (drive == 0) ? 0 : -1, (drive == 1) ? 0 : -1);
+#endif
         FreeNfdPath(outPath);
     }
 }
