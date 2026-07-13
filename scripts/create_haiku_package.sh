@@ -30,12 +30,14 @@ chmod 755 "$ROOT_DIR/apps/M88M/M88M"
 
 if [ -f LICENSE ]; then
     cp LICENSE "$ROOT_DIR/data/licenses/m88m/MIT"
+    cp LICENSE "$ROOT_DIR/data/licenses/MIT"
 fi
 if [ -f assets/NOTICE.md ]; then
     cp assets/NOTICE.md "$ROOT_DIR/data/licenses/m88m/NOTICE.md"
 fi
 if [ -f assets/OFL.txt ]; then
     cp assets/OFL.txt "$ROOT_DIR/data/licenses/m88m/OFL-1.1"
+    cp assets/OFL.txt "$ROOT_DIR/data/licenses/OFL-1.1"
 fi
 
 if [ -x scripts/prepare_haiku_app.sh ]; then
