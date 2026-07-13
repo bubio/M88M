@@ -10,6 +10,7 @@ on:
       - 'src/**'
       - 'scripts/build_haiku.sh'
       - 'scripts/prepare_haiku_app.sh'
+      - 'scripts/create_haiku_package.sh'
       - '.github/workflows/build-haiku.yml'
       - '.github/workflows/publish-release-assets.yml'
   pull_request:
@@ -21,6 +22,7 @@ on:
       - 'src/**'
       - 'scripts/build_haiku.sh'
       - 'scripts/prepare_haiku_app.sh'
+      - 'scripts/create_haiku_package.sh'
       - '.github/workflows/build-haiku.yml'
       - '.github/workflows/publish-release-assets.yml'
   release:
@@ -75,11 +77,21 @@ jobs:
         cp assets/NOTICE.md dist/m88m-haiku-x64/licenses/
         cp assets/OFL.txt dist/m88m-haiku-x64/licenses/
 
+    - name: Create HPKG
+      run: |
+        sh scripts/create_haiku_package.sh build/m88m dist/m88m-1.2.0-haiku-x64.hpkg 1.2.0 1
+
     - name: Upload Artifact
       uses: actions/upload-artifact@v7
       with:
         name: m88m-haiku-x64-app
         path: dist/m88m-haiku-x64
+
+    - name: Upload HPKG
+      uses: actions/upload-artifact@v7
+      with:
+        name: m88m-haiku-x64-hpkg
+        path: dist/m88m-1.2.0-haiku-x64.hpkg
 
   publish-release:
     if: github.event_name == 'release'
@@ -90,3 +102,4 @@ jobs:
     with:
       zip-artifacts: |
         m88m-haiku-x64-app=m88m-{version}-haiku-x64.zip
+        m88m-haiku-x64-hpkg=m88m-{version}-haiku-x64-hpkg.zip
