@@ -3,7 +3,12 @@
 #define RAYGUI_MALLOC(sz) malloc(sz)
 #include "raygui.h"
 #include "style_cyber.h"
+#ifdef __HAIKU__
+typedef char nfdchar_t;
+typedef enum { NFD_ERROR, NFD_OKAY, NFD_CANCEL } nfdresult_t;
+#else
 #include "nfd.h"
+#endif
 #include "config.h"
 #include "pc88.h"
 #include "paths.h"

@@ -213,19 +213,7 @@ add_library(raygui INTERFACE)
 target_include_directories(raygui INTERFACE ${raygui_SOURCE_DIR}/src)
 
 # --- nativefiledialog-extended -----------------------------------------
-if(M88M_IS_HAIKU)
-    find_path(NFD_INCLUDE_DIR nfd.h)
-    find_library(NFD_LIBRARY NAMES nfd)
-    if(NFD_INCLUDE_DIR AND NFD_LIBRARY)
-        add_library(nfd UNKNOWN IMPORTED GLOBAL)
-        set_target_properties(nfd PROPERTIES
-            IMPORTED_LOCATION "${NFD_LIBRARY}"
-            INTERFACE_INCLUDE_DIRECTORIES "${NFD_INCLUDE_DIR}"
-        )
-    else()
-        message(FATAL_ERROR "Haiku builds require the nfd package. Install it with pkgman, for example: pkgman install nfd nfd_devel")
-    endif()
-else()
+if(NOT M88M_IS_HAIKU)
     FetchContent_Declare(
         nfd
         GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
@@ -289,7 +277,10 @@ if(RAYLIB_FRONT_SRC)
         endif()
     endif()
 
-    target_link_libraries(m88_raylib PRIVATE m88core raylib raygui nfd)
+    target_link_libraries(m88_raylib PRIVATE m88core raylib raygui)
+    if(NOT M88M_IS_HAIKU)
+        target_link_libraries(m88_raylib PRIVATE nfd)
+    endif()
 
     if(M88M_IS_FREEBSD)
         # On FreeBSD, /usr/local/include/iconv.h from ports can shadow the base

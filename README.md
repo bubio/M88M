@@ -243,15 +243,15 @@ sh scripts/build_freebsd_pkg.sh
 #### Dependencies
 
 ```bash
-pkgman install cmake git pkgconfig libiconv_devel libsdl2_devel nfd_devel
+pkgman install cmake git pkgconfig libiconv_devel libsdl2_devel
 ```
 
 M88M builds raylib 6.0 from source on Haiku so it matches the raygui version
 used by the frontend. The raylib source build uses the SDL backend on Haiku,
 so SDL2 is required at both build time and runtime.
-If your repository only provides runtime package names, install `sdl2` and
-`nfd` instead. If `libiconv_devel` is unavailable, try the build anyway; Haiku
-may provide iconv through the base system in your image.
+If your repository only provides runtime package names, install `sdl2` instead.
+If `libiconv_devel` is unavailable, try the build anyway; Haiku may provide
+iconv through the base system in your image.
 
 #### Build
 

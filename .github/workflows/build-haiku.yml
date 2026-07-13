@@ -57,7 +57,6 @@ jobs:
         pkgman install -y cmake git pkgconfig
         pkgman install -y libiconv_devel || true
         pkgman install -y libsdl2_devel || pkgman install -y sdl2_devel
-        pkgman install -y nfd_devel || pkgman install -y nfd
 
     - name: Build
       run: |
