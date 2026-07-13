@@ -193,7 +193,9 @@ else()
     )
     FetchContent_MakeAvailable(raylib)
     if(M88M_IS_HAIKU)
-        target_compile_definitions(raylib PRIVATE MA_NO_THREAD_PRIORITY)
+        target_compile_options(raylib PRIVATE
+            -include "${CMAKE_CURRENT_SOURCE_DIR}/src/raylib/haiku_raylib_compat.h"
+        )
     endif()
 endif()
 
