@@ -4,6 +4,7 @@
 #include "soundsrc.h"
 #include <atomic>
 #include <cstdint>
+#include <vector>
 
 namespace PC8801 { class Config; }
 
@@ -21,6 +22,7 @@ public:
     void SetSource(SoundSource* src);
 
     void FillOutput(int16_t* buffer, unsigned int frames);
+    void Update();
 
 private:
     static void AudioCallback(void* buffer, unsigned int frames);
@@ -28,4 +30,6 @@ private:
     AudioStream stream;
     std::atomic<SoundSource*> outputSource;
     int sampleRate;
+    int streamBufferFrames;
+    std::vector<int16_t> updateBuffer;
 };
