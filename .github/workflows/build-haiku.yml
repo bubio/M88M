@@ -1,0 +1,87 @@
+name: Build Haiku (x86_64)
+
+on:
+  push:
+    branches: [ main, master, codex/haiku-build-experiment ]
+    paths:
+      - 'CMakeLists.txt'
+      - 'LICENSE'
+      - 'assets/**'
+      - 'src/**'
+      - 'scripts/build_haiku.sh'
+      - '.github/workflows/build-haiku.yml'
+      - '.github/workflows/publish-release-assets.yml'
+  pull_request:
+    branches: [ main, master, codex/haiku-build-experiment ]
+    paths:
+      - 'CMakeLists.txt'
+      - 'LICENSE'
+      - 'assets/**'
+      - 'src/**'
+      - 'scripts/build_haiku.sh'
+      - '.github/workflows/build-haiku.yml'
+      - '.github/workflows/publish-release-assets.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'release' }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: cpa.sh {0}
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Start Haiku VM
+      uses: cross-platform-actions/action@v1.3.0
+      with:
+        operating_system: haiku
+        architecture: x86-64
+        version: 'r1beta5'
+        shell: bash
+        memory: 6G
+        cpu_count: 4
+
+    - name: Install dependencies
+      run: |
+        for i in 1 2 3; do pkgman install -y cmake git pkgconfig && break || sleep 10; done
+        pkgman install -y libiconv_devel || true
+        pkgman install -y libsdl2_devel || pkgman install -y sdl2_devel
+        pkgman install -y nfd_devel || pkgman install -y nfd
+
+    - name: Build
+      run: |
+        sh scripts/build_haiku.sh
+
+    - name: Stage app
+      run: |
+        rm -rf dist/m88m-haiku-x64
+        mkdir -p dist/m88m-haiku-x64
+        cp build/m88m dist/m88m-haiku-x64/
+        cp -R build/assets dist/m88m-haiku-x64/
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: m88m-haiku-x64-app
+        path: dist/m88m-haiku-x64
+
+  publish-release:
+    if: github.event_name == 'release'
+    needs: build
+    permissions:
+      contents: write
+    uses: ./.github/workflows/publish-release-assets.yml
+    with:
+      zip-artifacts: |
+        m88m-haiku-x64-app=m88m-{version}-haiku-x64.zip
