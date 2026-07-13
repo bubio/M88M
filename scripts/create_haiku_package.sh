@@ -21,25 +21,25 @@ ROOT_DIR="$OUT_DIR/hpkg-root"
 PACKAGE_VERSION="$VERSION-$REVISION"
 
 rm -rf "$ROOT_DIR"
-mkdir -p "$ROOT_DIR/boot/system/apps/M88M"
-mkdir -p "$ROOT_DIR/boot/system/data/licenses/m88m"
+mkdir -p "$ROOT_DIR/apps/M88M"
+mkdir -p "$ROOT_DIR/data/licenses/m88m"
 mkdir -p "$OUT_DIR"
 
-cp "$APP_PATH" "$ROOT_DIR/boot/system/apps/M88M/M88M"
-chmod 755 "$ROOT_DIR/boot/system/apps/M88M/M88M"
+cp "$APP_PATH" "$ROOT_DIR/apps/M88M/M88M"
+chmod 755 "$ROOT_DIR/apps/M88M/M88M"
 
 if [ -f LICENSE ]; then
-    cp LICENSE "$ROOT_DIR/boot/system/data/licenses/m88m/MIT"
+    cp LICENSE "$ROOT_DIR/data/licenses/m88m/MIT"
 fi
 if [ -f assets/NOTICE.md ]; then
-    cp assets/NOTICE.md "$ROOT_DIR/boot/system/data/licenses/m88m/NOTICE.md"
+    cp assets/NOTICE.md "$ROOT_DIR/data/licenses/m88m/NOTICE.md"
 fi
 if [ -f assets/OFL.txt ]; then
-    cp assets/OFL.txt "$ROOT_DIR/boot/system/data/licenses/m88m/OFL-1.1"
+    cp assets/OFL.txt "$ROOT_DIR/data/licenses/m88m/OFL-1.1"
 fi
 
 if [ -x scripts/prepare_haiku_app.sh ]; then
-    scripts/prepare_haiku_app.sh "$ROOT_DIR/boot/system/apps/M88M/M88M" assets/AppIcon.png
+    scripts/prepare_haiku_app.sh "$ROOT_DIR/apps/M88M/M88M" assets/AppIcon.png
 fi
 
 cat > "$ROOT_DIR/.PackageInfo" <<EOF
