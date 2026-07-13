@@ -373,7 +373,7 @@ if(RAYLIB_FRONT_SRC)
             comdlg32
         )
     elseif(M88M_IS_HAIKU)
-        target_link_libraries(m88_raylib PRIVATE Iconv::Iconv pthread m be)
+        target_link_libraries(m88_raylib PRIVATE Iconv::Iconv pthread m be tracker)
     elseif(UNIX)
         target_link_libraries(m88_raylib PRIVATE Iconv::Iconv pthread m)
         if(NOT M88M_IS_FREEBSD)
