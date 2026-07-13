@@ -16,8 +16,28 @@
 #include <cctype>
 #include <ctime>
 #include <cstdio>
+#include <cstdlib>
 
 namespace {
+static const char* kDiskImageFilter = "d88,d77,88i,dim,dx9,784,dsk,m3u,m3u8";
+
+static bool OpenDiskImageDialog(nfdchar_t** outPath, const nfdchar_t* defaultPath) {
+#ifdef __HAIKU__
+    return NFD_OpenDialog(kDiskImageFilter, defaultPath, outPath) == NFD_OKAY;
+#else
+    nfdfilteritem_t filterItem[1] = { { "Disk Image", kDiskImageFilter } };
+    return NFD_OpenDialog(outPath, filterItem, 1, defaultPath) == NFD_OKAY;
+#endif
+}
+
+static void FreeNfdPath(nfdchar_t* path) {
+#ifdef __HAIKU__
+    free(path);
+#else
+    NFD_FreePath(path);
+#endif
+}
+
 struct StateSlotInfo {
     bool exists = false;
     std::string modified;
@@ -97,13 +117,17 @@ UIManager::UIManager() :
     fontJp = {0};
     fontEn = {0};
     LoadRecent();
+#ifndef __HAIKU__
     NFD_Init();
+#endif
 }
 
 UIManager::~UIManager() {
     SaveRecent();
     if (IsTextureValid(statePreviewTexture)) UnloadTexture(statePreviewTexture);
+#ifndef __HAIKU__
     NFD_Quit();
+#endif
 }
 
 void UIManager::DrawEnText(const char* text, int x, int y, Color color) const {
@@ -310,16 +334,15 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
 
 void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     nfdchar_t *outPath = NULL;
-    nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk,m3u,m3u8" } };
 
     const nfdchar_t* defaultPath = NULL;
     if (Config::Get().flags & PC8801::Config::savedirectory) {
         if (!lastAccessedDir.empty()) defaultPath = lastAccessedDir.c_str();
     }
 
-    if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {
+    if (OpenDiskImageDialog(&outPath, defaultPath)) {
         MountDisk(diskmgr, outPath, 0, 1);
-        NFD_FreePath(outPath);
+        FreeNfdPath(outPath);
     }
 }
 
@@ -1230,16 +1253,15 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
 
 void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
     nfdchar_t *outPath = NULL;
-    nfdfilteritem_t filterItem[1] = { { "Disk Image", "d88,d77,88i,dim,dx9,784,dsk,m3u,m3u8" } };
 
     const nfdchar_t* defaultPath = NULL;
     if (Config::Get().flags & PC8801::Config::savedirectory) {
         if (!lastAccessedDir.empty()) defaultPath = lastAccessedDir.c_str();
     }
 
-    if (NFD_OpenDialog(&outPath, filterItem, 1, defaultPath) == NFD_OKAY) {
+    if (OpenDiskImageDialog(&outPath, defaultPath)) {
         MountDisk(diskmgr, outPath, (drive == 0) ? 0 : -1, (drive == 1) ? 0 : -1);
-        NFD_FreePath(outPath);
+        FreeNfdPath(outPath);
     }
 }
 
