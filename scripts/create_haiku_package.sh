@@ -65,10 +65,6 @@ provides {
 }
 requires {
     haiku >= r1~beta5
-    lib:libbe
-    lib:libroot
-    lib:libmedia
-    lib:libtracker
 }
 EOF
 
