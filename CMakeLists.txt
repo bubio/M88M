@@ -169,6 +169,12 @@ else()
     set(SUPPORT_MODULE_RAUDIO  ON  CACHE BOOL "" FORCE)
     set(SUPPORT_MODULE_RMODELS OFF CACHE BOOL "" FORCE)
 
+    # raylib's default desktop backend uses GLFW/X11 when building from
+    # source. Haiku has no X11 in the CI image, so use raylib's SDL backend.
+    if(M88M_IS_HAIKU)
+        set(PLATFORM "SDL" CACHE STRING "" FORCE)
+    endif()
+
     # Raspberry Pi (and other ARM boards) expose OpenGL ES rather than full
     # desktop GL. A desktop GL 3.3 context fails at window creation on the Pi's
     # GPU (GLXBadFBConfig), so build raylib for GLES 2.0 on ARM Linux. raylib's
