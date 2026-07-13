@@ -13,6 +13,24 @@ M88M is a modern, cross-platform port of the classic PC-8801 emulator **M88**, o
   <a href="https://github.com/bubio/M88M/blob/main/LICENSE">
     <img src="https://img.shields.io/github/license/bubio/M88M" alt="License">
   </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-windows.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-windows.yml/badge.svg" alt="Windows">
+  </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-macos.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-macos.yml/badge.svg" alt="macOS">
+  </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-linux.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-linux.yml/badge.svg" alt="Linux">
+  </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-rpi.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-rpi.yml/badge.svg" alt="Raspberry Pi OS">
+  </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-freebsd.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-freebsd.yml/badge.svg" alt="FreeBSD">
+  </a>
+  <a href="https://github.com/bubio/M88M/actions/workflows/build-haiku.yml">
+    <img src="https://github.com/bubio/M88M/actions/workflows/build-haiku.yml/badge.svg" alt="haiku">
+  </a>
   <a href="https://github.com/bubio/M88M/releases/latest">
     <img src="https://img.shields.io/github/downloads/bubio/M88M/total.svg" alt="Downloads">
   </a>
@@ -20,10 +38,10 @@ M88M is a modern, cross-platform port of the classic PC-8801 emulator **M88**, o
 
 While the original M88 was tightly coupled with the Win32 API and DirectX, M88M leverages **raylib** and **raygui** for its frontend, making it natively compatible with **macOS (Intel/Apple Silicon)**, **Linux**, **FreeBSD**, **Haiku**, and **Windows** via a single CMake-based build system.
 
-<p align="center"><img src="docs/Screenshot1.png" alt="Phantasie on M88M"></p>
-<p align="center"><img src="docs/Screenshot2.png" alt="Phantasie II on M88M"></p>
-<p align="center"><img src="docs/Screenshot3.png" alt="Phantasie II on M88M Settings"></p>
-<p align="center"><img src="docs/Screenshot4.png" alt="Wizardry 4 on M88M Settings"></p>
+<p align="center"><img src="docs/Screenshot1.png" alt="Phantasie on M88M running on Ubuntu"></p>
+<p align="center"><img src="docs/Screenshot2.png" alt="Phantasie II on M88M Settings running on Ubuntu"></p>
+<p align="center"><img src="docs/Screenshot3.png" alt="Wizardry 4 on M88M running on FreeBSD"></p>
+<p align="center"><img src="docs/Screenshot4.png" alt="Hydlide 3 on M88M running on Haiku"></p>
 
 ## Key Features
 

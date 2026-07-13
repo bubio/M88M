@@ -7,7 +7,7 @@ project(M88M
 
 # --- Global settings -----------------------------------------------------
 set(M88M_VERSION "${M88M_VERSION_MAJOR}.${M88M_VERSION_MINOR}.${M88M_VERSION_PATCH}")
-set(MACOSX_BUNDLE_MINIMUM_SYSTEM_VERSION "13.0")
+set(MACOSX_BUNDLE_MINIMUM_SYSTEM_VERSION "13.5")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -19,7 +19,7 @@ if(APPLE)
     # Single-arch by default; pass -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
     # at configure time for a universal binary.
     if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
-        set(CMAKE_OSX_DEPLOYMENT_TARGET "13.0" CACHE STRING "" FORCE)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "13.5" CACHE STRING "" FORCE)
     endif()
     set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "" FORCE)
 endif()
@@ -445,7 +445,7 @@ if(RAYLIB_FRONT_SRC)
 
     if(M88M_IS_LINUX)
         set(CPACK_GENERATOR "DEB;RPM")
-        set(CPACK_DEBIAN_PACKAGE_MAINTAINER "seiji")
+        set(CPACK_DEBIAN_PACKAGE_MAINTAINER "bubio")
         # Basic runtime dependencies for raylib/nfd. Accept both the classic
         # names and the 64-bit time_t (t64) names so the package installs on
         # older releases (Debian bookworm / Ubuntu 22.04) as well as newer
