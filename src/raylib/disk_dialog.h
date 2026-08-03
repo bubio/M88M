@@ -66,6 +66,7 @@ private:
     bool selectingBothDrives;
     int recentDiskTargetDrive;
     int activeTab;
+    int settingsTabScroll;
     int currentStateSlot;
     Vector2 diskScrollOffset;
     Vector2 recentScrollOffset;

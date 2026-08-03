@@ -279,7 +279,7 @@ static std::string GetDirFromPath(const std::string& path) {
 
 UIManager::UIManager() :
     showMenu(false), modalState(MODAL_NONE), quitOpenedMenu(false), showSettings(false), showStateDialog(false), showRecentDialog(false),
-    selectingDiskForDrive(-1), selectingBothDrives(false), recentDiskTargetDrive(-1), activeTab(0),
+    selectingDiskForDrive(-1), selectingBothDrives(false), recentDiskTargetDrive(-1), activeTab(0), settingsTabScroll(0),
     currentStateSlot(0),
     diskScrollOffset({ 0, 0 }),
     recentScrollOffset({ 0, 0 }),
@@ -788,8 +788,11 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     }
 
     int prevTab = activeTab;
-    float tabW = (width - 40) / 6;
-    GuiToggleGroup({ x + 20, y + 35, tabW, 26 }, "System;Audio;Video;Mixer;Input;About", &activeTab);
+    const int tabItemsWidth = (int)((width - 40 - 5*4)/6);
+    const int previousTabItemsWidth = GuiGetStyle(TABBAR, TAB_ITEMS_WIDTH);
+    GuiSetStyle(TABBAR, TAB_ITEMS_WIDTH, tabItemsWidth);
+    GuiTabBar({ x + 20, y + 35, width - 40, 26 }, "System;Audio;Video;Mixer;Input;About", &settingsTabScroll, &activeTab);
+    GuiSetStyle(TABBAR, TAB_ITEMS_WIDTH, previousTabItemsWidth);
 
     if (activeTab != prevTab) {
         basicModeEdit = cpuModeEdit = port44Edit = portA8Edit = samplingEdit = windowScaleEdit = keyboardEdit = false;
