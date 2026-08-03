@@ -95,7 +95,19 @@ void RaylibDraw::Render() {
         float screenH = (float)GetScreenHeight();
         // Emulation area is the whole window minus the 24px status bar at the bottom
         float emuH = screenH - 24;
+
         Rectangle dest = { 0, 0, screenW, emuH };
+        if (IsWindowFullscreen()) {
+            // Keep the original 640x400 pixel aspect ratio in fullscreen.
+            // Limiting the scale to an integer keeps PC-88 pixels crisp and
+            // avoids changing the monitor display mode when a scale is chosen.
+            int scaleX = (int)(screenW / width);
+            int scaleY = (int)(emuH / height);
+            int scale = std::max(1, std::min(scaleX, scaleY));
+            float destW = (float)(width * scale);
+            float destH = (float)(height * scale);
+            dest = { (screenW - destW) * 0.5f, (emuH - destH) * 0.5f, destW, destH };
+        }
         DrawTexturePro(texture, { 0, 0, (float)width, (float)height }, dest, { 0, 0 }, 0, WHITE);
     }
 }

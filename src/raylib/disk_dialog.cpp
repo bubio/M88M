@@ -994,13 +994,16 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     else if (activeTab == 2) { // Video
         GuiLabel({ x + 20, pY, 120, 20 }, "Window Scale:");
         Rectangle scaleRect = { x + 150, pY, 200, 24 };
-        if (windowScaleEdit) { ddRect = scaleRect; ddText = "1x (640x400);2x (1280x800);3x (1920x1200)"; ddIndexPtr = &windowScale; ddEditPtr = &windowScaleEdit; }
+        if (isFullscreen) {
+            GuiLabel({ scaleRect.x, scaleRect.y + 3, scaleRect.width, scaleRect.height }, "Automatic (integer scale)");
+        } else if (windowScaleEdit) { ddRect = scaleRect; ddText = "1x (640x400);2x (1280x800);3x (1920x1200)"; ddIndexPtr = &windowScale; ddEditPtr = &windowScaleEdit; }
         else if (GuiDropdownBox(scaleRect, "1x (640x400);2x (1280x800);3x (1920x1200)", &windowScale, false)) windowScaleEdit = true;
 
         pY += rowH + 4;
         GuiLabel({ x + 20, pY, 120, 20 }, "Fullscreen:");
         int fsVal = isFullscreen ? 1 : 0;
         if (GuiToggleSlider({ x + 150, pY, 60, 20 }, "OFF;ON", &fsVal)) {
+            windowScaleEdit = false;
             isFullscreen = (fsVal == 1); ToggleFullscreen();
         }
 
