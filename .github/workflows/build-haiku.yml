@@ -56,7 +56,6 @@ jobs:
       run: |
         pkgman install -y cmake git pkgconfig
         pkgman install -y libiconv_devel || true
-        pkgman install -y libsdl2_devel || pkgman install -y sdl2_devel
 
     - name: Build
       run: |
