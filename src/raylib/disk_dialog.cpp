@@ -1587,13 +1587,10 @@ void UIManager::DrawConfirmDialog(bool& shouldExit, PC88* pc88, CoreRunner* core
     const char* title = (modalState == MODAL_CONFIRM_RESET) ? "Confirm Reset" : "Confirm Quit";
     const char* msg = (modalState == MODAL_CONFIRM_RESET) ? "Are you sure you want to reset?" : "Are you sure you want to quit?";
 
-    if (GuiWindowBox({ x, y, width, height }, title)) {
-        DismissConfirm();
-    }
+    int buttonActive = -1;
+    if (GuiMessageBox({ x, y, width, height }, title, msg, "Yes;No", &buttonActive) != RESULT_PRESSED) return;
 
-    GuiLabel({ x + 20, y + 40, width - 40, 20 }, msg);
-
-    if (GuiButton({ x + 40, y + 90, 100, 30 }, "Yes")) {
+    if (buttonActive == 1) {
         if (modalState == MODAL_CONFIRM_RESET) {
             if (coreRunner) coreRunner->RequestReset();
             else pc88->Reset();
@@ -1604,8 +1601,7 @@ void UIManager::DrawConfirmDialog(bool& shouldExit, PC88* pc88, CoreRunner* core
             modalState = MODAL_NONE;
         }
     }
-
-    if (GuiButton({ x + 160, y + 90, 100, 30 }, "No")) {
+    else {
         DismissConfirm();
     }
 }
