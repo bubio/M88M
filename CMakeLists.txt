@@ -185,7 +185,6 @@ else()
             GIT_SHALLOW    TRUE
         )
         FetchContent_MakeAvailable(sdl2)
-        add_library(SDL2::SDL2 ALIAS SDL2-static)
     endif()
 
     # Raspberry Pi (and other ARM boards) expose OpenGL ES rather than full
