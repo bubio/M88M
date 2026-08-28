@@ -43,18 +43,23 @@ jobs:
     - uses: actions/checkout@v7
 
     - name: Start Haiku VM
-      uses: cross-platform-actions/action@v1.4.0
+      # HaikuPorts retired the r1beta5 branch, so pkgman can no longer install
+      # anything on that image. Upstream added the R1/beta6 image in
+      # cross-platform-actions/action#165, which is merged but not yet tagged --
+      # v1.4.0 still pins the image release without it -- so pin the commit
+      # until it ships in a release, then switch back to a tag.
+      uses: cross-platform-actions/action@b77f08480307e762b98be92ba7ef04ea7c2272f8
       with:
         operating_system: haiku
         architecture: x86-64
-        version: 'r1beta5'
+        version: 'r1beta6'
         shell: bash
         memory: 6G
         cpu_count: 4
 
     - name: Install dependencies
       run: |
-        pkgman install -y cmake git pkgconfig
+        pkgman install -y cmake git pkgconfig libsdl2_devel
         pkgman install -y libiconv_devel || true
 
     - name: Build

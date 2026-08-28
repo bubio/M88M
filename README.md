@@ -243,14 +243,14 @@ sh scripts/build_freebsd_pkg.sh
 #### Dependencies
 
 ```bash
-pkgman install cmake git pkgconfig libiconv_devel
+pkgman install cmake git pkgconfig libsdl2_devel libiconv_devel
 ```
 
-M88M builds raylib 6.0 and SDL2 2.32.10 from source on Haiku. The raylib
-source build uses SDL2 because the CI image has no X11, while building SDL2
-statically avoids a HaikuPorts package-version mismatch with r1beta5.
-If `libiconv_devel` is unavailable, try the build anyway; Haiku may provide
-iconv through the base system in your image.
+M88M builds raylib 6.0 from source on Haiku and links it against the SDL2
+package from HaikuPorts. The raylib source build uses its SDL backend because
+the CI image has no X11. R1/beta6 or later is required — HaikuPorts no longer
+serves the r1beta5 branch. If `libiconv_devel` is unavailable, try the build
+anyway; Haiku may provide iconv through the base system in your image.
 
 #### Build
 
