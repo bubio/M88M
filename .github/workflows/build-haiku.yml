@@ -85,3 +85,5 @@ jobs:
     with:
       zip-artifacts: |
         m88m-haiku-x64-app=m88m-{version}-haiku-x64.zip
+      executable-paths: |
+        m88m
