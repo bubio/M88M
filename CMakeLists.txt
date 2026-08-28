@@ -171,20 +171,10 @@ else()
 
     # raylib's default desktop backend uses GLFW/X11 when building from
     # source. Haiku has no X11 in the CI image, so use raylib's SDL backend.
-    # HaikuPorts no longer provides an SDL2 package compatible with the
-    # r1beta5 CI image, so build and link SDL2 statically instead.
+    # HaikuPorts ships SDL2 for r1beta6, so raylib picks it up through
+    # find_package(SDL2); install libsdl2_devel before building.
     if(M88M_IS_HAIKU)
         set(PLATFORM "SDL" CACHE STRING "" FORCE)
-        set(SDL_SHARED OFF CACHE BOOL "" FORCE)
-        set(SDL_STATIC ON CACHE BOOL "" FORCE)
-        set(SDL_TEST OFF CACHE BOOL "" FORCE)
-        FetchContent_Declare(
-            sdl2
-            GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-            GIT_TAG        release-2.32.10
-            GIT_SHALLOW    TRUE
-        )
-        FetchContent_MakeAvailable(sdl2)
     endif()
 
     # Raspberry Pi (and other ARM boards) expose OpenGL ES rather than full

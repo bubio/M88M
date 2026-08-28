@@ -59,7 +59,7 @@ jobs:
 
     - name: Install dependencies
       run: |
-        pkgman install -y cmake git pkgconfig
+        pkgman install -y cmake git pkgconfig libsdl2_devel
         pkgman install -y libiconv_devel || true
 
     - name: Build
