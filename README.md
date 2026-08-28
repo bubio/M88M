@@ -87,7 +87,7 @@ Prebuilt binaries are available on the [**Releases**](https://github.com/bubio/M
 >
 > **Windows on ARM:** the OS ships no desktop OpenGL driver, which M88M (via raylib) requires. If M88M launches but no window appears, install the **"OpenCL, OpenGL, and Vulkan Compatibility Pack"** from the Microsoft Store and start it again.
 >
-> **Haiku:** the `.zip` contains the `m88m` executable and license files only. SDL2 must be installed on the system before running it, for example with `pkgman install libsdl2`.
+> **Haiku:** the `.zip` contains the `m88m` executable and license files only. SDL2 must be installed on the system before running it, for example with `pkgman install libsdl2`. If the extracted `m88m` fails to launch with "Invalid Argument", it lost its execute permission during extraction — restore it with `chmod +x m88m`.
 
 ## Prerequisites
 

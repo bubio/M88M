@@ -13,6 +13,14 @@ on:
         required: false
         default: ""
         type: string
+      executable-paths:
+        description: |
+          Newline-separated filename globs inside zipped artifacts that must keep the
+          execute bit. actions/upload-artifact drops file modes, so the bit has to be
+          restored here before the archive is created.
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -44,6 +52,7 @@ jobs:
         RELEASE_TAG: ${{ github.event.release.tag_name }}
         ASSET_PATTERNS: ${{ inputs.asset-patterns }}
         ZIP_ARTIFACTS: ${{ inputs.zip-artifacts }}
+        EXECUTABLE_PATHS: ${{ inputs.executable-paths }}
         VERSION: ${{ steps.ver.outputs.version }}
       run: |
         if [ -z "$RELEASE_TAG" ]; then
@@ -83,6 +92,11 @@ jobs:
               exit 1
             fi
           fi
+
+          while IFS= read -r exec_pattern; do
+            [ -z "$exec_pattern" ] && continue
+            find "$artifact_dir" -type f -name "$exec_pattern" -exec chmod +x {} +
+          done <<< "$EXECUTABLE_PATHS"
 
           output_zip="$(pwd)/release-upload/$zip_name"
           (cd "$artifact_dir" && zip -r "$output_zip" .)
