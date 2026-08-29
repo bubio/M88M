@@ -1375,7 +1375,7 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     DrawEnText(TextFormat("%d FPS", GetFPS()), (int)sW - 80, (int)textY, statusText);
 }
 
-void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2) {
+void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2, bool openSelectorIfNeeded) {
     std::string mountPath = NormalizeSelectedPath(path);
     if (mountPath.empty()) return;
 
@@ -1434,7 +1434,10 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
 #endif
         AddRecent(mountPath);
         // If mounting to only one drive, show selector if multiple images exist
-        if (origImg1 >= 0 && origImg2 < 0) {
+        if (!openSelectorIfNeeded) {
+            selectingDiskForDrive = -1;
+            selectingBothDrives = false;
+        } else if (origImg1 >= 0 && origImg2 < 0) {
             if (availableImages > 1) selectingDiskForDrive = 0;
             else selectingDiskForDrive = -1;
             selectingBothDrives = false;
