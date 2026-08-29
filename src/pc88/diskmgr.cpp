@@ -480,6 +480,32 @@ bool DiskImageHolder::IsSupportedDisk(int index)
 }
 
 // ---------------------------------------------------------------------------
+//	IsDiskWriteProtected
+//	D88 ヘッダの write-protect フラグだけを見る。
+//	ファイル自体の書き込み可否 (パーミッション等) は対象外。
+//
+bool DiskImageHolder::IsDiskWriteProtected(int index)
+{
+	FileIO* f = GetDisk(index);
+	if (!f)
+		return false;
+
+	if (!f->Seek(0, FileIO::begin))
+		return false;
+
+	ImageHeader ih;
+	memset(&ih, 0, sizeof(ih));
+	if (f->Read(&ih, sizeof(ih)) < 256+16)
+		return false;
+
+	// Raw イメージはヘッダに保護フラグを持たない
+	if (!memcmp(ih.title, "M88 RawDiskImage", 16))
+		return false;
+
+	return ih.readonly != 0;
+}
+
+// ---------------------------------------------------------------------------
 //	SetDiskSize
 //
 bool DiskImageHolder::SetDiskSize(int index, int newsize)
@@ -1113,6 +1139,17 @@ const char* DiskManager::GetImagePath(uint dr) const
 		return drive[dr].holder->GetFileName();
 	}
 	return "";
+}
+
+// ---------------------------------------------------------------------------
+//	指定ディスクの write-protect 状態を取得
+//
+bool DiskManager::IsDiskWriteProtected(uint dr, uint index)
+{
+	CriticalSection::Lock lock(cs);
+	if (dr < max_drives && drive[dr].holder)
+		return drive[dr].holder->IsDiskWriteProtected((int)index);
+	return false;
 }
 
 // ---------------------------------------------------------------------------

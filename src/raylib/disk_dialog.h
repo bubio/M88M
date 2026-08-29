@@ -48,6 +48,11 @@ private:
     void DrawMainMenu(DiskManager* diskmgr, class PC88* pc88, bool& shouldExit, class CoreRunner* coreRunner);
     void DrawSettings(PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner);
     void DrawDiskSelector(DiskManager* diskmgr);
+    void RefreshWriteProtectCache(DiskManager* diskmgr);
+    bool IsCurrentDiskWriteProtected(DiskManager* diskmgr, int drive);
+    // 書き込み禁止マークの鍵。GuiDrawIcon の pixelSize は整数倍しか取れないので、
+    // 一度 16px で焼いたテクスチャを任意サイズに縮小して描く。
+    void DrawKeyIcon(float x, float y, float size, Color color) const;
     void DrawRecentDiskDialog(DiskManager* diskmgr);
     void DrawStateDialog(DiskManager* diskmgr, class CoreRunner* coreRunner);
     void DrawConfirmDialog(bool& shouldExit, class PC88* pc88, class CoreRunner* coreRunner);
@@ -76,6 +81,17 @@ private:
     int currentStateSlot;
     Vector2 diskScrollOffset;
     Vector2 recentScrollOffset;
+
+    // ディスクセレクタ用の write-protect 状態キャッシュ。
+    // 判定はイメージのヘッダ読み込みを伴うので毎フレームは引かない。
+    std::vector<char> diskWriteProtect;
+    int wpCacheDrive;
+    std::string wpCachePath;
+
+    // ステータスバー用。挿入中のディスクの write-protect をドライブごとに保持する
+    bool statusWriteProtect[2];
+    std::string statusWpPath[2];
+    int statusWpIndex[2];
     
     // UI state
     int windowScale;
@@ -112,5 +128,7 @@ private:
     Texture2D statePreviewTexture;
     Font fontJp;
     Font fontEn;
+    RenderTexture2D keyIconTexture;
+    bool keyIconReady;
     bool resetPending;
 };

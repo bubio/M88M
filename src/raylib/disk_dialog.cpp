@@ -278,6 +278,9 @@ static std::string TrimDiskTitle(const char* raw) {
     return s;
 }
 
+// 書き込み禁止マークの鍵のサイズ。raygui のアイコン素の大きさ (16px) の 90%。
+static const float kKeyIconSize = 16.0f * 0.9f;
+
 static std::string StripExtension(std::string name) {
     size_t dot = name.find_last_of('.');
     if (dot != std::string::npos) {
@@ -300,6 +303,9 @@ UIManager::UIManager() :
     currentStateSlot(0),
     diskScrollOffset({ 0, 0 }),
     recentScrollOffset({ 0, 0 }),
+    wpCacheDrive(-1),
+    statusWriteProtect{ false, false },
+    statusWpIndex{ -1, -1 },
     windowScale(0), isFullscreen(false),
     basicModeEdit(false), windowScaleEdit(false),
     cpuModeEdit(false), port44Edit(false), portA8Edit(false), samplingEdit(false), keyboardEdit(false),
@@ -317,6 +323,8 @@ UIManager::UIManager() :
     statePreviewTexture = {0};
     fontJp = {0};
     fontEn = {0};
+    keyIconTexture = {0};
+    keyIconReady = false;
     LoadRecent();
 #ifndef __HAIKU__
     NFD_Init();
@@ -326,6 +334,7 @@ UIManager::UIManager() :
 UIManager::~UIManager() {
     SaveRecent();
     if (IsTextureValid(statePreviewTexture)) UnloadTexture(statePreviewTexture);
+    if (keyIconReady) UnloadRenderTexture(keyIconTexture);
 #ifndef __HAIKU__
     NFD_Quit();
 #endif
@@ -384,10 +393,34 @@ void UIManager::Init() {
         GuiSetStyle(DEFAULT, TEXT_SPACING, 1);
     }
 
+    // 書き込み禁止マークの鍵を等倍 (16px) で焼いておく。
+    // GuiDrawIcon の pixelSize は整数倍しか受け付けないため、
+    // 小数倍で出したい場合はここから縮小して描く。
+    keyIconTexture = LoadRenderTexture(16, 16);
+    if (IsRenderTextureValid(keyIconTexture)) {
+        BeginTextureMode(keyIconTexture);
+        ClearBackground(BLANK);
+        GuiDrawIcon(ICON_KEY, 0, 0, 1, WHITE);
+        EndTextureMode();
+        SetTextureFilter(keyIconTexture.texture, TEXTURE_FILTER_BILINEAR);
+        keyIconReady = true;
+    }
+
     int h = GetScreenHeight();
     if (h >= 1224) windowScale = 2;
     else if (h >= 824) windowScale = 1;
     else windowScale = 0;
+}
+
+void UIManager::DrawKeyIcon(float x, float y, float size, Color color) const {
+    if (keyIconReady) {
+        // RenderTexture は上下反転して格納されるので src の height を負にする
+        Rectangle src = { 0, 0, (float)keyIconTexture.texture.width,
+                                -(float)keyIconTexture.texture.height };
+        DrawTexturePro(keyIconTexture.texture, src, { x, y, size, size }, { 0, 0 }, 0.0f, color);
+    } else {
+        GuiDrawIcon(ICON_KEY, (int)x, (int)y, 1, color);
+    }
 }
 
 void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
@@ -554,6 +587,54 @@ void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     }
 }
 
+// セレクタに並ぶ各ディスクの write-protect 状態を取り直す。
+// 判定はイメージのヘッダ読み込み (m3u なら実体を開く) を伴うため、
+// 対象ドライブ・イメージ・枚数が変わったときだけ引き直す。
+void UIManager::RefreshWriteProtectCache(DiskManager* diskmgr) {
+    if (selectingDiskForDrive < 0) {
+        wpCacheDrive = -1;
+        wpCachePath.clear();
+        diskWriteProtect.clear();
+        return;
+    }
+
+    std::string path = diskmgr->GetImagePath(selectingDiskForDrive);
+    int numDisks = (int)diskmgr->GetNumDisks(selectingDiskForDrive);
+    if (wpCacheDrive == selectingDiskForDrive && wpCachePath == path &&
+        (int)diskWriteProtect.size() == numDisks) {
+        return;
+    }
+
+    diskWriteProtect.assign((size_t)numDisks, 0);
+    for (int i = 0; i < numDisks; i++) {
+        diskWriteProtect[i] = diskmgr->IsDiskWriteProtected(selectingDiskForDrive, i) ? 1 : 0;
+    }
+    wpCacheDrive = selectingDiskForDrive;
+    wpCachePath = path;
+}
+
+// 挿入中のディスクの write-protect 状態。ステータスバーは毎フレーム描かれるので、
+// 対象ディスク (パス + 枚番号) が変わったときだけ引き直す。
+bool UIManager::IsCurrentDiskWriteProtected(DiskManager* diskmgr, int drive) {
+    if (drive < 0 || drive >= 2) return false;
+
+    int index = diskmgr->GetCurrentDisk(drive);
+    if (index < 0) {
+        statusWpIndex[drive] = -1;
+        statusWpPath[drive].clear();
+        statusWriteProtect[drive] = false;
+        return false;
+    }
+
+    std::string path = diskmgr->GetImagePath(drive);
+    if (statusWpIndex[drive] != index || statusWpPath[drive] != path) {
+        statusWpIndex[drive] = index;
+        statusWpPath[drive] = path;
+        statusWriteProtect[drive] = diskmgr->IsDiskWriteProtected((uint)drive, (uint)index);
+    }
+    return statusWriteProtect[drive];
+}
+
 void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
     float width = 320;
     float height = 340;
@@ -564,6 +645,8 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
     if (GuiWindowBox({ x, y, width, height }, title.c_str())) selectingDiskForDrive = -1;
 
     int numDisks = diskmgr->GetNumDisks(selectingDiskForDrive);
+    RefreshWriteProtectCache(diskmgr);
+
     float btnY = y + 40;
     float btnH = 26;
 
@@ -594,6 +677,13 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
 
         std::string label = std::to_string(i + 1) + ": " + dLabel;
         if (GuiButton({ view.x, itemY, content.width, btnH }, label.c_str())) chosen = i;
+
+        // 書き込み禁止 (D88 ヘッダの write-protect) なら右端に鍵を出す
+        if (i < (int)diskWriteProtect.size() && diskWriteProtect[i]) {
+            DrawKeyIcon(view.x + content.width - kKeyIconSize - 6,
+                        itemY + (btnH - kKeyIconSize) / 2.0f,
+                        kKeyIconSize, StyleColor(BUTTON, TEXT_COLOR_NORMAL));
+        }
 
         if (isJp && IsFontValid(fontEn)) {
             GuiSetFont(fontEn);
@@ -1356,15 +1446,39 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     Color ledOff = StyleFade(STATUSBAR, BORDER_COLOR_FOCUSED, 0.25f);
     Color statusText = StyleColor(STATUSBAR, TEXT_COLOR_NORMAL);
 
+    // タイトルを描き、書き込み禁止ならその右に鍵を出す。
+    // slotEndX はこのドライブの表示枠の右端 (隣の要素の手前)。
+    // 枠は 16 文字のタイトルでほぼ埋まるので、はみ出しはクリップで抑え、
+    // 鍵の分の幅を先に確保してから描く。
+    auto drawTitle = [&](const std::string& text, float titleX, float slotEndX, bool writeProtected) {
+        float textLimit = writeProtected ? (slotEndX - kKeyIconSize - 4) : slotEndX;
+
+        float textW;
+        BeginScissorMode((int)titleX, (int)(sH - 24), (int)(textLimit - titleX), 24);
+        if (ContainsJapanese(text) && IsFontValid(fontJp)) {
+            DrawTextEx(fontJp, text.c_str(), { titleX, sH - 21 }, 16, 1, statusText);
+            textW = MeasureTextEx(fontJp, text.c_str(), 16, 1).x;
+        } else {
+            DrawEnText(text.c_str(), (int)titleX, (int)textY, statusText);
+            textW = (float)MeasureEnText(text.c_str());
+        }
+        EndScissorMode();
+
+        if (!writeProtected) return;
+
+        // 通常はタイトルの直後。収まらない場合は確保した右端に固定する
+        float iconX = titleX + textW + 4;
+        if (iconX > textLimit) iconX = textLimit;
+        float iconY = sH - 24.0f + (24.0f - kKeyIconSize) / 2.0f;
+        DrawKeyIcon(iconX, iconY, kKeyIconSize, statusText);
+    };
+
     Color l1 = (statusdisplay.GetFDState(1) & 1) ? ledOn : ledOff;
     DrawCircle(15, (int)centerY, 4, l1);
 
     DrawEnText("FDD2:", 25, (int)textY, statusText);
-    if (ContainsJapanese(t1) && IsFontValid(fontJp)) {
-        DrawTextEx(fontJp, t1.c_str(), { 75, sH - 21 }, 16, 1, statusText);
-    } else {
-        DrawEnText(t1.c_str(), 75, (int)textY, statusText);
-    }
+    // 右隣は FDD1 の LED (x=215, r=4) なのでその左端の手前まで
+    drawTitle(t1, 75, 209, IsCurrentDiskWriteProtected(diskmgr, 1));
 
     int d0 = diskmgr->GetCurrentDisk(0);
     const char* t0_raw = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : nullptr;
@@ -1375,11 +1489,8 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     DrawCircle(215, (int)centerY, 4, l0);
 
     DrawEnText("FDD1:", 225, (int)textY, statusText);
-    if (ContainsJapanese(t0) && IsFontValid(fontJp)) {
-        DrawTextEx(fontJp, t0.c_str(), { 275, sH - 21 }, 16, 1, statusText);
-    } else {
-        DrawEnText(t0.c_str(), 275, (int)textY, statusText);
-    }
+    // 右隣は BASIC モード表示 (sW - 200) なのでその手前まで
+    drawTitle(t0, 275, sW - 200 - 4, IsCurrentDiskWriteProtected(diskmgr, 0));
 
     const auto& cfg = Config::Get();
     std::string modeStr = "Unknown";

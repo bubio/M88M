@@ -59,6 +59,9 @@ public:
 	// index のディスクが ReadDiskImage() で扱えるメディアかを確認する。
 	// ヘッダしか見ない Open() の後段検証用 (m3u なら実体ファイルの存在も見る)。
 	bool IsSupportedDisk(int index);
+	// index のディスクに D88 ヘッダの write-protect フラグが立っているか。
+	// ファイル自体の書き込み可否 (パーミッション等) は見ない。
+	bool IsDiskWriteProtected(int index);
 	const char* GetFileName() const { return diskname; }
 	uint GetNumDisks() { return ndisks; }
 	bool SetDiskSize(int index, int newsize);
@@ -112,6 +115,8 @@ public:
 	uint GetNumDisks(uint dr);
 	int GetCurrentDisk(uint dr); 
 	const char* GetImagePath(uint dr) const;
+	// dr の index 枚目に D88 ヘッダの write-protect フラグが立っているか
+	bool IsDiskWriteProtected(uint dr, uint index);
 	bool AddDisk(uint dr, const char* title, uint type);
 	bool IsImageOpen(const char* filename);
 	bool FormatDisk(uint dr);
