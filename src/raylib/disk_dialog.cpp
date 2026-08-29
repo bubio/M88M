@@ -379,6 +379,7 @@ void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
     }
     if (showMenu && IsKeyPressed(KEY_ESCAPE)) {
         if (modalState != MODAL_NONE) DismissConfirm();
+        else if (selectingBothDrives && selectingDiskForDrive == 1) { selectingDiskForDrive = 0; }
         else if (selectingDiskForDrive != -1) { selectingDiskForDrive = -1; selectingBothDrives = false; }
         else if (showRecentDialog) showRecentDialog = false;
         else if (showStateDialog) showStateDialog = false;
@@ -591,8 +592,12 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
     EndScissorMode();
 
     if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) {
-        selectingDiskForDrive = -1;
-        selectingBothDrives = false;
+        if (selectingBothDrives && selectingDiskForDrive == 1) {
+            selectingDiskForDrive = 0;
+        } else {
+            selectingDiskForDrive = -1;
+            selectingBothDrives = false;
+        }
     }
 }
 
