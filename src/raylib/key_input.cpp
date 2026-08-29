@@ -37,7 +37,7 @@ bool KeyInput::Init(IOBus* bus) {
     return bus->Connect(this, connectors);
 }
 
-void KeyInput::Update() {
+void KeyInput::Update(bool suppressEscape) {
     memset(matrix, 0xff, sizeof(matrix));
 
     auto set_key = [&](int row, int bit, bool down) {
@@ -166,7 +166,7 @@ void KeyInput::Update() {
     set_key(9, 4, IsKeyDown(KEY_F4));
     set_key(9, 5, IsKeyDown(KEY_F5));
     set_key(9, 6, IsKeyDown(KEY_SPACE));
-    set_key(9, 7, IsKeyDown(KEY_ESCAPE));
+    set_key(9, 7, !suppressEscape && IsKeyDown(KEY_ESCAPE));
 
     // --- Row 10: TAB, DOWN, LEFT, HELP, COPY, Numpad-, Numpad/, CAPS ---
     set_key(0xa, 0, IsKeyDown(KEY_TAB));
