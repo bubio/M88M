@@ -1391,13 +1391,29 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     // Update last accessed directory
     lastAccessedDir = GetDirFromPath(diskPath);
 
+    // When a selector may be shown, peek at how many disks the image holds
+    // *before* touching either drive, so a multi-disk image (e.g. a .m3u
+    // playlist) doesn't get a disk inserted ahead of the user's choice.
+    // Drag & drop never shows the selector (openSelectorIfNeeded is false),
+    // so it keeps mounting the requested indices immediately, unaffected.
+    int peekedImages = 0;
+    if (openSelectorIfNeeded) {
+        DiskImageHolder probe;
+        if (probe.Open(diskPath, true, false)) {
+            peekedImages = (int)probe.GetNumDisks();
+        }
+    }
+    bool needsSelector = openSelectorIfNeeded &&
+        peekedImages > ((origImg1 >= 0 && origImg2 >= 0) ? 2 : 1);
+
     // Mount Drive 1
     if (img1 >= 0) {
         // If mounting only to Drive 1, check for collision with Drive 2 if it's the same file
         if (img2 < 0 && mountPath == diskmgr->GetImagePath(1) && diskmgr->GetCurrentDisk(1) == img1) {
             if (diskmgr->GetNumDisks(1) > 1) img1 = -1; // Force selector if multi-image
         }
-        if (diskmgr->Mount(0, diskPath, false, img1, false)) {
+        int mountIndex = needsSelector ? -1 : img1;
+        if (diskmgr->Mount(0, diskPath, false, mountIndex, false)) {
             success = true;
             availableImages = (int)diskmgr->GetNumDisks(0);
         }
@@ -1410,10 +1426,16 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
             if (mountPath == diskmgr->GetImagePath(0) && diskmgr->GetCurrentDisk(0) == img2) {
                 if (diskmgr->GetNumDisks(0) > 1) img2 = -1; // Force selector if multi-image
             }
-            if (diskmgr->Mount(1, diskPath, false, img2, false)) {
+            int mountIndex = needsSelector ? -1 : img2;
+            if (diskmgr->Mount(1, diskPath, false, mountIndex, false)) {
                 success = true;
                 availableImages = (int)diskmgr->GetNumDisks(1);
             }
+        } else if (needsSelector) {
+            // Both drives specified but a selector will be shown: attach
+            // Drive 2 to the same image without inserting a disk, so the
+            // selector can enumerate it once the user moves on from Drive 1.
+            diskmgr->Mount(1, diskPath, false, -1, false);
         } else {
             // Both drives specified (Drive 1&2 auto-mount behavior)
             //availableImages should be set from Drive 1 mount above
