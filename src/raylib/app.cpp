@@ -322,7 +322,7 @@ int main() {
 #ifdef __HAIKU__
         std::string haikuDroppedPath;
         while (HaikuPollDroppedFile(haikuDroppedPath)) {
-            core.GetUIManager()->MountDisk(core.GetDiskManager(), haikuDroppedPath.c_str(), 0, 1);
+            core.GetUIManager()->MountDisk(core.GetDiskManager(), haikuDroppedPath.c_str(), 0, 1, false);
             if (Config::Get().flag2 & PC8801::Config::resetondrop) {
                 core.RequestReset();
             }
@@ -332,7 +332,7 @@ int main() {
         if (IsFileDropped()) {
             FilePathList droppedFiles = LoadDroppedFiles();
             if (droppedFiles.count > 0) {
-                core.GetUIManager()->MountDisk(core.GetDiskManager(), droppedFiles.paths[0], 0, 1);
+                core.GetUIManager()->MountDisk(core.GetDiskManager(), droppedFiles.paths[0], 0, 1, false);
                 if (Config::Get().flag2 & PC8801::Config::resetondrop) {
                     core.RequestReset();
                 }
