@@ -1582,6 +1582,9 @@ void UIManager::DrawRecentDiskDialog(DiskManager* diskmgr) {
     EndScissorMode();
 
     if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) showRecentDialog = false;
+    if (!recentDisks.empty()) {
+        if (GuiButton({ x + 10, y + height - 40, 100, 28 }, "Clear")) modalState = MODAL_CONFIRM_CLEAR_RECENT;
+    }
 }
 
 void UIManager::DrawConfirmDialog(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
@@ -1590,8 +1593,10 @@ void UIManager::DrawConfirmDialog(bool& shouldExit, PC88* pc88, CoreRunner* core
     float x = (float)GetScreenWidth() / 2 - width / 2;
     float y = (float)GetScreenHeight() / 2 - height / 2;
 
-    const char* title = (modalState == MODAL_CONFIRM_RESET) ? "Confirm Reset" : "Confirm Quit";
-    const char* msg = (modalState == MODAL_CONFIRM_RESET) ? "Are you sure you want to reset?" : "Are you sure you want to quit?";
+    const char* title = (modalState == MODAL_CONFIRM_RESET) ? "Confirm Reset"
+        : (modalState == MODAL_CONFIRM_CLEAR_RECENT) ? "Confirm Clear" : "Confirm Quit";
+    const char* msg = (modalState == MODAL_CONFIRM_RESET) ? "Are you sure you want to reset?"
+        : (modalState == MODAL_CONFIRM_CLEAR_RECENT) ? "Clear the recent disks list?" : "Are you sure you want to quit?";
 
     int buttonActive = -1;
     if (GuiMessageBox({ x, y, width, height }, title, msg, "Yes;No", &buttonActive) != RESULT_PRESSED) return;
@@ -1604,6 +1609,11 @@ void UIManager::DrawConfirmDialog(bool& shouldExit, PC88* pc88, CoreRunner* core
             modalState = MODAL_NONE;
         } else if (modalState == MODAL_CONFIRM_QUIT) {
             shouldExit = true;
+            modalState = MODAL_NONE;
+        } else if (modalState == MODAL_CONFIRM_CLEAR_RECENT) {
+            recentDisks.clear();
+            recentScrollOffset = { 0, 0 };
+            SaveRecent();
             modalState = MODAL_NONE;
         }
     }
