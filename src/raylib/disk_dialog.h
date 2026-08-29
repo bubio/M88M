@@ -48,6 +48,10 @@ private:
     void DrawMainMenu(DiskManager* diskmgr, class PC88* pc88, bool& shouldExit, class CoreRunner* coreRunner);
     void DrawSettings(PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner);
     void DrawDiskSelector(DiskManager* diskmgr);
+    // セレクタの対象ドライブを切り替える。Drive 1 <-> Drive 2 の行き来は
+    // ヘッダの数字しか変わらず分かりづらいので、横スライドで方向を見せる。
+    // 1<->2 を書き換える箇所が複数あるため、必ずここを通す。
+    void SetSelectorDrive(int drive);
     void RefreshWriteProtectCache(DiskManager* diskmgr);
     bool IsCurrentDiskWriteProtected(DiskManager* diskmgr, int drive);
     // 書き込み禁止マークの鍵。GuiDrawIcon の pixelSize は整数倍しか取れないので、
@@ -75,6 +79,8 @@ private:
     bool showRecentDialog;
     int selectingDiskForDrive; // -1: none, 0: Drive 1, 1: Drive 2
     bool selectingBothDrives;
+    float selectorSlideT;      // 1.0 で停止。0.0 -> 1.0 の間だけスライド中
+    int selectorSlideDir;      // +1: 次のドライブへ (右から入る), -1: 前へ戻る
     int recentDiskTargetDrive;
     int activeTab;
     int settingsTabScroll;
