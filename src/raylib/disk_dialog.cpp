@@ -299,7 +299,8 @@ static std::string GetDirFromPath(const std::string& path) {
 
 UIManager::UIManager() :
     showMenu(false), modalState(MODAL_NONE), quitOpenedMenu(false), showSettings(false), showStateDialog(false), showRecentDialog(false),
-    selectingDiskForDrive(-1), selectingBothDrives(false), recentDiskTargetDrive(-1), activeTab(0), settingsTabScroll(0),
+    selectingDiskForDrive(-1), selectingBothDrives(false), selectorSlideT(1.0f), selectorSlideDir(1),
+    recentDiskTargetDrive(-1), activeTab(0), settingsTabScroll(0),
     currentStateSlot(0),
     diskScrollOffset({ 0, 0 }),
     recentScrollOffset({ 0, 0 }),
@@ -430,8 +431,8 @@ void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
     }
     if (showMenu && IsKeyPressed(KEY_ESCAPE)) {
         if (modalState != MODAL_NONE) DismissConfirm();
-        else if (selectingBothDrives && selectingDiskForDrive == 1) { selectingDiskForDrive = 0; }
-        else if (selectingDiskForDrive != -1) { selectingDiskForDrive = -1; selectingBothDrives = false; }
+        else if (selectingBothDrives && selectingDiskForDrive == 1) { SetSelectorDrive(0); }
+        else if (selectingDiskForDrive != -1) { SetSelectorDrive(-1); selectingBothDrives = false; }
         else if (showRecentDialog) showRecentDialog = false;
         else if (showStateDialog) showStateDialog = false;
         else if (showSettings) showSettings = false;
@@ -531,7 +532,7 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
 
         bool hasMultiple = diskmgr->GetNumDisks(i) > 1;
         if (GuiButton({ x + width - 85, btnY + 10, 30, btnH }, hasMultiple ? GuiIconText(ICON_FILE_COPY, NULL) : GuiIconText(ICON_FILE_OPEN, NULL))) {
-            if (hasMultiple) { selectingDiskForDrive = i; selectingBothDrives = false; }
+            if (hasMultiple) { SetSelectorDrive(i); selectingBothDrives = false; }
             else OpenNativeDialog(diskmgr, i);
         }
 
@@ -635,14 +636,48 @@ bool UIManager::IsCurrentDiskWriteProtected(DiskManager* diskmgr, int drive) {
     return statusWriteProtect[drive];
 }
 
+// セレクタの対象ドライブを切り替える唯一の入口。
+// ドライブ間を移動するときだけスライドを開始し、リストのスクロール位置も戻す
+// (Drive 1 の長いリストをスクロールしたまま Drive 2 が途中から開くのを防ぐ)。
+void UIManager::SetSelectorDrive(int drive) {
+    int prev = selectingDiskForDrive;
+    selectingDiskForDrive = drive;
+    diskScrollOffset = { 0, 0 };
+
+    if (prev >= 0 && drive >= 0 && prev != drive) {
+        selectorSlideDir = (drive > prev) ? 1 : -1;
+        selectorSlideT = 0.0f;
+    } else {
+        selectorSlideT = 1.0f;
+    }
+}
+
 void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
+    const float kSlideDuration = 0.18f;
+    if (selectorSlideT < 1.0f) {
+        selectorSlideT += GetFrameTime() / kSlideDuration;
+        if (selectorSlideT > 1.0f) selectorSlideT = 1.0f;
+    }
+    bool sliding = selectorSlideT < 1.0f;
     float width = 320;
     float height = 340;
     float x = (float)GetScreenWidth() / 2 - width / 2;
     float y = (float)GetScreenHeight() / 2 - height / 2;
 
+    // 新しいドライブのパネルを画面外から中央へ寄せる (ease-out)。
+    // 前のドライブのパネルは同時に描かない: write-protect キャッシュが
+    // 対象ドライブ単位なので、1 フレームで両方触ると毎フレーム引き直しになる。
+    if (sliding) {
+        float e = 1.0f - (1.0f - selectorSlideT) * (1.0f - selectorSlideT);
+        x += selectorSlideDir * (width + 40) * (1.0f - e);
+        // 移動中のボタンを押せてしまわないように入力だけ止める
+        // (GuiLock は描画状態を変えないので見た目はそのまま)
+        GuiLock();
+    }
+
     std::string title = "Select Disk for Drive " + std::to_string(selectingDiskForDrive + 1);
-    if (GuiWindowBox({ x, y, width, height }, title.c_str())) selectingDiskForDrive = -1;
+    if (selectingBothDrives) title += "  (" + std::to_string(selectingDiskForDrive + 1) + "/2)";
+    if (GuiWindowBox({ x, y, width, height }, title.c_str())) SetSelectorDrive(-1);
 
     int numDisks = diskmgr->GetNumDisks(selectingDiskForDrive);
     RefreshWriteProtectCache(diskmgr);
@@ -650,7 +685,35 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
     float btnY = y + 40;
     float btnH = 26;
 
-    Rectangle view = { x + 10, btnY, width - 20, height - 90 };
+    // Drive 2 では直前に Drive 1 で選んだディスクを 1 行で見せて、
+    // 「今どちらを選んでいるか」が数字以外でも分かるようにする
+    float listTop = btnY;
+    if (selectingBothDrives && selectingDiskForDrive == 1) {
+        int d1 = diskmgr->GetCurrentDisk(0);
+        // raygui はテキスト先頭の "#id#" しかアイコンとして解釈しないので、
+        // チェックマークは必ず行頭に置く
+        std::string done = std::string(GuiIconText(ICON_OK_TICK, NULL)) + " Drive 1: ";
+        if (d1 >= 0) {
+            std::string t = Paths::NormalizeNFC(Paths::SJIStoUTF8(TrimDiskTitle(diskmgr->GetImageTitle(0, d1))));
+            done += t.empty() ? "(No Title)" : t;
+        } else {
+            done += "Empty";
+        }
+
+        bool doneJp = ContainsJapanese(done);
+        if (doneJp && IsFontValid(fontJp)) {
+            GuiSetFont(fontJp);
+            GuiSetStyle(DEFAULT, TEXT_SIZE, 14);
+        }
+        GuiLabel({ x + 12, btnY - 2, width - 24, 20 }, done.c_str());
+        if (doneJp) {
+            if (IsFontValid(fontEn)) GuiSetFont(fontEn); else GuiSetFont(GetFontDefault());
+            GuiSetStyle(DEFAULT, TEXT_SIZE, IsFontValid(fontEn) ? 16 : 10);
+        }
+        listTop += 22;
+    }
+
+    Rectangle view = { x + 10, listTop, width - 20, height - 90 - (listTop - btnY) };
     Rectangle content = { 0, 0, width - 40, (float)numDisks * (btnH + 4) };
 
     GuiScrollPanel(view, NULL, { 0, 0, content.width, content.height }, &diskScrollOffset, &view);
@@ -698,21 +761,26 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
             diskmgr->Mount(selectingDiskForDrive, currentPath.c_str(), false, chosen, false);
         }
         if (selectingBothDrives && selectingDiskForDrive == 0) {
-            selectingDiskForDrive = 1;
+            SetSelectorDrive(1);
         } else {
-            selectingDiskForDrive = -1;
+            SetSelectorDrive(-1);
             selectingBothDrives = false;
         }
     }
 
-    if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) {
-        if (selectingBothDrives && selectingDiskForDrive == 1) {
-            selectingDiskForDrive = 0;
+    // 「戻ると Drive 1 に帰る」ことをラベルで示す
+    bool backToDrive1 = selectingBothDrives && selectingDiskForDrive == 1;
+    const char* backLabel = backToDrive1 ? GuiIconText(ICON_ARROW_LEFT, "Drive 1") : "Back";
+    if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, backLabel)) {
+        if (backToDrive1) {
+            SetSelectorDrive(0);
         } else {
-            selectingDiskForDrive = -1;
+            SetSelectorDrive(-1);
             selectingBothDrives = false;
         }
     }
+
+    if (sliding) GuiUnlock();
 }
 
 static std::string GetPathHash(const std::string& path) {
@@ -1677,22 +1745,20 @@ bool UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
         if (mountedAll) AddRecent(mountPath);
         // If mounting to only one drive, show selector if multiple images exist
         if (!openSelectorIfNeeded) {
-            selectingDiskForDrive = -1;
+            SetSelectorDrive(-1);
             selectingBothDrives = false;
         } else if (origImg1 >= 0 && origImg2 < 0) {
-            if (availableImages > 1) selectingDiskForDrive = 0;
-            else selectingDiskForDrive = -1;
+            SetSelectorDrive(availableImages > 1 ? 0 : -1);
             selectingBothDrives = false;
         } else if (origImg1 < 0 && origImg2 >= 0) {
-            if (availableImages > 1) selectingDiskForDrive = 1;
-            else selectingDiskForDrive = -1;
+            SetSelectorDrive(availableImages > 1 ? 1 : -1);
             selectingBothDrives = false;
         } else {
             if (availableImages > 2) {
-                selectingDiskForDrive = 0;
+                SetSelectorDrive(0);
                 selectingBothDrives = true;
             } else {
-                selectingDiskForDrive = -1;
+                SetSelectorDrive(-1);
                 selectingBothDrives = false;
             }
         }
