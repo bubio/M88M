@@ -63,4 +63,9 @@ private:
     std::atomic<bool> configResetPending;
     std::atomic<bool> resetPending;
     std::mutex stateMutex;
+
+    // ESC でメニュー/ダイアログを閉じた直後、同じキー押下が
+    // そのままエミュ側の ESC (STOP相当) にも入力されてしまうのを防ぐ。
+    // 物理キーが離されるまで、このキー押下はメニュー操作専用として扱う。
+    bool escOwnedByMenu = false;
 };

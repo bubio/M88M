@@ -305,13 +305,16 @@ bool CoreRunner::LoadState(const std::string& path, std::string* message) {
 }
 
 void CoreRunner::UpdateInput() {
+    if (!IsKeyDown(KEY_ESCAPE)) escOwnedByMenu = false;
     if (!uiManager.IsMenuOpen()) {
-        if (running) keyInput.Update();
+        if (running) keyInput.Update(escOwnedByMenu);
     }
 }
 
 void CoreRunner::UpdateUI(bool& shouldExit) {
+    bool menuWasOpen = uiManager.IsMenuOpen();
     uiManager.Update(shouldExit, this, this);
+    if (menuWasOpen && IsKeyDown(KEY_ESCAPE)) escOwnedByMenu = true;
 }
 
 void CoreRunner::DrawUI(bool& shouldExit) {

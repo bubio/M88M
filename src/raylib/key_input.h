@@ -19,7 +19,7 @@ public:
     // IO Handlers
     uint IOCALL In(uint port);
 
-    void Update();
+    void Update(bool suppressEscape = false);
     bool Init(IOBus* bus);
 
 private:
