@@ -229,17 +229,29 @@ bool CoreRunner::LoadState(const std::string& path, std::string* message) {
             ApplyConfig(&cfg);
             Reset();
 
+            // 壊れたファイルで巨大な確保をしないよう検証する
+            if (ssh.datasize <= 0 || ssh.datasize > 64 * 1024 * 1024) {
+                if (message) *message = "Failed to load state";
+                return false;
+            }
+
             std::vector<uint8> state((size_t)ssh.datasize);
             bool dataRead = false;
             if (ssh.flags & 0x80000000u) {
                 int32 csize = 0;
                 if (file.Read(&csize, 4) == 4 && csize < 0) {
-                    csize = -csize;
-                    std::vector<uint8> compressed((size_t)csize);
-                    if (file.Read(compressed.data(), csize) == csize) {
-                        uLongf destSize = (uLongf)ssh.datasize;
-                        dataRead = uncompress(state.data(), &destSize, compressed.data(), (uLongf)csize) == Z_OK
-                                && destSize == (uLongf)ssh.datasize;
+                    // int32 のまま反転すると INT32_MIN で符号が戻らないので
+                    // 64bit で受けてから圧縮後サイズの上限で検証する。
+                    // 上限を掛けないと壊れたファイルで巨大な確保に走り、
+                    // bad_alloc が catch されずプロセスごと落ちる。
+                    long long len = -(long long)csize;
+                    if (len > 0 && len <= (long long)compressBound((uLong)ssh.datasize)) {
+                        std::vector<uint8> compressed((size_t)len);
+                        if (file.Read(compressed.data(), (int32)len) == (int32)len) {
+                            uLongf destSize = (uLongf)ssh.datasize;
+                            dataRead = uncompress(state.data(), &destSize, compressed.data(), (uLongf)len) == Z_OK
+                                    && destSize == (uLongf)ssh.datasize;
+                        }
                     }
                 }
             } else {
@@ -249,6 +261,31 @@ bool CoreRunner::LoadState(const std::string& path, std::string* message) {
             if (dataRead) {
                 if (devlist.LoadStatus(state.data())) {
                     ok = true;
+
+                    // 保存時に挿入されていたディスク番号へ戻す。
+                    // イメージのパスはスナップショットに含まれないので、
+                    // 同じイメージが開かれている場合のみ復元できる。
+                    //
+                    // 現在の状態は必ずループの前に採取する: Mount() は同じ
+                    // holder の同じ index を掴んでいる他のドライブを
+                    // Unmount() するため、1 台目を復元した時点で 2 台目の
+                    // GetImagePath() が空になり復元できなくなる。
+                    std::string imagePath[2];
+                    int imageDisks[2];
+                    int currentDisk[2];
+                    for (uint i = 0; i < 2; i++) {
+                        imagePath[i]   = diskmgr.GetImagePath(i);
+                        imageDisks[i]  = (int)diskmgr.GetNumDisks(i);
+                        currentDisk[i] = diskmgr.GetCurrentDisk(i);
+                    }
+                    for (uint i = 0; i < 2; i++) {
+                        if (imagePath[i].empty()) continue;
+                        if (currentDisk[i] == ssh.disk[i]) continue;
+                        // 保存時より枚数の少ないイメージが入っている場合は
+                        // マウントに失敗して空になるだけなので触らない
+                        if (ssh.disk[i] >= imageDisks[i]) continue;
+                        diskmgr.Mount(i, imagePath[i].c_str(), false, ssh.disk[i], false);
+                    }
                 } else {
                     Reset();
                 }
@@ -381,6 +418,10 @@ void CoreRunner::Run() {
             TimeSync();
             actualTicks = Proceed(ticksToRun, clockParam, speedParam);
             UpdateScreen(true);
+
+            // 変更のあったトラックをイメージへ書き戻す。これを回さないと
+            // 書き込みはアンマウント/終了時までディスクに反映されない
+            diskmgr.Update();
         }
 
         totalTicksEmulated += actualTicks;

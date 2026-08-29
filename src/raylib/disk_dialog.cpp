@@ -206,16 +206,19 @@ static std::string NormalizeSelectedPath(const char* rawPath) {
     }
 
     const std::string filePrefix = "file://";
-    if (path.rfind(filePrefix, 0) == 0) {
-        std::string rest = path.substr(filePrefix.size());
-        const std::string localhost = "localhost";
-        if (rest.rfind(localhost, 0) == 0) {
-            rest.erase(0, localhost.size());
-        }
-        if (rest.empty() || rest[0] != '/') {
-            rest.insert(rest.begin(), '/');
-        }
-        path = rest;
+    if (path.rfind(filePrefix, 0) != 0) {
+        // 素のファイルパス。ここで percent-decode すると "SAVE%20DATA.d88" の
+        // ようにリテラルで %XX を含むファイル名が壊れる
+        return path;
+    }
+
+    path.erase(0, filePrefix.size());
+    const std::string localhost = "localhost";
+    if (path.rfind(localhost, 0) == 0) {
+        path.erase(0, localhost.size());
+    }
+    if (path.empty() || path[0] != '/') {
+        path.insert(path.begin(), '/');
     }
 
     return PercentDecodePath(path);
@@ -261,6 +264,23 @@ static const char* GetFileNameOnly(const char* path) {
     return f ? f + 1 : path;
 }
 
+// D88 のディスクタイトルは 16 バイト固定長で、NUL や空白が詰められている。
+// find_last_not_of(" \0", n) は探索集合が C 文字列として解釈されるため実際には
+// " " だけになり埋め込み NUL を落とせない。明示的に切り詰める。
+static std::string TrimDiskTitle(const char* raw) {
+    if (!raw) return std::string();
+    size_t len = 0;
+    while (len < 16 && raw[len]) len++;
+    std::string s(raw, len);
+    size_t last = s.find_last_not_of(' ');
+    if (last == std::string::npos) return std::string();
+    s.resize(last + 1);
+    return s;
+}
+
+// 書き込み禁止マークの鍵のサイズ。raygui のアイコン素の大きさ (16px) の 90%。
+static const float kKeyIconSize = 16.0f * 0.9f;
+
 static std::string StripExtension(std::string name) {
     size_t dot = name.find_last_of('.');
     if (dot != std::string::npos) {
@@ -283,6 +303,9 @@ UIManager::UIManager() :
     currentStateSlot(0),
     diskScrollOffset({ 0, 0 }),
     recentScrollOffset({ 0, 0 }),
+    wpCacheDrive(-1),
+    statusWriteProtect{ false, false },
+    statusWpIndex{ -1, -1 },
     windowScale(0), isFullscreen(false),
     basicModeEdit(false), windowScaleEdit(false),
     cpuModeEdit(false), port44Edit(false), portA8Edit(false), samplingEdit(false), keyboardEdit(false),
@@ -290,15 +313,18 @@ UIManager::UIManager() :
     volFmEdit(false), volSsgEdit(false), volAdpcmEdit(false), volRhythmEdit(false),
     mouseSensEdit(false),
     bufferVal(100), mouseSensVal(10),
+    systemScroll({ 0, 0 }),
     mixerScroll({ 0, 0 }),
     inputScroll({ 0, 0 }),
-    resetPending(false),
-    lastAccessedDir("")
+    lastAccessedDir(""),
+    resetPending(false)
 {
     for (int i = 0; i < 6; i++) volRhythmDetailEdit[i] = false;
     statePreviewTexture = {0};
     fontJp = {0};
     fontEn = {0};
+    keyIconTexture = {0};
+    keyIconReady = false;
     LoadRecent();
 #ifndef __HAIKU__
     NFD_Init();
@@ -308,6 +334,7 @@ UIManager::UIManager() :
 UIManager::~UIManager() {
     SaveRecent();
     if (IsTextureValid(statePreviewTexture)) UnloadTexture(statePreviewTexture);
+    if (keyIconReady) UnloadRenderTexture(keyIconTexture);
 #ifndef __HAIKU__
     NFD_Quit();
 #endif
@@ -366,10 +393,34 @@ void UIManager::Init() {
         GuiSetStyle(DEFAULT, TEXT_SPACING, 1);
     }
 
+    // 書き込み禁止マークの鍵を等倍 (16px) で焼いておく。
+    // GuiDrawIcon の pixelSize は整数倍しか受け付けないため、
+    // 小数倍で出したい場合はここから縮小して描く。
+    keyIconTexture = LoadRenderTexture(16, 16);
+    if (IsRenderTextureValid(keyIconTexture)) {
+        BeginTextureMode(keyIconTexture);
+        ClearBackground(BLANK);
+        GuiDrawIcon(ICON_KEY, 0, 0, 1, WHITE);
+        EndTextureMode();
+        SetTextureFilter(keyIconTexture.texture, TEXTURE_FILTER_BILINEAR);
+        keyIconReady = true;
+    }
+
     int h = GetScreenHeight();
     if (h >= 1224) windowScale = 2;
     else if (h >= 824) windowScale = 1;
     else windowScale = 0;
+}
+
+void UIManager::DrawKeyIcon(float x, float y, float size, Color color) const {
+    if (keyIconReady) {
+        // RenderTexture は上下反転して格納されるので src の height を負にする
+        Rectangle src = { 0, 0, (float)keyIconTexture.texture.width,
+                                -(float)keyIconTexture.texture.height };
+        DrawTexturePro(keyIconTexture.texture, src, { x, y, size, size }, { 0, 0 }, 0.0f, color);
+    } else {
+        GuiDrawIcon(ICON_KEY, (int)x, (int)y, 1, color);
+    }
 }
 
 void UIManager::Update(bool& shouldExit, PC88* pc88, CoreRunner* coreRunner) {
@@ -400,6 +451,9 @@ void UIManager::Draw(DiskManager* diskmgr, PC8801::Config& cfg, PC88* pc88, Core
         else if (showSettings) DrawSettings(cfg, pc88, coreRunner);
         else DrawMainMenu(diskmgr, pc88, shouldExit, coreRunner);
     }
+
+    // メニューやモーダルより手前に出す
+    DrawOSDMessage();
 }
 
 void UIManager::ToggleMenu(CoreRunner* coreRunner) {
@@ -456,10 +510,8 @@ void UIManager::DrawMainMenu(DiskManager* diskmgr, PC88* pc88, bool& shouldExit,
         int diskIdx = diskmgr->GetCurrentDisk(i);
         std::string label;
         if (diskIdx >= 0) {
-            const char* title = diskmgr->GetImageTitle(i, diskIdx);
-            label = Paths::SJIStoUTF8(title ? std::string(title, 16) : "");
-            size_t last = label.find_last_not_of(" \0", label.length());
-            if (last != std::string::npos) label = label.substr(0, last + 1);
+            label = Paths::SJIStoUTF8(TrimDiskTitle(diskmgr->GetImageTitle(i, diskIdx)));
+            if (label.empty()) label = std::string("Drive ") + std::to_string(i + 1) + ": (No Title)";
         } else {
             label = std::string("Drive ") + std::to_string(i + 1) + ": Empty";
         }
@@ -535,6 +587,54 @@ void UIManager::OpenBothDrives(DiskManager* diskmgr) {
     }
 }
 
+// セレクタに並ぶ各ディスクの write-protect 状態を取り直す。
+// 判定はイメージのヘッダ読み込み (m3u なら実体を開く) を伴うため、
+// 対象ドライブ・イメージ・枚数が変わったときだけ引き直す。
+void UIManager::RefreshWriteProtectCache(DiskManager* diskmgr) {
+    if (selectingDiskForDrive < 0) {
+        wpCacheDrive = -1;
+        wpCachePath.clear();
+        diskWriteProtect.clear();
+        return;
+    }
+
+    std::string path = diskmgr->GetImagePath(selectingDiskForDrive);
+    int numDisks = (int)diskmgr->GetNumDisks(selectingDiskForDrive);
+    if (wpCacheDrive == selectingDiskForDrive && wpCachePath == path &&
+        (int)diskWriteProtect.size() == numDisks) {
+        return;
+    }
+
+    diskWriteProtect.assign((size_t)numDisks, 0);
+    for (int i = 0; i < numDisks; i++) {
+        diskWriteProtect[i] = diskmgr->IsDiskWriteProtected(selectingDiskForDrive, i) ? 1 : 0;
+    }
+    wpCacheDrive = selectingDiskForDrive;
+    wpCachePath = path;
+}
+
+// 挿入中のディスクの write-protect 状態。ステータスバーは毎フレーム描かれるので、
+// 対象ディスク (パス + 枚番号) が変わったときだけ引き直す。
+bool UIManager::IsCurrentDiskWriteProtected(DiskManager* diskmgr, int drive) {
+    if (drive < 0 || drive >= 2) return false;
+
+    int index = diskmgr->GetCurrentDisk(drive);
+    if (index < 0) {
+        statusWpIndex[drive] = -1;
+        statusWpPath[drive].clear();
+        statusWriteProtect[drive] = false;
+        return false;
+    }
+
+    std::string path = diskmgr->GetImagePath(drive);
+    if (statusWpIndex[drive] != index || statusWpPath[drive] != path) {
+        statusWpIndex[drive] = index;
+        statusWpPath[drive] = path;
+        statusWriteProtect[drive] = diskmgr->IsDiskWriteProtected((uint)drive, (uint)index);
+    }
+    return statusWriteProtect[drive];
+}
+
 void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
     float width = 320;
     float height = 340;
@@ -545,6 +645,8 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
     if (GuiWindowBox({ x, y, width, height }, title.c_str())) selectingDiskForDrive = -1;
 
     int numDisks = diskmgr->GetNumDisks(selectingDiskForDrive);
+    RefreshWriteProtectCache(diskmgr);
+
     float btnY = y + 40;
     float btnH = 26;
 
@@ -553,15 +655,19 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
 
     GuiScrollPanel(view, NULL, { 0, 0, content.width, content.height }, &diskScrollOffset, &view);
 
+    // 選択はループ内で処理しない。selectingDiskForDrive を書き換えると
+    // 残りの項目が別ドライブのタイトルで描かれてしまうため、
+    // 描画を終えてから確定させる。
+    int chosen = -1;
+
     BeginScissorMode((int)view.x, (int)view.y, (int)view.width, (int)view.height);
     for (int i = 0; i < numDisks; i++) {
         float itemY = view.y + i * (btnH + 4) + diskScrollOffset.y;
         if (itemY + btnH < view.y || itemY > view.y + view.height) continue;
 
-        const char* dTitle = diskmgr->GetImageTitle(selectingDiskForDrive, i);
-        std::string dLabel = dTitle ? Paths::NormalizeNFC(Paths::SJIStoUTF8(std::string(dTitle, 16))) : "(No Title)";
-        size_t last = dLabel.find_last_not_of(" \0", dLabel.length());
-        if (last != std::string::npos) dLabel = dLabel.substr(0, last + 1);
+        std::string dLabel = Paths::NormalizeNFC(
+            Paths::SJIStoUTF8(TrimDiskTitle(diskmgr->GetImageTitle(selectingDiskForDrive, i))));
+        if (dLabel.empty()) dLabel = "(No Title)";
 
         bool isJp = ContainsJapanese(dLabel);
         if (isJp && IsFontValid(fontJp)) {
@@ -570,18 +676,13 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
         }
 
         std::string label = std::to_string(i + 1) + ": " + dLabel;
+        if (GuiButton({ view.x, itemY, content.width, btnH }, label.c_str())) chosen = i;
 
-        if (GuiButton({ view.x, itemY, content.width, btnH }, label.c_str())) {
-            std::string currentPath = diskmgr->GetImagePath(selectingDiskForDrive);
-            if (!currentPath.empty()) {
-                diskmgr->Mount(selectingDiskForDrive, currentPath.c_str(), false, i, false);
-            }
-            if (selectingBothDrives && selectingDiskForDrive == 0) {
-                selectingDiskForDrive = 1;
-            } else {
-                selectingDiskForDrive = -1;
-                selectingBothDrives = false;
-            }
+        // 書き込み禁止 (D88 ヘッダの write-protect) なら右端に鍵を出す
+        if (i < (int)diskWriteProtect.size() && diskWriteProtect[i]) {
+            DrawKeyIcon(view.x + content.width - kKeyIconSize - 6,
+                        itemY + (btnH - kKeyIconSize) / 2.0f,
+                        kKeyIconSize, StyleColor(BUTTON, TEXT_COLOR_NORMAL));
         }
 
         if (isJp && IsFontValid(fontEn)) {
@@ -590,6 +691,19 @@ void UIManager::DrawDiskSelector(DiskManager* diskmgr) {
         }
     }
     EndScissorMode();
+
+    if (chosen >= 0) {
+        std::string currentPath = diskmgr->GetImagePath(selectingDiskForDrive);
+        if (!currentPath.empty()) {
+            diskmgr->Mount(selectingDiskForDrive, currentPath.c_str(), false, chosen, false);
+        }
+        if (selectingBothDrives && selectingDiskForDrive == 0) {
+            selectingDiskForDrive = 1;
+        } else {
+            selectingDiskForDrive = -1;
+            selectingBothDrives = false;
+        }
+    }
 
     if (GuiButton({ x + width - 120, y + height - 40, 100, 28 }, "Back")) {
         if (selectingBothDrives && selectingDiskForDrive == 1) {
@@ -1325,43 +1439,58 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
 
     int d1 = diskmgr->GetCurrentDisk(1);
     const char* t1_raw = (d1 >= 0) ? diskmgr->GetImageTitle(1, d1) : nullptr;
-    std::string t1 = (t1_raw) ? Paths::NormalizeNFC(Paths::SJIStoUTF8(std::string(t1_raw, 16))) : "Empty";
-    if (t1_raw) {
-        size_t last = t1.find_last_not_of(" \0", t1.length());
-        if (last != std::string::npos) t1 = t1.substr(0, last + 1);
-    }
+    std::string t1 = t1_raw ? Paths::NormalizeNFC(Paths::SJIStoUTF8(TrimDiskTitle(t1_raw))) : "Empty";
+    if (t1.empty()) t1 = "(No Title)";
 
     Color ledOn = StyleColor(STATUSBAR, BORDER_COLOR_FOCUSED);
     Color ledOff = StyleFade(STATUSBAR, BORDER_COLOR_FOCUSED, 0.25f);
     Color statusText = StyleColor(STATUSBAR, TEXT_COLOR_NORMAL);
 
+    // タイトルを描き、書き込み禁止ならその右に鍵を出す。
+    // slotEndX はこのドライブの表示枠の右端 (隣の要素の手前)。
+    // 枠は 16 文字のタイトルでほぼ埋まるので、はみ出しはクリップで抑え、
+    // 鍵の分の幅を先に確保してから描く。
+    auto drawTitle = [&](const std::string& text, float titleX, float slotEndX, bool writeProtected) {
+        float textLimit = writeProtected ? (slotEndX - kKeyIconSize - 4) : slotEndX;
+
+        float textW;
+        BeginScissorMode((int)titleX, (int)(sH - 24), (int)(textLimit - titleX), 24);
+        if (ContainsJapanese(text) && IsFontValid(fontJp)) {
+            DrawTextEx(fontJp, text.c_str(), { titleX, sH - 21 }, 16, 1, statusText);
+            textW = MeasureTextEx(fontJp, text.c_str(), 16, 1).x;
+        } else {
+            DrawEnText(text.c_str(), (int)titleX, (int)textY, statusText);
+            textW = (float)MeasureEnText(text.c_str());
+        }
+        EndScissorMode();
+
+        if (!writeProtected) return;
+
+        // 通常はタイトルの直後。収まらない場合は確保した右端に固定する
+        float iconX = titleX + textW + 4;
+        if (iconX > textLimit) iconX = textLimit;
+        float iconY = sH - 24.0f + (24.0f - kKeyIconSize) / 2.0f;
+        DrawKeyIcon(iconX, iconY, kKeyIconSize, statusText);
+    };
+
     Color l1 = (statusdisplay.GetFDState(1) & 1) ? ledOn : ledOff;
     DrawCircle(15, (int)centerY, 4, l1);
 
     DrawEnText("FDD2:", 25, (int)textY, statusText);
-    if (ContainsJapanese(t1) && IsFontValid(fontJp)) {
-        DrawTextEx(fontJp, t1.c_str(), { 75, sH - 21 }, 16, 1, statusText);
-    } else {
-        DrawEnText(t1.c_str(), 75, (int)textY, statusText);
-    }
+    // 右隣は FDD1 の LED (x=215, r=4) なのでその左端の手前まで
+    drawTitle(t1, 75, 209, IsCurrentDiskWriteProtected(diskmgr, 1));
 
     int d0 = diskmgr->GetCurrentDisk(0);
     const char* t0_raw = (d0 >= 0) ? diskmgr->GetImageTitle(0, d0) : nullptr;
-    std::string t0 = (d0 >= 0) ? Paths::NormalizeNFC(Paths::SJIStoUTF8(std::string(t0_raw, 16))) : "Empty";
-    if (t0_raw) {
-        size_t last = t0.find_last_not_of(" \0", t0.length());
-        if (last != std::string::npos) t0 = t0.substr(0, last + 1);
-    }
+    std::string t0 = t0_raw ? Paths::NormalizeNFC(Paths::SJIStoUTF8(TrimDiskTitle(t0_raw))) : "Empty";
+    if (t0.empty()) t0 = "(No Title)";
 
     Color l0 = (statusdisplay.GetFDState(0) & 1) ? ledOn : ledOff;
     DrawCircle(215, (int)centerY, 4, l0);
 
     DrawEnText("FDD1:", 225, (int)textY, statusText);
-    if (ContainsJapanese(t0) && IsFontValid(fontJp)) {
-        DrawTextEx(fontJp, t0.c_str(), { 275, sH - 21 }, 16, 1, statusText);
-    } else {
-        DrawEnText(t0.c_str(), 275, (int)textY, statusText);
-    }
+    // 右隣は BASIC モード表示 (sW - 200) なのでその手前まで
+    drawTitle(t0, 275, sW - 200 - 4, IsCurrentDiskWriteProtected(diskmgr, 0));
 
     const auto& cfg = Config::Get();
     std::string modeStr = "Unknown";
@@ -1380,9 +1509,55 @@ void UIManager::DrawStatusBar(DiskManager* diskmgr) {
     DrawEnText(TextFormat("%d FPS", GetFPS()), (int)sW - 80, (int)textY, statusText);
 }
 
-void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2, bool openSelectorIfNeeded) {
+// コア側 (statusdisplay) が投げた一時メッセージをステータスバーの上に表示する。
+// これが無いとマウント失敗などのエラーがユーザーに一切伝わらない。
+void UIManager::DrawOSDMessage() {
+    char msg[128];
+    int remaining = 0;
+    if (!statusdisplay.GetCurrentMessage(msg, sizeof(msg), &remaining)) return;
+    if (!msg[0]) return;
+
+    const float sW = (float)GetScreenWidth();
+    const float sH = (float)GetScreenHeight();
+
+    bool isJp = ContainsJapanese(msg);
+    bool useJpFont = isJp && IsFontValid(fontJp);
+    Font font = useJpFont ? fontJp : fontEn;
+    float fontSize = useJpFont ? 15.0f : 16.0f;
+    float textW = IsFontValid(font) ? MeasureTextEx(font, msg, fontSize, 1).x
+                                    : (float)MeasureText(msg, 10);
+
+    const float padX = 8.0f;
+    const float boxH = 22.0f;
+    float boxW = textW + padX * 2;
+    if (boxW > sW - 20.0f) boxW = sW - 20.0f;
+
+    const float x = 10.0f;
+    const float y = sH - 24.0f - boxH - 4.0f;
+
+    // 消える直前だけフェードアウトさせる (remaining < 0 は期限なし)
+    float alpha = (remaining >= 0 && remaining < 300) ? (float)remaining / 300.0f : 1.0f;
+
+    Color bg = StyleColor(DEFAULT, BACKGROUND_COLOR);
+    bg.a = (unsigned char)(220 * alpha);
+    Color border = StyleFade(DEFAULT, LINE_COLOR, alpha);
+    Color text = StyleFade(DEFAULT, TEXT_COLOR_NORMAL, alpha);
+
+    DrawRectangleRec({ x, y, boxW, boxH }, bg);
+    DrawRectangleLinesEx({ x, y, boxW, boxH }, 1, border);
+
+    BeginScissorMode((int)(x + padX), (int)y, (int)(boxW - padX * 2), (int)boxH);
+    if (IsFontValid(font)) {
+        DrawTextEx(font, msg, { x + padX, y + (boxH - fontSize) / 2 }, fontSize, 1, text);
+    } else {
+        DrawText(msg, (int)(x + padX), (int)(y + 6), 10, text);
+    }
+    EndScissorMode();
+}
+
+bool UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2, bool openSelectorIfNeeded) {
     std::string mountPath = NormalizeSelectedPath(path);
-    if (mountPath.empty()) return;
+    if (mountPath.empty()) return false;
 
     const char* diskPath = mountPath.c_str();
 #ifdef __HAIKU__
@@ -1393,23 +1568,56 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
     int origImg1 = img1;
     int origImg2 = img2;
 
-    // Update last accessed directory
-    lastAccessedDir = GetDirFromPath(diskPath);
-
-    // When a selector may be shown, peek at how many disks the image holds
-    // *before* touching either drive, so a multi-disk image (e.g. a .m3u
-    // playlist) doesn't get a disk inserted ahead of the user's choice.
+    // Peek at the image *before* touching either drive. DiskManager::Mount
+    // ejects the target drive as its very first step, so without this an
+    // unsupported file (a stray drag & drop, a stale recent entry) would
+    // throw away whatever the user had inserted. The probe is quiet so its
+    // failure doesn't post a message for a mount we never attempted.
+    // It also tells us how many disks the image holds, so a multi-disk image
+    // (e.g. a .m3u playlist) doesn't get a disk inserted ahead of the user's
+    // choice in the selector.
+    //
     // Drag & drop never shows the selector (openSelectorIfNeeded is false),
     // so it keeps mounting the requested indices immediately, unaffected.
     int peekedImages = 0;
-    if (openSelectorIfNeeded) {
+    bool needsSelector = false;
+    {
         DiskImageHolder probe;
-        if (probe.Open(diskPath, true, false)) {
-            peekedImages = (int)probe.GetNumDisks();
+        if (!probe.Open(diskPath, true, false, /*quiet*/ true)) {
+#ifdef __HAIKU__
+            std::fprintf(stderr, "M88M: disk mount failed (probe): %s\n", diskPath);
+#endif
+            statusdisplay.Show(100, 3000, "Disk mount failed: %.96s", GetFileNameOnly(diskPath));
+            return false;
+        }
+        peekedImages = (int)probe.GetNumDisks();
+        needsSelector = openSelectorIfNeeded &&
+            peekedImages > ((origImg1 >= 0 && origImg2 >= 0) ? 2 : 1);
+
+        // Open() はヘッダしか見ないので、実際に挿入する枚のメディア種別まで
+        // ここで確認する。これが無いと「1 枚目は読めるが 2 枚目が未対応」の
+        // イメージで Drive 1 だけ差し替わり Drive 2 が排出されたまま残る。
+        // 衝突回避で index が -1 に落ちる枚は「既に他ドライブで読めている」
+        // ものなので、まとめて検証しても誤判定にはならない。
+        if (!needsSelector) {
+            const int wanted[2] = { origImg1, origImg2 };
+            for (int w = 0; w < 2; w++) {
+                if (wanted[w] < 0 || wanted[w] >= peekedImages) continue;
+                if (probe.IsSupportedDisk(wanted[w])) continue;
+#ifdef __HAIKU__
+                std::fprintf(stderr, "M88M: unsupported disk %d in %s\n", wanted[w], diskPath);
+#endif
+                statusdisplay.Show(100, 3000, "Unsupported disk image: %.96s", GetFileNameOnly(diskPath));
+                return false;
+            }
         }
     }
-    bool needsSelector = openSelectorIfNeeded &&
-        peekedImages > ((origImg1 >= 0 && origImg2 >= 0) ? 2 : 1);
+
+    // Update last accessed directory
+    lastAccessedDir = GetDirFromPath(diskPath);
+
+    // 要求したドライブが実際にマウントできたか (成功判定用)
+    bool mountedAll = true;
 
     // Mount Drive 1
     if (img1 >= 0) {
@@ -1421,6 +1629,8 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
         if (diskmgr->Mount(0, diskPath, false, mountIndex, false)) {
             success = true;
             availableImages = (int)diskmgr->GetNumDisks(0);
+        } else {
+            mountedAll = false;
         }
     }
 
@@ -1435,18 +1645,22 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
             if (diskmgr->Mount(1, diskPath, false, mountIndex, false)) {
                 success = true;
                 availableImages = (int)diskmgr->GetNumDisks(1);
+            } else {
+                mountedAll = false;
             }
         } else if (needsSelector) {
             // Both drives specified but a selector will be shown: attach
             // Drive 2 to the same image without inserting a disk, so the
             // selector can enumerate it once the user moves on from Drive 1.
-            diskmgr->Mount(1, diskPath, false, -1, false);
+            if (!diskmgr->Mount(1, diskPath, false, -1, false)) mountedAll = false;
         } else {
             // Both drives specified (Drive 1&2 auto-mount behavior)
             //availableImages should be set from Drive 1 mount above
             if (img2 < availableImages) {
                 if (diskmgr->Mount(1, diskPath, false, img2, false)) {
                     success = true;
+                } else {
+                    mountedAll = false;
                 }
             } else {
                 // No second image available, explicitly eject Drive 2
@@ -1459,7 +1673,8 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
 #ifdef __HAIKU__
         std::fprintf(stderr, "M88M: disk mounted: %s\n", diskPath);
 #endif
-        AddRecent(mountPath);
+        // 要求したドライブが全部マウントできたときだけ履歴に残す
+        if (mountedAll) AddRecent(mountPath);
         // If mounting to only one drive, show selector if multiple images exist
         if (!openSelectorIfNeeded) {
             selectingDiskForDrive = -1;
@@ -1485,8 +1700,10 @@ void UIManager::MountDisk(DiskManager* diskmgr, const char* path, int img1, int 
 #ifdef __HAIKU__
         std::fprintf(stderr, "M88M: disk mount failed: %s\n", diskPath);
 #endif
-        statusdisplay.Show(100, 3000, "Disk mount failed: %.96s", diskPath);
+        statusdisplay.Show(100, 3000, "Disk mount failed: %.96s", GetFileNameOnly(diskPath));
     }
+
+    return success && mountedAll;
 }
 
 void UIManager::OpenNativeDialog(DiskManager* diskmgr, int drive) {
@@ -1526,14 +1743,14 @@ void UIManager::LoadRecent() {
     std::string path = Paths::GetConfigDir() + "/recent.txt";
     FileIO fio;
     if (fio.Open(path.c_str(), FileIO::readonly)) {
-        std::vector<char> buf(fio.Tellp() + 1024); // Size of file if we knew it
-        // Since FileIO doesn't have a GetSize, but we can Seek to end
+        // FileIO には GetSize が無いので末尾までシークして求める
         fio.Seek(0, FileIO::end);
         int32 size = fio.Tellp();
         fio.Seek(0, FileIO::begin);
+        if (size <= 0) return;
 
         std::string content;
-        content.resize(size);
+        content.resize((size_t)size);
         fio.Read(&content[0], size);
 
         std::string line;

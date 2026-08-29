@@ -49,16 +49,25 @@ public:
 	DiskImageHolder();
 	~DiskImageHolder();
 
-	bool Open(const char* filename, bool readonly, bool create);
+	// quiet: ステータス表示にメッセージを出さない (マウント前の内容確認用)
+	bool Open(const char* filename, bool readonly, bool create, bool quiet = false);
 	bool Connect(const char* filename);
 	bool Disconnect();
 
 	const char* GetTitle(int index);
 	FileIO* GetDisk(int index);
+	// index のディスクが ReadDiskImage() で扱えるメディアかを確認する。
+	// ヘッダしか見ない Open() の後段検証用 (m3u なら実体ファイルの存在も見る)。
+	bool IsSupportedDisk(int index);
+	// index のディスクに D88 ヘッダの write-protect フラグが立っているか。
+	// ファイル自体の書き込み可否 (パーミッション等) は見ない。
+	bool IsDiskWriteProtected(int index);
 	const char* GetFileName() const { return diskname; }
 	uint GetNumDisks() { return ndisks; }
 	bool SetDiskSize(int index, int newsize);
-	bool IsReadOnly() { return readonly || (playlist && (fio.GetFlags() & FileIO::readonly)); }
+	// FileIO::Open は書き込みで開けなかった場合に読み込み専用へフォールバックするため、
+	// playlist かどうかに関わらず fio のフラグを見ないと書き込み不能を検出できない
+	bool IsReadOnly() { return readonly || (fio.GetFlags() & FileIO::readonly); }
 	uint IsOpen() { return ref > 0; }
 	bool AddDisk(const char* title, uint type);
 
@@ -74,12 +83,13 @@ private:
 	bool ReadPlaylist(const char* filename);
 	void Close();
 	bool IsValidHeader(D88::ImageHeader&);
-	
+
 	FileIO fio;
 	int ndisks;
 	int ref;
 	bool readonly;
 	bool playlist;
+	bool quiet;
 	DiskInfo disks[max_disks];
 	char diskname[MAX_PATH];
 };
@@ -105,6 +115,8 @@ public:
 	uint GetNumDisks(uint dr);
 	int GetCurrentDisk(uint dr); 
 	const char* GetImagePath(uint dr) const;
+	// dr の index 枚目に D88 ヘッダの write-protect フラグが立っているか
+	bool IsDiskWriteProtected(uint dr, uint index);
 	bool AddDisk(uint dr, const char* title, uint type);
 	bool IsImageOpen(const char* filename);
 	bool FormatDisk(uint dr);

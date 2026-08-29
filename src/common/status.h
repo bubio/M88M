@@ -37,7 +37,10 @@ public:
     void Update() {}
 
     // --- Frontend-facing accessors (portable extension) ---
-    // Pull the current message + remaining duration in milliseconds.
+    // Pull the current message + remaining duration in milliseconds
+    // (-1 when the message has no expiry, i.e. it was posted with duration <= 0).
+    // Returns false once the message has expired (the ticker owns the timeout,
+    // so the frontend only has to poll).
     // Thread-safe: takes the internal critical section.
     bool GetCurrentMessage(char* dst, size_t cap, int* duration_ms_out);
 
@@ -47,9 +50,10 @@ public:
 private:
     mutable CriticalSection cs_;
 
-    char    msg_[128];
-    int     priority_;
-    int     duration_ms_;
+    char      msg_[128];
+    int       priority_;
+    int       duration_ms_;
+    long long expire_at_ms_;   // steady clock 基準の失効時刻
 
     int     litstat_[3];   // [0]=FD0, [1]=FD1, [2]=Subsys wait
     int     litcurrent_[3];

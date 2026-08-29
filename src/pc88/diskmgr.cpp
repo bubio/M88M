@@ -109,7 +109,13 @@ static void CopyTitleFromPath(char* dest, size_t destSize, const std::string& pa
 DiskImageHolder::DiskImageHolder()
 {
 	ref = 0;
+	ndisks = 0;
+	readonly = false;
 	playlist = false;
+	quiet = false;
+	// Open() は最初に Connect() で diskname を比較するので、
+	// 未初期化のまま読まれないよう空にしておく
+	diskname[0] = 0;
 }
 
 DiskImageHolder::~DiskImageHolder()
@@ -120,8 +126,10 @@ DiskImageHolder::~DiskImageHolder()
 // ---------------------------------------------------------------------------
 //	�t�@�C�����J��
 //
-bool DiskImageHolder::Open(const char* filename, bool ro, bool create)
+bool DiskImageHolder::Open(const char* filename, bool ro, bool create, bool bequiet)
 {
+	quiet = bequiet;
+
 	// ���Ɏ����Ă���t�@�C�����ǂ������m�F
 	if (Connect(filename))
 		return true;
@@ -150,8 +158,8 @@ bool DiskImageHolder::Open(const char* filename, bool ro, bool create)
 	{
 		if (fio.Open(filename, FileIO::readonly))
 		{
-			if (!readonly)
-				statusdisplay.Show(100, 3000, "�ǎ��p�t�@�C���ł�");
+			if (!readonly && !quiet)
+				statusdisplay.Show(100, 3000, "Read-only image");
 			readonly = true;
 		}
 		else
@@ -159,12 +167,22 @@ bool DiskImageHolder::Open(const char* filename, bool ro, bool create)
 			// �V�����f�B�X�N�C���[�W�H
 			if (!create || !fio.Open(filename, FileIO::create))
 			{
-				statusdisplay.Show(80, 3000, "�f�B�X�N�C���[�W���J���܂���");
+				if (!quiet)
+					statusdisplay.Show(80, 3000, "Cannot open disk image");
 				return false;
 			}
 		}
 	}
-	
+	else if (fio.GetFlags() & FileIO::readonly)
+	{
+		// 書き込みで開けず FileIO が読み込み専用にフォールバックした場合。
+		// ここで拾わないと書き込み可能なイメージとして扱われ、
+		// ゲストからの書き込みが最後まで失敗に気づかれないまま失われる
+		if (!quiet)
+			statusdisplay.Show(100, 3000, "Read-only image");
+		readonly = true;
+	}
+
 	// �t�@�C������o�^
 	strncpy(diskname, filename, MAX_PATH-1);
 	diskname[MAX_PATH-1] = 0;
@@ -239,7 +257,8 @@ bool DiskImageHolder::ReadHeaders()
 		{
 			if (!IsValidHeader(ih))
 			{
-				statusdisplay.Show(90, 3000, "�C���[�W�ɖ����ȃf�[�^���܂܂�Ă��܂�");
+				if (!quiet)
+					statusdisplay.Show(90, 3000, "Image contains invalid data");
 				break;
 			}
 			
@@ -252,7 +271,8 @@ bool DiskImageHolder::ReadHeaders()
 		{
 			if (ndisks != 0)
 			{
-				statusdisplay.Show(80, 3000, "READER �n�f�B�X�N�C���[�W�͘A���ł��܂���");
+				if (!quiet)
+					statusdisplay.Show(80, 3000, "Cannot concatenate READER disk images");
 				return false;
 			}
 
@@ -338,6 +358,7 @@ void DiskImageHolder::Close()
 	diskname[0] = 0;
 	ref = 0;
 	playlist = false;
+	quiet = false;
 }
 
 // ---------------------------------------------------------------------------
@@ -429,6 +450,59 @@ FileIO* DiskImageHolder::GetDisk(int index)
 		return &fio;
 	}
 	return 0;
+}
+
+// ---------------------------------------------------------------------------
+//	IsSupportedDisk
+//	ReadDiskImage() が受け付けるメディアかどうかをマウント前に確認する
+//
+bool DiskImageHolder::IsSupportedDisk(int index)
+{
+	FileIO* f = GetDisk(index);		// playlist ならここで実体が開けるかも判る
+	if (!f)
+		return false;
+
+	if (!f->Seek(0, FileIO::begin))
+		return false;
+
+	ImageHeader ih;
+	memset(&ih, 0, sizeof(ih));
+	// ReadHeaders() と同じく 256+16 を最小サイズとみなす
+	if (f->Read(&ih, sizeof(ih)) < 256+16)
+		return false;
+
+	// Raw イメージは 2D 固定で常に読める
+	if (!memcmp(ih.title, "M88 RawDiskImage", 16))
+		return true;
+
+	// ReadDiskImage() の switch と同じ判定
+	return ih.disktype == 0x00 || ih.disktype == 0x10 || ih.disktype == 0x20;
+}
+
+// ---------------------------------------------------------------------------
+//	IsDiskWriteProtected
+//	D88 ヘッダの write-protect フラグだけを見る。
+//	ファイル自体の書き込み可否 (パーミッション等) は対象外。
+//
+bool DiskImageHolder::IsDiskWriteProtected(int index)
+{
+	FileIO* f = GetDisk(index);
+	if (!f)
+		return false;
+
+	if (!f->Seek(0, FileIO::begin))
+		return false;
+
+	ImageHeader ih;
+	memset(&ih, 0, sizeof(ih));
+	if (f->Read(&ih, sizeof(ih)) < 256+16)
+		return false;
+
+	// Raw イメージはヘッダに保護フラグを持たない
+	if (!memcmp(ih.title, "M88 RawDiskImage", 16))
+		return false;
+
+	return ih.readonly != 0;
 }
 
 // ---------------------------------------------------------------------------
@@ -659,7 +733,7 @@ bool DiskManager::Unmount(uint dr)
 		drv.holder = 0;
 	}
 	if (!ret)
-		statusdisplay.Show(50, 3000, "�f�B�X�N�̍X�V�Ɏ��s���܂���");
+		statusdisplay.Show(50, 3000, "Failed to update the disk image");
 	return ret;
 }
 
@@ -694,7 +768,7 @@ bool DiskManager::ReadDiskImage(FileIO* fio, Drive* drive)
 		break;
 
 	default:
-		statusdisplay.Show(90, 3000, "�T�|�[�g���Ă��Ȃ����f�B�A�ł�");
+		statusdisplay.Show(90, 3000, "Unsupported media type");
 		return false;
 	}
 	bool readonly = drive->holder->IsReadOnly() || ih.readonly;
@@ -702,7 +776,7 @@ bool DiskManager::ReadDiskImage(FileIO* fio, Drive* drive)
 	FloppyDisk& disk = drive->disk;
 	if (!disk.Init(type, readonly))
 	{
-		statusdisplay.Show(70, 3000, "��Ɨp�̈�����蓖�Ă邱�Ƃ��ł��܂���ł���");
+		statusdisplay.Show(70, 3000, "Cannot allocate work area");
 		return false;
 	}
 
@@ -715,7 +789,7 @@ bool DiskManager::ReadDiskImage(FileIO* fio, Drive* drive)
 	if (t<164)
 		memset(&ih.trackptr[t], 0, (164-t) * 4);
 	if (t<(uint) Min(160, disk.GetNumTracks()))
-		statusdisplay.Show(80, 3000, "�w�b�_�[�ɖ����ȃf�[�^���܂܂�Ă��܂�");
+		statusdisplay.Show(80, 3000, "Header contains invalid data");
 
 	// trackptr �̂��݂�����
 	uint trackstart = sizeof(ImageHeader);
@@ -795,7 +869,7 @@ bool DiskManager::ReadDiskImageRaw(FileIO* fio, Drive* drive)
 	FloppyDisk& disk = drive->disk;
 	if (!disk.Init(FloppyDisk::MD2D, readonly))
 	{
-		statusdisplay.Show(70, 3000, "��Ɨp�̈�����蓖�Ă邱�Ƃ��ł��܂���ł���");
+		statusdisplay.Show(70, 3000, "Cannot allocate work area");
 		return false;
 	}
 
@@ -981,10 +1055,12 @@ void DiskManager::Update()
 //
 void DiskManager::UpdateDrive(Drive* drv)
 {
+	// holder / sizechanged は UI スレッドの Mount/Unmount から書き換わるため、
+	// 参照する前にロックを取る
+	CriticalSection::Lock lock(cs);
 	if (!drv->holder || drv->sizechanged)
 		return;
 
-	CriticalSection::Lock lock(cs);
 	int t;
 	for (t=0; t<164 && !drv->modified[t]; t++)
 		;
@@ -1005,9 +1081,15 @@ void DiskManager::UpdateDrive(Drive* drv)
 					
 					if (tracksize <= drv->tracksize[t])
 					{
-						drv->modified[t] = false;
 						fio->Seek(drv->trackpos[t], FileIO::begin);
-						WriteTrackImage(fio, drv, t);
+						if (!WriteTrackImage(fio, drv, t))
+						{
+							// 書き込みに失敗したら modified は落とさない。
+							// 落とすと Unmount 時のイメージ全体の書き戻しと
+							// エラー表示まで抑止され、変更が無言で失われる
+							break;
+						}
+						drv->modified[t] = false;
 					}
 					else
 					{
@@ -1060,6 +1142,17 @@ const char* DiskManager::GetImagePath(uint dr) const
 }
 
 // ---------------------------------------------------------------------------
+//	指定ディスクの write-protect 状態を取得
+//
+bool DiskManager::IsDiskWriteProtected(uint dr, uint index)
+{
+	CriticalSection::Lock lock(cs);
+	if (dr < max_drives && drive[dr].holder)
+		return drive[dr].holder->IsDiskWriteProtected((int)index);
+	return false;
+}
+
+// ---------------------------------------------------------------------------
 //	ݑIĂfBXN̔ԍ擾
 //
 int DiskManager::GetCurrentDisk(uint dr)
@@ -1097,6 +1190,8 @@ bool DiskManager::AddDisk(uint dr, const char* title, uint type)
 //
 bool DiskManager::FormatDisk(uint dr)
 {
+	if (dr >= max_drives)
+		return false;
 	if (!drive[dr].holder || drive[dr].disk.GetType() != FloppyDisk::MD2D)
 		return false;
 //	statusdisplay.Show(10, 5000, "Format drive : %d", dr);
@@ -1143,8 +1238,8 @@ bool DiskManager::FormatDisk(uint dr)
 			dest += 256;
 		}
 	}
-	drive->sizechanged = true;
-	drive->modified[0] = true;
+	drive[dr].sizechanged = true;
+	drive[dr].modified[0] = true;
 	delete[] buf;
 	return true;
 }
