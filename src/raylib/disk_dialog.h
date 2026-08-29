@@ -36,7 +36,8 @@ public:
     enum ModalState {
         MODAL_NONE,
         MODAL_CONFIRM_RESET,
-        MODAL_CONFIRM_QUIT
+        MODAL_CONFIRM_QUIT,
+        MODAL_CONFIRM_CLEAR_RECENT
     };
 
 private:
