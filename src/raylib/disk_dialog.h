@@ -16,7 +16,11 @@ public:
     void Draw(DiskManager* diskmgr, PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner, bool& shouldExit);
     void OpenNativeDialog(DiskManager* diskmgr, int drive);
     void OpenBothDrives(DiskManager* diskmgr);
-    void MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2, bool openSelectorIfNeeded = true);
+    // 要求したドライブすべてのマウントに成功したときだけ true。
+    // イメージが開けない場合や、挿入する枚が未対応メディア / m3u の実体欠落
+    // だった場合は、ドライブに一切触れずに false を返す。
+    // (セレクタを出す場合にユーザーが後から選ぶ枚は検証対象外)
+    bool MountDisk(DiskManager* diskmgr, const char* path, int img1, int img2, bool openSelectorIfNeeded = true);
     void AddRecent(const std::string& path);
     void LoadRecent();
     void SaveRecent();
@@ -49,6 +53,7 @@ private:
     void DrawConfirmDialog(bool& shouldExit, class PC88* pc88, class CoreRunner* coreRunner);
     void DismissConfirm();
     void DrawStatusBar(DiskManager* diskmgr);
+    void DrawOSDMessage();
     void DrawDriveStatus(DiskManager* diskmgr, int drive, float x, float y);
     std::string GetStatePath(DiskManager* diskmgr, int slot) const;
     std::string GetStateScreenshotPath(DiskManager* diskmgr, int slot) const;
