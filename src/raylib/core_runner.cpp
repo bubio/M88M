@@ -74,6 +74,8 @@ bool CoreRunner::Init(Draw* draw) {
     if (!coreSound.Init(this, outrate, bufsize)) return false;
     coreSound.ApplyConfig(&Config::Get());
     sound.Init(outrate, bufsize);
+    lastAudioRate = outrate;
+    lastAudioBufMs = Config::Get().soundbuffer;
     sound.SetVolume(&Config::Get());
     sound.SetSource(coreSound.GetSoundSource());
 
@@ -120,6 +122,8 @@ void CoreRunner::RestartAudio() {
         GetOPN1()->Connect(&coreSound);
         GetOPN2()->Connect(&coreSound);
         GetBEEP()->Connect(&coreSound);
+        lastAudioRate = outrate;
+        lastAudioBufMs = cfg.soundbuffer;
     }
 }
 
@@ -371,18 +375,16 @@ void CoreRunner::Run() {
                 // Re-initialize audio if sampling rate or buffer size changed
                 uint32 currentRate = (uint32)Config::Get().sound;
                 int currentBufMs = (int)Config::Get().soundbuffer;
-                static uint32 lastRate = 0;
-                static int lastBufMs = 0;
-                
-                if (currentRate != lastRate || currentBufMs != lastBufMs) {
+
+                if (currentRate != lastAudioRate || currentBufMs != lastAudioBufMs) {
                     int samples = (int)(currentRate * currentBufMs / 1000);
                     if (samples < 1024) samples = 4096;
                     coreSound.Init(this, currentRate, samples);
                     sound.Cleanup();
                     sound.Init(currentRate, samples);
                     sound.Start();
-                    lastRate = currentRate;
-                    lastBufMs = currentBufMs;
+                    lastAudioRate = currentRate;
+                    lastAudioBufMs = currentBufMs;
                 }
 
                 Reset();

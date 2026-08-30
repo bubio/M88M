@@ -64,6 +64,14 @@ private:
     std::atomic<bool> resetPending;
     std::mutex stateMutex;
 
+    // Run() 内でリセット時に音声デバイスの再初期化が必要かどうかを
+    // 判定するための直近の設定値。関数ローカルの static だと 0 から
+    // 始まってしまい、初回リセット時に必ず再初期化が走って
+    // (別スレッドからの InitAudioDevice/CloseAudioDevice 呼び出しにより)
+    // フリーズする不具合があったため、Init() で実際の初期値を設定する。
+    uint32 lastAudioRate = 0;
+    int lastAudioBufMs = 0;
+
     // ESC でメニュー/ダイアログを閉じた直後、同じキー押下が
     // そのままエミュ側の ESC (STOP相当) にも入力されてしまうのを防ぐ。
     // 物理キーが離されるまで、このキー押下はメニュー操作専用として扱う。
