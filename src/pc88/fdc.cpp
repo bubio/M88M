@@ -1189,9 +1189,6 @@ void FDC::ReadDiagnostic()
 		uint dr = hdu & 3;
 		uint flags = ((hdu >> 2) & 1) | (command & 0x40) | (drive[dr].hd & 0x80);
 		uint size;
-		int tr = (drive[dr].cyrinder >> drive[dr].dd) * 2 + ((hdu>>2) & 1);
-		statusdisplay.Show(84, showstatus ? 1000 : 2000, 
-			"ReadDiagnostic (Dr%d Tr%d)", dr, tr);
 
 		result = diskmgr->GetFDU(dr)->MakeDiagData(flags, buffer, &size);
 		if (result)
