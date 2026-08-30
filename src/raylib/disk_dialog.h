@@ -12,6 +12,10 @@ public:
     ~UIManager();
 
     void Init();
+    // statePreviewTexture / keyIconTexture の GPU リソースを解放する。
+    // CloseWindow() より前に呼ぶこと。デストラクタでも呼ばれるが、その時点では
+    // CloseWindow() 済みで GL コンテキストが無く、Unload*() が未定義動作になる。
+    void Cleanup();
     void Update(bool& shouldExit, class PC88* pc88, class CoreRunner* coreRunner);
     void Draw(DiskManager* diskmgr, PC8801::Config& cfg, class PC88* pc88, class CoreRunner* coreRunner, bool& shouldExit);
     void OpenNativeDialog(DiskManager* diskmgr, int drive);

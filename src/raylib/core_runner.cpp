@@ -337,7 +337,10 @@ void CoreRunner::Stop() {
         running = false;
         if (thread.joinable()) thread.join();
     }
-    StopAudio();
+    if (!audioStopped) {
+        StopAudio();
+        audioStopped = true;
+    }
 }
 
 void CoreRunner::Pause(bool p) { paused = p; }

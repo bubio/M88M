@@ -377,6 +377,8 @@ int main() {
     }
 
     core.Stop();
+    // UIManager の GPU リソースは CloseWindow() より前に解放する必要がある。
+    core.GetUIManager()->Cleanup();
     draw.Cleanup();
     if (IsFontValid(fontJp)) UnloadFont(fontJp);
     if (IsFontValid(fontEn)) UnloadFont(fontEn);
