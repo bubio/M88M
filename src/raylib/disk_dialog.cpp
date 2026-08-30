@@ -1400,7 +1400,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
     else if (activeTab == 5) { // About
         GuiLabel({ x + 20, pY, 500, 20 }, "M88M - PC-8801 Emulator for Modern Platforms");
         pY += 25;
-        GuiLabel({ x + 20, pY, 500, 20 }, "Version: 1.2.1");
+        GuiLabel({ x + 20, pY, 500, 20 }, "Version: 1.2.2");
         pY += 35;
 
         auto DrawLink = [&](float lx, float ly, const char* text, const char* url) {
