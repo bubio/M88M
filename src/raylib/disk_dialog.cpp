@@ -334,11 +334,21 @@ UIManager::UIManager() :
 
 UIManager::~UIManager() {
     SaveRecent();
-    if (IsTextureValid(statePreviewTexture)) UnloadTexture(statePreviewTexture);
-    if (keyIconReady) UnloadRenderTexture(keyIconTexture);
+    Cleanup();
 #ifndef __HAIKU__
     NFD_Quit();
 #endif
+}
+
+void UIManager::Cleanup() {
+    if (IsTextureValid(statePreviewTexture)) {
+        UnloadTexture(statePreviewTexture);
+        statePreviewTexture = {0};
+    }
+    if (keyIconReady) {
+        UnloadRenderTexture(keyIconTexture);
+        keyIconReady = false;
+    }
 }
 
 void UIManager::DrawEnText(const char* text, int x, int y, Color color) const {

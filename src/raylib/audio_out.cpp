@@ -97,7 +97,7 @@ void RaylibSound::Cleanup() {
     }
 #else
     if (IsAudioStreamValid(stream)) { StopAudioStream(stream); UnloadAudioStream(stream); stream = {0}; }
-    CloseAudioDevice();
+    if (IsAudioDeviceReady()) CloseAudioDevice();
     if (s_current_sound == this) s_current_sound = nullptr;
 #endif
     updateBuffer.clear();

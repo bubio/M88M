@@ -72,6 +72,10 @@ private:
     uint32 lastAudioRate = 0;
     int lastAudioBufMs = 0;
 
+    // Stop() は main() の終了処理と ~CoreRunner() の両方から呼ばれるため、
+    // StopAudio() の二重実行 (Device already closed 警告) を防ぐガード。
+    bool audioStopped = false;
+
     // ESC でメニュー/ダイアログを閉じた直後、同じキー押下が
     // そのままエミュ側の ESC (STOP相当) にも入力されてしまうのを防ぐ。
     // 物理キーが離されるまで、このキー押下はメニュー操作専用として扱う。
