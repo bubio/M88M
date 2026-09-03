@@ -48,7 +48,7 @@ jobs:
       # cross-platform-actions/action#165, which is merged but not yet tagged --
       # v1.4.0 still pins the image release without it -- so pin the commit
       # until it ships in a release, then switch back to a tag.
-      uses: cross-platform-actions/action@b77f08480307e762b98be92ba7ef04ea7c2272f8
+      uses: cross-platform-actions/action@faa0c6197e94aacf1c5956460152c8380d3560a5
       with:
         operating_system: haiku
         architecture: x86-64
