@@ -16,6 +16,9 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(APPLE)
+    # JIS の ¥ / ろ キーを NSEvent で読むため Objective-C++ を使う
+    enable_language(OBJCXX)
+
     # Single-arch by default; pass -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
     # at configure time for a universal binary.
     if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
@@ -239,6 +242,10 @@ if(WIN32)
     list(APPEND RAYLIB_FRONT_SRC src/raylib/m88m.rc)
 endif()
 
+if(APPLE)
+    list(APPEND RAYLIB_FRONT_SRC src/raylib/native_keys_mac.mm)
+endif()
+
 if(RAYLIB_FRONT_SRC)
     if(APPLE OR UNIX OR M88M_IS_HAIKU)
         find_package(Iconv REQUIRED)
@@ -378,6 +385,9 @@ if(RAYLIB_FRONT_SRC)
 
         find_package(X11 REQUIRED)
         target_link_libraries(m88_raylib PRIVATE ${X11_LIBRARIES})
+        # JIS の ¥ / ろ キーを GLFW のキーコールバックで読む (native_keys.cpp)
+        target_include_directories(m88_raylib PRIVATE ${X11_INCLUDE_DIR})
+        target_compile_definitions(m88_raylib PRIVATE M88M_NATIVE_KEYS_GLFW)
 
         # Link X11 extension libraries by the exact paths discovered by CMake.
         # Bare -lXcursor/-lXinerama/... works on Linux, but can fail on FreeBSD

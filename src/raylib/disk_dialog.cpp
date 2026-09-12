@@ -1323,7 +1323,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             GuiLabel({ sX + 15, curY, labelW, 20 }, "Keyboard:");
             Rectangle kRect = { sX + 190, curY, 200, 24 };
             static int kIdx;
-            if (!keyboardEdit) kIdx = cfg.keytype;
+            if (!keyboardEdit) kIdx = (cfg.keytype == PC8801::Config::AT101) ? 1 : 0;
             if (keyboardEdit) { ddRect = kRect; ddText = "AT-106 JP;AT-101 US (US)"; ddIndexPtr = &kIdx; ddEditPtr = &keyboardEdit; }
             else if (GuiDropdownBox(kRect, "AT-106 JP;AT-101 US (US)", &kIdx, false)) keyboardEdit = true;
             curY += rowH + 4;
@@ -1500,7 +1500,7 @@ void UIManager::DrawSettings(PC8801::Config& cfg, PC88* pc88, CoreRunner* coreRu
             } else if (ddEditPtr == &windowScaleEdit) {
                 int scale = (*ddIndexPtr) + 1;
                 SetWindowSize(640 * scale, (400 * scale) + 24);
-            } else if (ddEditPtr == &keyboardEdit) { cfg.keytype = *ddIndexPtr; changed = true; resetPending = true; }
+            } else if (ddEditPtr == &keyboardEdit) { cfg.keytype = (*ddIndexPtr == 1) ? PC8801::Config::AT101 : PC8801::Config::AT106; changed = true; resetPending = true; }
 
             if (changed) { coreRunner->RequestConfigApply(cfg, false); Config::Save(cfg); }
         }

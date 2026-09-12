@@ -1,4 +1,5 @@
 #include "key_input.h"
+#include "native_keys.h"
 #include "raylib.h"
 #include "pc88.h"
 #include "config.h"
@@ -8,7 +9,12 @@
 
 static const IDevice::ID KEY_ID = DEV_ID('K', 'E', 'Y', 'B');
 
-KeyInput::KeyInput() : Device(KEY_ID), capsLockState(false), kanaLockState(false) {
+// raylib の KeyboardKey に無い GLFW のキーコード (ISO 配列の追加キー)。
+// GLFW バックエンドではそのまま IsKeyDown() に渡せる。
+static const int KEY_WORLD_1 = 161;
+static const int KEY_WORLD_2 = 162;
+
+KeyInput::KeyInput() : Device(KEY_ID), capsLockState(false), kanaLockState(false), zenkakuPulse(0) {
     memset(matrix, 0xff, sizeof(matrix));
 }
 
@@ -54,6 +60,11 @@ void KeyInput::Update(bool suppressEscape) {
 
     bool shift = IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT);
 
+    // ¥ と ろ は GLFW がキーコードを持たないのでネイティブ API で読む
+    bool focused = IsWindowFocused();
+    bool jisYen = !isUS && focused && NativeKeys_IsDown(NativeKey::JisYen);
+    bool jisRo  = !isUS && focused && NativeKeys_IsDown(NativeKey::JisRo);
+
     // --- Row 0: Numpad 0-7 (and equivalents) ---
     set_key(0, 0, IsKeyDown(KEY_KP_0) || IsKeyDown(KEY_INSERT) || (useNumRowFor10 && IsKeyDown(KEY_ZERO)));
     set_key(0, 1, IsKeyDown(KEY_KP_1) || IsKeyDown(KEY_END)    || (useNumRowFor10 && IsKeyDown(KEY_ONE)));
@@ -69,17 +80,18 @@ void KeyInput::Update(bool suppressEscape) {
     set_key(1, 1, IsKeyDown(KEY_KP_9) || IsKeyDown(KEY_PAGE_UP) || (useNumRowFor10 && IsKeyDown(KEY_NINE)));
     set_key(1, 2, IsKeyDown(KEY_KP_MULTIPLY));
     set_key(1, 3, IsKeyDown(KEY_KP_ADD));
-    set_key(1, 4, IsKeyDown(KEY_KP_EQUAL) || (isUS && IsKeyDown(KEY_EQUAL))); // num =
-    set_key(1, 5, (isUS && IsKeyDown(KEY_COMMA))); // num ,
+    set_key(1, 4, IsKeyDown(KEY_KP_EQUAL)); // num =
     set_key(1, 6, IsKeyDown(KEY_KP_DECIMAL) || IsKeyDown(KEY_DELETE));
     set_key(1, 7, IsKeyDown(KEY_ENTER) || IsKeyDown(KEY_KP_ENTER)); // Return
 
+    // 記号キーの対応。raylib のキーコードは US 配列の物理位置を指す。
+    // JIS: オリジナルの KeyTable106 に準拠し、JIS の刻印どおりに対応させる。
+    // US : SHIFT なしで US の刻印どおりの文字が出るように対応させ、
+    //      刻印が PC-88 に無いキー (= ' `) には残りの ^ : @ を割り当てる。
+    // どちらも SHIFT 併用時は PC-88 側の刻印の文字になる。
+
     // --- Row 2: @, A, B, C, D, E, F, G ---
-    if (isUS) {
-        set_key(2, 0, (!useNumRowFor10 && IsKeyDown(KEY_TWO) && shift)); // US Shift+2 = @
-    } else {
-        set_key(2, 0, IsKeyDown(KEY_LEFT_BRACKET)); // JIS @
-    }
+    set_key(2, 0, IsKeyDown(isUS ? KEY_GRAVE : KEY_LEFT_BRACKET)); // @
     set_key(2, 1, IsKeyDown(KEY_A));
     set_key(2, 2, IsKeyDown(KEY_B));
     set_key(2, 3, IsKeyDown(KEY_C));
@@ -113,18 +125,17 @@ void KeyInput::Update(bool suppressEscape) {
     set_key(5, 1, IsKeyDown(KEY_Y));
     set_key(5, 2, IsKeyDown(KEY_Z));
     if (isUS) {
-        set_key(5, 3, IsKeyDown(KEY_LEFT_BRACKET)); // [
-        set_key(5, 4, IsKeyDown(KEY_BACKSLASH));    // \ 
+        set_key(5, 3, IsKeyDown(KEY_LEFT_BRACKET));  // [
+        set_key(5, 4, IsKeyDown(KEY_BACKSLASH));     // ¥ (US \)
         set_key(5, 5, IsKeyDown(KEY_RIGHT_BRACKET)); // ]
-        set_key(5, 6, (!useNumRowFor10 && IsKeyDown(KEY_SIX) && shift)); // ^ (US Shift+6)
-        set_key(5, 7, IsKeyDown(KEY_MINUS));        // -
     } else {
-        set_key(5, 3, IsKeyDown(KEY_RIGHT_BRACKET)); // [
-        set_key(5, 4, IsKeyDown(KEY_BACKSLASH));
-        set_key(5, 5, IsKeyDown(KEY_APOSTROPHE));    // ]
-        set_key(5, 6, IsKeyDown(KEY_EQUAL));         // ^
-        set_key(5, 7, IsKeyDown(KEY_MINUS));
+        set_key(5, 3, IsKeyDown(KEY_RIGHT_BRACKET)); // [ (US ] の位置)
+        set_key(5, 4, jisYen);                       // ¥
+        // X11 で jp が先頭レイアウトだと ¥ / ろ も KEY_BACKSLASH になるので除外する
+        set_key(5, 5, IsKeyDown(KEY_BACKSLASH) && !jisYen && !jisRo); // ] (Enter の左)
     }
+    set_key(5, 6, IsKeyDown(KEY_EQUAL));             // ^ (US = の位置)
+    set_key(5, 7, IsKeyDown(KEY_MINUS));             // -
 
     // --- Row 6: 0-7 ---
     for (int i=0; i<=7; i++) set_key(6, i, (!useNumRowFor10 && IsKeyDown((KeyboardKey)(KEY_ZERO + i))));
@@ -132,20 +143,16 @@ void KeyInput::Update(bool suppressEscape) {
     // --- Row 7: 8, 9, :, ;, ,, ., /, _ ---
     set_key(7, 0, (!useNumRowFor10 && IsKeyDown(KEY_EIGHT)));
     set_key(7, 1, (!useNumRowFor10 && IsKeyDown(KEY_NINE)));
+    set_key(7, 2, IsKeyDown(KEY_APOSTROPHE)); // : (US ' の位置)
+    set_key(7, 3, IsKeyDown(KEY_SEMICOLON));  // ;
+    set_key(7, 4, IsKeyDown(KEY_COMMA));
+    set_key(7, 5, IsKeyDown(KEY_PERIOD));
+    set_key(7, 6, IsKeyDown(KEY_SLASH));
     if (isUS) {
-        set_key(7, 2, IsKeyDown(KEY_SEMICOLON) && shift); // : (US Shift+;)
-        set_key(7, 3, IsKeyDown(KEY_SEMICOLON) && !shift); // ; (US ;)
-        set_key(7, 4, IsKeyDown(KEY_COMMA));
-        set_key(7, 5, IsKeyDown(KEY_PERIOD));
-        set_key(7, 6, IsKeyDown(KEY_SLASH));
-        set_key(7, 7, IsKeyDown(KEY_MINUS) && shift); // _ (US Shift+-)
+        // ISO 配列の 102 キー目 (VK_OEM_102)。ANSI 配列には存在しない
+        set_key(7, 7, IsKeyDown(KEY_WORLD_1) || IsKeyDown(KEY_WORLD_2)); // _
     } else {
-        set_key(7, 2, IsKeyDown(KEY_SEMICOLON)); // :
-        set_key(7, 3, IsKeyDown(KEY_GRAVE));     // ;
-        set_key(7, 4, IsKeyDown(KEY_COMMA));
-        set_key(7, 5, IsKeyDown(KEY_PERIOD));
-        set_key(7, 6, IsKeyDown(KEY_SLASH));
-        set_key(7, 7, IsKeyDown(KEY_BACKSLASH)); // _ (approx)
+        set_key(7, 7, jisRo);                     // _ (ろ)
     }
 
     // --- Row 8: CLR, UP, RIGHT, BS, GRPH, KANA, SHIFT, CTRL ---
@@ -188,6 +195,15 @@ void KeyInput::Update(bool suppressEscape) {
     set_key(0xc, 2, IsKeyDown(KEY_F8));
     set_key(0xc, 3, IsKeyDown(KEY_F9));
     set_key(0xc, 4, IsKeyDown(KEY_F10));
+
+    // --- Row 13: 全角 ---
+    // 半角/全角キー (US ` の位置) は Windows だと押下しか通知されず
+    // 離したことが分からないので、オリジナル同様キーダウンのたびに
+    // 3 フレームだけ押下扱いにする。押下が続く間の通知は repeat で届く。
+    if (!isUS && (IsKeyPressed(KEY_GRAVE) || IsKeyPressedRepeat(KEY_GRAVE)))
+        zenkakuPulse = 3;
+    set_key(0xd, 3, zenkakuPulse > 0);
+    if (zenkakuPulse > 0) zenkakuPulse--;
 }
 
 const Device::Descriptor KeyInput::descriptor = { indef, nullptr };
