@@ -1,4 +1,4 @@
-name: Build Linux (x64/arm64 DEB/RPM/AppImage)
+name: Build Linux (x64/arm64/riscv64 DEB/RPM/AppImage)
 
 on:
   push:
@@ -134,9 +134,55 @@ jobs:
         name: ${{ matrix.appimage-artifact }}
         path: dist/appimage/
 
+  linux-riscv64:
+    name: Linux (riscv64)
+    # No riscv64 GitHub-hosted runner exists yet, so build and package inside
+    # a QEMU-emulated Ubuntu riscv64 VM on a regular x86_64 runner.
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Build and package in Ubuntu riscv64 VM
+      uses: vmactions/ubuntu-vm@v1
+      with:
+        release: '24.04'
+        arch: riscv64
+        sync: rsync
+        mem: 8192
+        prepare: |
+          apt-get update
+          apt-get install -y \
+            build-essential \
+            cmake \
+            libasound2-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
+            libgtk-3-dev
+        run: |
+          set -e
+          chmod +x scripts/build_linux.sh
+          ./scripts/build_linux.sh
+
+          cd build
+          cpack -G DEB
+          cd ..
+
+          mkdir -p dist/deb
+          cp build/*.deb dist/deb/
+
+    - name: Upload DEB Artifact
+      uses: actions/upload-artifact@v7
+      with:
+        name: m88m-linux-riscv64-deb
+        path: dist/deb/
+
   publish-release:
     if: github.event_name == 'release'
-    needs: build
+    needs: [build, linux-riscv64]
     permissions:
       contents: write
     uses: ./.github/workflows/publish-release-assets.yml
