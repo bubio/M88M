@@ -16,6 +16,9 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(APPLE)
+    # JIS の ¥ / ろ キーを NSEvent で読むため Objective-C++ を使う
+    enable_language(OBJCXX)
+
     # Single-arch by default; pass -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
     # at configure time for a universal binary.
     if(NOT CMAKE_OSX_DEPLOYMENT_TARGET)
@@ -237,6 +240,10 @@ set(M88M_FONT_LICENSE_RESOURCES
 
 if(WIN32)
     list(APPEND RAYLIB_FRONT_SRC src/raylib/m88m.rc)
+endif()
+
+if(APPLE)
+    list(APPEND RAYLIB_FRONT_SRC src/raylib/native_keys_mac.mm)
 endif()
 
 if(RAYLIB_FRONT_SRC)

@@ -47,6 +47,9 @@ void Load(PC8801::Config& cfg) {
         file.Close();
         // Recalculate mainsubratio in case it was saved inconsistently
         cfg.mainsubratio = (cfg.clock >= 60) ? 2 : 1;
+        // 以前の設定画面はドロップダウンの番号 (US=1) をそのまま保存しており、
+        // US を選ぶと PC98 になっていた。raylib 版に PC98 配列は無いので US に読み替える
+        if (cfg.keytype == PC8801::Config::PC98) cfg.keytype = PC8801::Config::AT101;
     } else {
         // Save defaults if file doesn't exist
         Save(cfg);

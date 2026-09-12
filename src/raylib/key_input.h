@@ -26,6 +26,7 @@ private:
     uint8_t matrix[16];
     bool capsLockState;
     bool kanaLockState;
+    int zenkakuPulse;
 
     static const Descriptor descriptor;
     static const InFuncPtr indef[];
