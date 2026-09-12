@@ -385,6 +385,9 @@ if(RAYLIB_FRONT_SRC)
 
         find_package(X11 REQUIRED)
         target_link_libraries(m88_raylib PRIVATE ${X11_LIBRARIES})
+        # JIS の ¥ / ろ キーを GLFW のキーコールバックで読む (native_keys.cpp)
+        target_include_directories(m88_raylib PRIVATE ${X11_INCLUDE_DIR})
+        target_compile_definitions(m88_raylib PRIVATE M88M_NATIVE_KEYS_GLFW)
 
         # Link X11 extension libraries by the exact paths discovered by CMake.
         # Bare -lXcursor/-lXinerama/... works on Linux, but can fail on FreeBSD

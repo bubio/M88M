@@ -131,7 +131,8 @@ void KeyInput::Update(bool suppressEscape) {
     } else {
         set_key(5, 3, IsKeyDown(KEY_RIGHT_BRACKET)); // [ (US ] の位置)
         set_key(5, 4, jisYen);                       // ¥
-        set_key(5, 5, IsKeyDown(KEY_BACKSLASH));     // ] (Enter の左)
+        // X11 で jp が先頭レイアウトだと ¥ / ろ も KEY_BACKSLASH になるので除外する
+        set_key(5, 5, IsKeyDown(KEY_BACKSLASH) && !jisYen && !jisRo); // ] (Enter の左)
     }
     set_key(5, 6, IsKeyDown(KEY_EQUAL));             // ^ (US = の位置)
     set_key(5, 7, IsKeyDown(KEY_MINUS));             // -
