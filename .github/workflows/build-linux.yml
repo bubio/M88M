@@ -136,69 +136,43 @@ jobs:
 
   linux-riscv64:
     name: Linux (riscv64)
-    # No riscv64 GitHub-hosted runner exists yet. Rather than booting a full
-    # QEMU riscv64 VM (which runs the compiler itself under emulation and is
-    # very slow), cross-compile natively on an x86_64 runner, matching the
-    # approach used for armhf in build-rpi.yml. GTK3 is a runtime-only
-    # dependency (see CPACK_DEBIAN_PACKAGE_DEPENDS in CMakeLists.txt, not
-    # linked at build time), so its dev package isn't needed here.
+    # No riscv64 GitHub-hosted runner exists yet, so build and package inside
+    # a QEMU-emulated Ubuntu riscv64 VM on a regular x86_64 runner.
     runs-on: ubuntu-24.04
     steps:
     - uses: actions/checkout@v7
 
-    - name: Switch apt sources to ports.ubuntu.com for riscv64
-      run: |
-        FLAVOR="$(lsb_release -sc)"
-        sudo tee /etc/apt/sources.list.d/riscv64.list <<LIST
-        deb [arch=riscv64] http://ports.ubuntu.com/ ${FLAVOR} main restricted
-        deb [arch=riscv64] http://ports.ubuntu.com/ ${FLAVOR}-updates main restricted
-        deb [arch=riscv64] http://ports.ubuntu.com/ ${FLAVOR} universe
-        deb [arch=riscv64] http://ports.ubuntu.com/ ${FLAVOR}-updates universe
-        deb [arch=riscv64] http://ports.ubuntu.com/ ${FLAVOR} multiverse
-        deb [arch=riscv64] http://ports.ubuntu.com/ ${FLAVOR}-updates multiverse
-        deb [arch=riscv64] http://ports.ubuntu.com/ ${FLAVOR}-backports main restricted universe multiverse
-        LIST
-        sudo sed -E -i 's/deb (http|file|mirror)/deb [arch=amd64,i386] \1/' /etc/apt/sources.list
+    - name: Build and package in Ubuntu riscv64 VM
+      uses: vmactions/ubuntu-vm@v1
+      with:
+        release: '24.04'
+        arch: riscv64
+        sync: rsync
+        mem: 8192
+        prepare: |
+          apt-get update
+          apt-get install -y \
+            build-essential \
+            cmake \
+            libasound2-dev \
+            libx11-dev \
+            libxcursor-dev \
+            libxinerama-dev \
+            libxrandr-dev \
+            libxi-dev \
+            libgl1-mesa-dev \
+            libgtk-3-dev
+        run: |
+          set -e
+          chmod +x scripts/build_linux.sh
+          ./scripts/build_linux.sh
 
-    - name: Install cross-compile tools and dependencies (riscv64)
-      run: |
-        sudo dpkg --add-architecture riscv64
-        sudo apt-get update
-        sudo apt-get install -y \
-          cmake \
-          pkg-config \
-          g++-riscv64-linux-gnu \
-          libasound2-dev:riscv64 \
-          libx11-dev:riscv64 \
-          libxcursor-dev:riscv64 \
-          libxinerama-dev:riscv64 \
-          libxrandr-dev:riscv64 \
-          libxi-dev:riscv64 \
-          libgl1-mesa-dev:riscv64
+          cd build
+          cpack -G DEB
+          cd ..
 
-    - name: Configure and build (riscv64)
-      run: |
-        export PKG_CONFIG_PATH=/usr/lib/riscv64-linux-gnu/pkgconfig:/usr/share/pkgconfig
-        export PKG_CONFIG_LIBDIR=/usr/lib/riscv64-linux-gnu/pkgconfig
-        cmake -S . -B build \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_SYSTEM_NAME=Linux \
-          -DCMAKE_SYSTEM_PROCESSOR=riscv64 \
-          -DCMAKE_C_COMPILER=riscv64-linux-gnu-gcc \
-          -DCMAKE_CXX_COMPILER=riscv64-linux-gnu-g++ \
-          -DCPACK_GENERATOR=DEB \
-          -DCPACK_DEBIAN_PACKAGE_ARCHITECTURE=riscv64
-        cmake --build build -j "$(nproc)"
-
-    - name: Package with CPack
-      run: |
-        cd build
-        cpack -G DEB
-
-    - name: Prepare Distribution
-      run: |
-        mkdir -p dist/deb
-        cp build/*.deb dist/deb/
+          mkdir -p dist/deb
+          cp build/*.deb dist/deb/
 
     - name: Upload DEB Artifact
       uses: actions/upload-artifact@v7
