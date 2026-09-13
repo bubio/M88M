@@ -158,16 +158,7 @@ jobs:
         deb [arch=riscv64] http://ports.ubuntu.com/ ${FLAVOR}-updates multiverse
         deb [arch=riscv64] http://ports.ubuntu.com/ ${FLAVOR}-backports main restricted universe multiverse
         LIST
-        # ubuntu-24.04 runners list the default archive in deb822 format
-        # (/etc/apt/sources.list.d/ubuntu.sources) rather than the classic
-        # /etc/apt/sources.list, so restrict architectures there instead of
-        # sed-ing a one-line sources.list entry.
-        if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then
-          sudo sed -E -i '/^Types: /a Architectures: amd64 i386' /etc/apt/sources.list.d/ubuntu.sources
-        fi
-        if [ -f /etc/apt/sources.list ]; then
-          sudo sed -E -i 's/deb (http|file|mirror)/deb [arch=amd64,i386] \1/' /etc/apt/sources.list
-        fi
+        sudo sed -E -i 's/deb (http|file|mirror)/deb [arch=amd64,i386] \1/' /etc/apt/sources.list
 
     - name: Install cross-compile tools and dependencies (riscv64)
       run: |
