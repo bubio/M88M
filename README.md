@@ -75,7 +75,7 @@ Prebuilt binaries are available on the [**Releases**](https://github.com/bubio/M
 | Windows | `windows` | `.zip` | `x64`, `x86`, `arm64` |
 | macOS | `macos` | `.dmg` | `universal` (Intel + Apple Silicon) |
 | Linux (portable) | `linux` | `.AppImage` | `x86_64`, `aarch64` |
-| Linux (Debian / Ubuntu) | `linux` | `.deb` | `amd64`, `arm64` |
+| Linux (Debian / Ubuntu) | `linux` | `.deb` | `amd64`, `arm64`, `riscv64` |
 | Linux (Fedora / RHEL / openSUSE) | `linux` | `.rpm` | `x86_64`, `aarch64` |
 | Raspberry Pi OS | `raspios` | `.deb` | `arm64`, `armhf` |
 | FreeBSD | `freebsd` | `.pkg` | `amd64` |
