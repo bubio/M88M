@@ -110,6 +110,10 @@ target_compile_definitions(m88core PUBLIC
 
 target_link_libraries(m88core PUBLIC ZLIB::ZLIB)
 
+# Standalone regression test; not part of the normal emulator build.
+add_executable(d88_writeback_test EXCLUDE_FROM_ALL tests/d88_writeback_test.cpp)
+target_link_libraries(d88_writeback_test PRIVATE m88core)
+
 # --- raylib ------------------------------------------------------------
 include(FetchContent)
 
