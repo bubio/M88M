@@ -78,8 +78,10 @@ void incremental(const std::filesystem::path& dir, unsigned type) {
     for (auto t : tracks) {
         write(d,type,t,2,0xd1,expected);
         d.Update();
+        require(read(p)==expected,"first incremental update not visible while mounted");
         write(d,type,t,8,0xe2,expected);
         d.Update();
+        require(read(p)==expected,"second incremental update not visible while mounted");
     }
     require(d.Unmount(0),"unmount");
     require(read(p)==expected,"incremental image differs (wrong track or unintended full rewrite)");

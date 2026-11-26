@@ -51,6 +51,7 @@ public:
     int32 Write(const void* src, int32 len);
     bool  Seek(int32 fpos, SeekMethod method);
     int32 Tellp();
+    bool  Flush();
     bool  SetEndOfFile();
 
     uint  GetFlags() { return flags_; }

@@ -162,6 +162,11 @@ int32 FileIO::Tellp()
     return (int32)(pos - (long)lorigin_);
 }
 
+bool FileIO::Flush()
+{
+    return fp_ && !(flags_ & readonly) && fflush(fp_) == 0;
+}
+
 bool FileIO::SetEndOfFile()
 {
     if (!fp_ || (flags_ & readonly) || fflush(fp_) != 0)

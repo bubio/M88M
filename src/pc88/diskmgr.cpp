@@ -1099,7 +1099,7 @@ void DiskManager::UpdateDrive(Drive* drv)
 					if (drv->trackpos[t] >= sizeof(ImageHeader) && tracksize == drv->tracksize[t])
 					{
 						if (!fio->Seek(drv->trackpos[t], FileIO::begin) ||
-							!WriteTrackImage(fio, drv, tr))
+							!WriteTrackImage(fio, drv, tr) || !fio->Flush())
 						{
 							// 書き込みに失敗したら modified は落とさない。
 							// 落とすと Unmount 時のイメージ全体の書き戻しと
