@@ -9,6 +9,7 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#include <io.h>
 #else
 #include <dirent.h>
 #include <strings.h>
@@ -161,15 +162,23 @@ int32 FileIO::Tellp()
     return (int32)(pos - (long)lorigin_);
 }
 
+bool FileIO::Flush()
+{
+    return fp_ && !(flags_ & readonly) && fflush(fp_) == 0;
+}
+
 bool FileIO::SetEndOfFile()
 {
-    // Best-effort: stdio has no portable truncate. The Win32 path used
-    // SetEndOfFile() to grow newly-created snapshot files; on POSIX a
-    // subsequent fwrite implicitly extends the file, so the call is
-    // effectively a no-op for our usage.
-    if (!fp_) return false;
-    fflush(fp_);
-    return true;
+    if (!fp_ || (flags_ & readonly) || fflush(fp_) != 0)
+        return false;
+    const long pos = ftell(fp_);
+    if (pos < 0)
+        return false;
+#ifdef _WIN32
+    return _chsize_s(_fileno(fp_), pos) == 0;
+#else
+    return ftruncate(fileno(fp_), pos) == 0;
+#endif
 }
 
 std::string FileIO::ResolvePathCaseInsensitive(const std::string& path) {

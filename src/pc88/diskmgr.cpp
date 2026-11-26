@@ -539,21 +539,23 @@ bool DiskImageHolder::SetDiskSize(int index, int newsize)
 		if (!data)
 			return false;
 
-		fio.Seek(moveorg, FileIO::begin);
-		fio.Read(data, sizemove);
-		fio.Seek(moveorg + sizediff, FileIO::begin);
-		fio.Write(data, sizemove);
+		bool ok = fio.Seek(moveorg, FileIO::begin) &&
+			fio.Read(data, sizemove) == sizemove &&
+			fio.Seek(moveorg + sizediff, FileIO::begin) &&
+			fio.Write(data, sizemove) == sizemove;
 
 		delete[] data;
-
-		for (i=index+1; i<ndisks; i++)
-			disks[i].pos += sizemove;
+		if (!ok)
+			return false;
 	}
-	else
+	else if (!fio.Seek(disks[index].pos + newsize, FileIO::begin))
 	{
-		fio.Seek(disks[index].pos + newsize, FileIO::begin);
+		return false;
 	}
-	fio.SetEndOfFile();
+	if (!fio.SetEndOfFile())
+		return false;
+	for (i=index+1; i<ndisks; i++)
+		disks[i].pos += sizediff;
 	disks[index].size = newsize;
 	return true;
 }
@@ -1034,10 +1036,20 @@ bool DiskManager::WriteTrackImage(FileIO* fio, Drive* drv, int t)
 //
 void DiskManager::Modified(int dr, int tr)
 {
-	if (0 <= tr && tr < 164 && !drive[dr].disk.IsReadOnly())
+	// FDU reports a physical track. D88 metadata and dirty flags use
+	// logical image tracks (2D occupies every other physical cylinder).
+	if (dr < 0 || dr >= max_drives || tr < 0 || drive[dr].disk.IsReadOnly())
+		return;
+	Drive& drv = drive[dr];
+	if (drv.disk.GetType() == FloppyDisk::MD2D)
 	{
-		drive[dr].modified[tr] = true;
+		// Odd physical cylinders cannot be represented by a 2D D88.
+		if (tr & 2)
+			return;
+		tr = ((tr >> 2) << 1) | (tr & 1);
 	}
+	if (uint(tr) < drv.disk.GetNumTracks())
+		drv.modified[tr] = true;
 }
 
 // ---------------------------------------------------------------------------
@@ -1076,13 +1088,18 @@ void DiskManager::UpdateDrive(Drive* drv)
 					FloppyDisk::Sector* sec;
 					int tracksize = 0;
 					
-					for (sec = drv->disk.GetFirstSector(t); sec; sec=sec->next)
+					// Map the logical dirty track back to the internal track.
+					int tr = (drv->disk.GetType() == FloppyDisk::MD2D) ? t & ~1 : t >> 1;
+					tr = (tr << 1) | (t & 1);
+					for (sec = drv->disk.GetFirstSector(tr); sec; sec=sec->next)
 						tracksize += sec->size + sizeof(SectorHeader);
 					
-					if (tracksize <= drv->tracksize[t])
+					// Only overwrite an existing track of exactly the same size.
+					// Missing tracks or size changes require a full image rewrite.
+					if (drv->trackpos[t] >= sizeof(ImageHeader) && tracksize == drv->tracksize[t])
 					{
-						fio->Seek(drv->trackpos[t], FileIO::begin);
-						if (!WriteTrackImage(fio, drv, t))
+						if (!fio->Seek(drv->trackpos[t], FileIO::begin) ||
+							!WriteTrackImage(fio, drv, tr) || !fio->Flush())
 						{
 							// 書き込みに失敗したら modified は落とさない。
 							// 落とすと Unmount 時のイメージ全体の書き戻しと
