@@ -539,21 +539,23 @@ bool DiskImageHolder::SetDiskSize(int index, int newsize)
 		if (!data)
 			return false;
 
-		fio.Seek(moveorg, FileIO::begin);
-		fio.Read(data, sizemove);
-		fio.Seek(moveorg + sizediff, FileIO::begin);
-		fio.Write(data, sizemove);
+		bool ok = fio.Seek(moveorg, FileIO::begin) &&
+			fio.Read(data, sizemove) == sizemove &&
+			fio.Seek(moveorg + sizediff, FileIO::begin) &&
+			fio.Write(data, sizemove) == sizemove;
 
 		delete[] data;
-
-		for (i=index+1; i<ndisks; i++)
-			disks[i].pos += sizemove;
+		if (!ok)
+			return false;
 	}
-	else
+	else if (!fio.Seek(disks[index].pos + newsize, FileIO::begin))
 	{
-		fio.Seek(disks[index].pos + newsize, FileIO::begin);
+		return false;
 	}
-	fio.SetEndOfFile();
+	if (!fio.SetEndOfFile())
+		return false;
+	for (i=index+1; i<ndisks; i++)
+		disks[i].pos += sizediff;
 	disks[index].size = newsize;
 	return true;
 }
